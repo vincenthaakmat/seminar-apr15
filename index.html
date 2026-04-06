@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Seminar Registration | April 15</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background: radial-gradient(circle at center, #001d3d 0%, #000814 100%); color: white; font-family: sans-serif; }
+        .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .glow-text { text-shadow: 0 0 10px #0077ff; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div id="reg-card" class="max-w-md w-full glass rounded-3xl p-8 shadow-2xl">
+        <div class="text-center mb-6">
+            <h1 class="text-2xl font-bold glow-text uppercase tracking-wider">Double Your Business Account</h1>
+            <p class="text-blue-400 font-semibold mt-1 italic">WITH AI</p>
+        </div>
+
+        <form id="registrationForm" action="https://submit-form.com/YOUR_FORMSPARK_ID" method="POST" class="space-y-4">
+            <input type="hidden" name="reference_code" id="refCodeInput">
+            
+            <div>
+                <label class="block text-xs uppercase text-gray-400 mb-1">Full Name</label>
+                <input type="text" name="name" required class="w-full bg-black/40 border border-gray-600 rounded-lg p-3 text-white">
+            </div>
+            
+            <div>
+                <label class="block text-xs uppercase text-gray-400 mb-1">Email Address</label>
+                <input type="email" name="email" required class="w-full bg-black/40 border border-gray-600 rounded-lg p-3 text-white">
+            </div>
+
+            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl shadow-lg transition-all">
+                GET PAYMENT DETAILS
+            </button>
+        </form>
+    </div>
+
+    <div id="payment-modal" class="hidden fixed inset-0 bg-black/90 flex items-center justify-center p-6 text-center">
+        <div class="glass p-8 rounded-3xl max-w-sm border-blue-500 border">
+            <h2 class="text-2xl font-bold mb-4">Final Step: Payment</h2>
+            <p class="text-gray-300 mb-6">To complete your registration, please transfer <b>$15</b> to the following account:</p>
+            
+            <div class="bg-white/10 p-4 rounded-lg text-left text-sm space-y-2 mb-6">
+                <p><b>Bank:</b> WIB or Republic Bank</p>
+                <p><b>Account Name:</b> [Your Name/Business]</p>
+                <p><b>Account #:</b> [Your Account Number]</p>
+                <p class="text-yellow-400"><b>MEMO:</b> <span id="displayRefCode" class="font-mono text-lg font-bold"></span></p>
+            </div>
+
+            <p class="text-xs text-gray-400 mb-4 italic">*Important: You must use the code above in the transfer description so we can verify your seat.</p>
+            <button onclick="window.location.reload()" class="text-blue-400 underline">Back to Home</button>
+        </div>
+    </div>
+
+    <script>
+        // Generate a random code like AI-1234
+        const randomCode = "AI-" + Math.floor(1000 + Math.random() * 9000);
+        document.getElementById('refCodeInput').value = randomCode;
+        document.getElementById('displayRefCode').innerText = randomCode;
+
+        const form = document.getElementById('registrationForm');
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            const formData = new FormData(form);
+            
+            // Send data to Formspark (replace YOUR_FORMSPARK_ID later)
+            await fetch(form.action, {
+                method: "POST",
+                body: formData,
+            });
+
+            // Show payment instructions
+            document.getElementById('reg-card').classList.add('hidden');
+            document.getElementById('payment-modal').classList.remove('hidden');
+        };
+    </script>
+</body>
+</html>
