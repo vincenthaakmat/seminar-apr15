@@ -6,84 +6,106 @@
     <title>AI Seminar Registration | April 15</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background-color: #010a17; color: white; font-family: sans-serif; background-image: radial-gradient(rgba(0, 119, 255, 0.2) 1.5px, transparent 1.5px); background-size: 30px 30px; }
-        .glass-card { background: rgba(1, 15, 30, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(0, 119, 255, 0.3); }
-        .neon-glow { text-shadow: 0 0 10px #0077ff; }
-        .form-input { background: rgba(0, 0, 0, 0.7) !important; border: 1px solid rgba(0, 119, 255, 0.4); color: white !important; }
-        .rsvp-button { background: linear-gradient(135deg, #0077ff 0%, #00b4d8 100%); }
+        body { background-color: #010a17; color: white; font-family: ui-sans-serif, system-ui; background-image: radial-gradient(rgba(0, 119, 255, 0.2) 1.5px, transparent 1.5px); background-size: 40px 40px; }
+        .glass-card { background: rgba(1, 15, 30, 0.95); backdrop-filter: blur(12px); border: 1px solid rgba(0, 119, 255, 0.3); box-shadow: 0 0 50px rgba(0,0,0,0.8); }
+        .neon-glow { text-shadow: 0 0 15px #0077ff; }
+        .form-input { background: rgba(0, 0, 0, 0.7) !important; border: 1px solid rgba(0, 119, 255, 0.3); color: white !important; }
+        .rsvp-button { background: linear-gradient(135deg, #0077ff 0%, #00b4d8 100%); transition: transform 0.2s; }
+        .rsvp-button:hover { transform: scale(1.02); box-shadow: 0 0 20px rgba(0, 180, 216, 0.6); }
+        .counter-badge { background: linear-gradient(90deg, #ef4444, #991b1b); box-shadow: 0 0 15px rgba(239, 68, 68, 0.5); }
     </style>
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">
 
-    <div id="reg-card" class="max-w-xl w-full glass-card rounded-2xl p-8 shadow-2xl relative">
-        <div class="text-center mb-8">
-            <h1 class="text-3xl font-extrabold neon-glow uppercase tracking-tighter">Double Your Business Account</h1>
-            <p class="text-blue-400 font-bold mt-1 text-lg italic tracking-widest">WITH AI</p>
-            <div class="mt-4 text-[11px] text-gray-300 bg-blue-900/20 py-2 px-4 rounded-lg border border-blue-800/30 inline-block uppercase">
-                📍 Holland House | April 15th | 6pm - 8pm
+    <div id="main-container" class="max-w-xl w-full">
+        <div id="reg-card" class="glass-card rounded-2xl p-8 relative overflow-hidden">
+            
+            <div class="counter-badge absolute top-0 left-0 w-full py-2 text-center text-[11px] font-black uppercase tracking-[0.2em] z-10 border-b border-white/20">
+                ⚠️ URGENT: ONLY <span id="spots-left-display" class="text-white underline">15</span> SPOTS REMAINING
             </div>
+
+            <div class="text-center mb-8 mt-6">
+                <h1 class="text-3xl font-extrabold neon-glow uppercase tracking-tighter">Double Your Business Account</h1>
+                <p class="text-blue-400 font-bold mt-1 text-lg italic tracking-widest leading-none uppercase">WITH AI</p>
+                <div class="mt-6 text-[11px] text-gray-300 bg-blue-900/20 py-2 px-4 rounded-lg border border-blue-800/30 inline-block uppercase tracking-widest">
+                    📍 Holland House | April 15th | 6pm - 8pm
+                </div>
+            </div>
+
+            <form action="https://submit-form.com/6p8OWQR0U" method="POST" class="space-y-4">
+                <input type="hidden" name="reference_code" id="refCodeInput">
+                <input type="hidden" name="_next" id="redirectUrl">
+
+                <div>
+                    <label class="block text-[10px] uppercase text-gray-400 mb-1 tracking-widest font-bold">Full Name</label>
+                    <input type="text" name="name" required class="form-input w-full rounded-lg p-4 text-sm focus:border-blue-500 outline-none">
+                </div>
+                
+                <div>
+                    <label class="block text-[10px] uppercase text-gray-400 mb-1 tracking-widest font-bold">Email Address</label>
+                    <input type="email" name="email" required class="form-input w-full rounded-lg p-4 text-sm focus:border-blue-500 outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-[10px] uppercase text-gray-400 mb-1 tracking-widest font-bold">WhatsApp Number</label>
+                    <input type="tel" name="phone" required class="form-input w-full rounded-lg p-4 text-sm focus:border-blue-500 outline-none" placeholder="+1 721...">
+                </div>
+
+                <button type="submit" class="rsvp-button w-full text-white font-black py-5 rounded-xl text-lg uppercase tracking-tighter mt-4 flex flex-col items-center shadow-lg">
+                    <span>YES, I WANT TO BE THERE!</span>
+                    <span class="text-[11px] mt-1 opacity-90 font-medium tracking-normal text-blue-100 italic">SUBMIT & SEE PAYMENT DETAILS ($15)</span>
+                </button>
+                
+                <p class="text-center text-[10px] text-gray-500 uppercase tracking-widest mt-4">First Paid, First Served Policy applies.</p>
+            </form>
         </div>
-
-        <form action="https://submit-form.com/6p8OWQR0U" method="POST" class="space-y-4">
-            <input type="hidden" name="reference_code" id="refCodeInput">
-            
-            <input type="hidden" name="_next" id="redirectUrl">
-
-            <div>
-                <label class="block text-[10px] uppercase text-gray-400 mb-1 tracking-widest">Full Name</label>
-                <input type="text" name="name" required class="form-input w-full rounded-lg p-3 text-sm">
-            </div>
-            
-            <div>
-                <label class="block text-[10px] uppercase text-gray-400 mb-1 tracking-widest">Email Address</label>
-                <input type="email" name="email" required class="form-input w-full rounded-lg p-3 text-sm">
-            </div>
-
-            <div>
-                <label class="block text-[10px] uppercase text-gray-400 mb-1 tracking-widest">WhatsApp Number</label>
-                <input type="tel" name="phone" required class="form-input w-full rounded-lg p-3 text-sm" placeholder="+1 721...">
-            </div>
-
-            <button type="submit" class="rsvp-button w-full text-white font-black py-5 rounded-xl text-lg uppercase tracking-tighter mt-4 flex flex-col items-center shadow-lg hover:scale-[1.02] transition-transform">
-                <span>YES, I WANT TO BE THERE!</span>
-                <span class="text-[11px] mt-1 opacity-90 font-medium tracking-normal text-blue-100 italic">SUBMIT & SEE PAYMENT DETAILS ($15)</span>
-            </button>
-        </form>
     </div>
 
     <script>
-        // Generate a random code for this visitor
+        // ==========================================
+        // EDIT THE NUMBER BELOW AS PEOPLE PAY
+        // ==========================================
+        const SPOTS_REMAINING = 15; 
+        // ==========================================
+
+        // Update the display automatically
+        document.getElementById('spots-left-display').innerText = SPOTS_REMAINING;
+
         const randomCode = "AI-" + Math.floor(1000 + Math.random() * 8999);
         document.getElementById('refCodeInput').value = randomCode;
 
-        // Auto-detect your current URL to tell Formspark where to send the user after they submit
-        // It will add ?paid=true to the URL so the page knows to show the bank info
-        const currentUrl = window.location.href.split('?')[0];
-        document.getElementById('redirectUrl').value = currentUrl + "?status=success&code=" + randomCode;
+        const seminarPath = "https://vincenthaakmat.github.io/seminar-apr15/";
+        document.getElementById('redirectUrl').value = seminarPath + "?status=success&code=" + randomCode;
 
-        // Check if the user just finished submitting
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('status') === 'success') {
             const submittedCode = urlParams.get('code');
-            document.body.innerHTML = `
-                <div class="max-w-md w-full glass-card rounded-3xl p-8 border-blue-500 border-2 text-center">
-                    <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-900/30 border border-green-500 mb-4">
-                        <svg class="h-6 w-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+            document.getElementById('main-container').innerHTML = `
+                <div class="glass-card rounded-3xl p-8 border-blue-500 border-2 text-center shadow-[0_0_30px_rgba(0,119,255,0.4)] relative overflow-hidden">
+                    <div class="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-green-900/40 border-2 border-green-500 mb-6">
+                        <svg class="h-8 w-8 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
                     </div>
-                    <h2 class="text-2xl font-bold mb-1 text-white uppercase tracking-tighter italic">Registration Sent!</h2>
-                    <p class="text-blue-400 text-xs font-bold mb-6 uppercase tracking-widest">Final Step: Pay $15.00</p>
-                    <div class="bg-black/60 p-5 rounded-xl text-left border border-blue-900/50 space-y-2 mb-6 shadow-inner">
-                        <img src="image_16d907.png" class="h-10 mb-4 rounded" onerror="this.style.display='none'">
-                        <p class="text-sm text-white"><b>Bank:</b> <a href="https://www.wib-bank.net/personal" target="_blank" class="text-blue-400 underline">Windward Islands Bank (WIB)</a></p>
-                        <p class="text-sm text-white"><b>Name:</b> VHC Solutions BV</p>
-                        <p class="text-sm text-white"><b>Acc #:</b> 820471-03</p>
-                        <div class="mt-4 pt-4 border-t border-blue-900/50">
-                            <p class="text-yellow-400 text-[10px] uppercase font-bold text-center italic mb-1 tracking-widest">IMPORTANT MEMO CODE:</p>
-                            <p class="text-3xl font-mono font-black text-white bg-blue-950 p-2 rounded text-center border border-blue-600 shadow-lg tracking-widest">${submittedCode}</p>
+                    <h2 class="text-3xl font-black mb-1 text-white uppercase tracking-tighter italic neon-glow">Registration Sent!</h2>
+                    <p class="text-blue-400 text-xs font-black mb-8 uppercase tracking-[0.2em]">Step 2: Complete Payment</p>
+                    
+                    <div class="bg-black/80 p-6 rounded-2xl text-left border border-blue-900/50 space-y-3 mb-8 shadow-inner">
+                        <img src="image_16d907.png" class="h-12 mb-4 rounded opacity-90" onerror="this.style.display='none'">
+                        <p class="text-sm text-gray-200"><b>Bank:</b> <a href="https://www.wib-bank.net/personal" target="_blank" class="text-blue-400 underline font-bold tracking-wide">Windward Islands Bank (WIB)</a></p>
+                        <p class="text-sm text-gray-200"><b>Name:</b> VHC Solutions BV</p>
+                        <p class="text-sm text-gray-200"><b>Acc #:</b> 820471-03</p>
+                        <div class="mt-6 pt-5 border-t border-blue-900/50 text-center">
+                            <p class="text-yellow-400 text-[10px] uppercase font-black tracking-[0.2em] mb-2 italic underline underline-offset-4">REQUIRED MEMO CODE</p>
+                            <p class="text-4xl font-mono font-black text-white bg-blue-950/50 py-3 rounded-lg border-2 border-blue-600 shadow-[0_0_15px_rgba(0,119,255,0.3)] tracking-widest">${submittedCode}</p>
                         </div>
                     </div>
-                    <p class="text-[10px] text-gray-400 mb-6">Take a screenshot of this. Once payment is verified via the code, your seat is locked.</p>
-                    <a href="${currentUrl}" class="text-gray-500 text-[10px] uppercase underline tracking-widest">Register someone else</a>
+                    
+                    <p class="text-[10px] text-gray-500 mb-8 leading-relaxed px-4 font-medium uppercase tracking-wider">
+                        Transfer <span class="text-white">$15.00</span> now. Take a screenshot. Seats are confirmed only by payment order.
+                    </p>
+                    
+                    <a href="${seminarPath}" class="text-blue-400 text-[10px] font-black uppercase tracking-[0.3em] hover:text-white transition-colors underline decoration-2 underline-offset-8">
+                        Register another person
+                    </a>
                 </div>`;
         }
     </script>
