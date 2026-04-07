@@ -16,24 +16,30 @@
             font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
         }
         .glass-card {
-            background: rgba(1, 15, 30, 0.85);
+            background: rgba(1, 15, 30, 0.9);
             backdrop-filter: blur(15px);
             border: 1px solid rgba(0, 119, 255, 0.3);
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
         }
         .neon-glow {
             text-shadow: 0 0 10px #0077ff, 0 0 20px #0077ff;
         }
         .form-input {
-            background: rgba(0, 0, 0, 0.5) !important;
+            background: rgba(0, 0, 0, 0.6) !important;
             border: 1px solid rgba(0, 119, 255, 0.4);
             color: white !important;
+        }
+        .form-input:focus {
+            border-color: #0077ff;
+            box-shadow: 0 0 10px rgba(0, 119, 255, 0.5);
+            outline: none;
         }
         .rsvp-button {
             background: linear-gradient(135deg, #0077ff 0%, #00b4d8 100%);
             transition: all 0.3s ease;
         }
         .rsvp-button:hover {
-            box-shadow: 0 0 20px rgba(0, 180, 216, 0.7);
+            box-shadow: 0 0 25px rgba(0, 180, 216, 0.8);
             transform: translateY(-2px);
         }
         .hidden { display: none !important; }
@@ -41,67 +47,81 @@
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">
 
-    <div id="reg-card" class="max-w-xl w-full glass-card rounded-2xl p-8 shadow-2xl">
-        <div class="text-center mb-8">
-            <h1 class="text-3xl font-extrabold neon-glow uppercase tracking-tighter">Double Your Business Account</h1>
-            <p class="text-blue-400 font-bold mt-2 text-lg italic">WITH AI</p>
-            <div class="mt-4 text-sm text-gray-300 bg-blue-900/20 py-2 rounded-lg border border-blue-800/30">
-                🗓️ April 15th, 2026 | 6pm - 8pm | Holland House
-            </div>
+    <div id="reg-card" class="max-w-xl w-full glass-card rounded-2xl p-8 shadow-2xl relative">
+        
+        <div class="absolute -top-4 -right-4 bg-red-600 text-white text-[10px] font-black px-3 py-1 rounded-full shadow-lg border-2 border-white animate-pulse uppercase z-10">
+            Only 15 Spots Available
         </div>
 
-        <form id="registrationForm" action="https://submit-form.com/YOUR_FORMSPARK_ID" method="POST" class="space-y-5">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-extrabold neon-glow uppercase tracking-tighter">Double Your Business Account</h1>
+            <p class="text-blue-400 font-bold mt-1 text-lg italic">WITH AI</p>
+            <div class="mt-4 text-[11px] text-gray-300 bg-blue-900/20 py-2 px-4 rounded-lg border border-blue-800/30 inline-block uppercase tracking-widest">
+                📍 Holland House | April 15th | 6pm - 8pm
+            </div>
+            <p class="mt-4 text-xs text-yellow-400 font-bold uppercase tracking-tight italic">
+                ⚠️ First Paid, First Served Policy applies.
+            </p>
+        </div>
+
+        <form id="registrationForm" action="https://submit-form.com/6p8OWQR0U" method="POST" class="space-y-4">
             <input type="hidden" name="reference_code" id="refCodeInput">
             
             <div>
-                <label class="block text-xs uppercase text-gray-400 mb-1">Full Name</label>
-                <input type="text" name="name" required class="form-input w-full rounded-lg p-3">
+                <label class="block text-[10px] uppercase text-gray-400 mb-1 tracking-widest">Full Name</label>
+                <input type="text" name="name" required class="form-input w-full rounded-lg p-3 text-sm">
             </div>
             
             <div>
-                <label class="block text-xs uppercase text-gray-400 mb-1">Email Address</label>
-                <input type="email" name="email" required class="form-input w-full rounded-lg p-3">
+                <label class="block text-[10px] uppercase text-gray-400 mb-1 tracking-widest">Email Address</label>
+                <input type="email" name="email" required class="form-input w-full rounded-lg p-3 text-sm">
             </div>
 
             <div>
-                <label class="block text-xs uppercase text-gray-400 mb-1">WhatsApp / Phone</label>
-                <input type="tel" name="phone" required class="form-input w-full rounded-lg p-3" placeholder="+1 721...">
+                <label class="block text-[10px] uppercase text-gray-400 mb-1 tracking-widest">WhatsApp Number</label>
+                <input type="tel" name="phone" required class="form-input w-full rounded-lg p-3 text-sm" placeholder="+1 721...">
             </div>
 
-            <button type="submit" class="rsvp-button w-full text-white font-black py-4 rounded-xl text-lg uppercase tracking-widest mt-4">
-                YES, I WANT TO BE THERE
+            <button type="submit" class="rsvp-button w-full text-white font-black py-5 rounded-xl text-lg uppercase tracking-tighter mt-4 flex flex-col items-center leading-none">
+                <span>YES, I WANT TO BE THERE!</span>
+                <span class="text-[11px] mt-1 opacity-90 font-medium tracking-normal text-blue-100 italic">SECURE MY SPOT FOR $15.00</span>
             </button>
-            <p class="text-center text-[10px] text-gray-500 uppercase tracking-widest mt-4">Fee: $15.00 USD</p>
         </form>
+
+        <div class="text-center mt-8 pt-4 border-t border-gray-800">
+            <a href="https://formspark.io/dashboard" target="_blank" class="text-[10px] text-gray-600 hover:text-gray-400 uppercase tracking-widest transition">
+                Admin: Track Registrants Here
+            </a>
+        </div>
     </div>
 
     <div id="payment-modal" class="hidden fixed inset-0 bg-black/95 flex items-center justify-center p-4 z-50">
         <div class="glass-card p-8 rounded-3xl max-w-md border-blue-500 border-2 text-center">
             <div class="flex justify-center mb-4">
-                <img src="https://i.imgur.com/vH3yY5t.png" alt="WIB Logo" class="h-16 w-auto rounded-md border border-white/20 shadow-lg">
+                <img src="image_16d907.png" alt="WIB Logo" class="h-16 w-auto rounded-md shadow-lg border border-white/10" onerror="this.src='https://i.imgur.com/vH3yY5t.png'">
             </div>
             
-            <h2 class="text-2xl font-bold mb-2 neon-glow">Registration Received!</h2>
-            <p class="text-gray-300 text-sm mb-6">To confirm your seat, please complete the bank transfer below.</p>
+            <h2 class="text-2xl font-bold mb-2 neon-glow">Final Step: Pay $15</h2>
+            <p class="text-gray-300 text-xs mb-6">Complete the bank transfer now to secure your seat. First paid, first served!</p>
             
             <div class="bg-black/60 p-5 rounded-xl text-left border border-blue-900/50 space-y-2">
-                <p class="text-xs text-blue-400 uppercase font-bold tracking-widest">Bank Account Info</p>
-                <p class="text-white"><b>Bank:</b> Windward Islands Bank (WIB)</p>
-                <p class="text-white"><b>Account:</b> VHC Solutions BV</p>
-                <p class="text-white"><b>Number:</b> 820471-03</p>
+                <p class="text-[10px] text-blue-400 uppercase font-bold tracking-widest">Bank Account Info</p>
+                <p class="text-sm"><b>Bank:</b> Windward Islands Bank (WIB)</p>
+                <p class="text-sm"><b>Name:</b> VHC Solutions BV</p>
+                <p class="text-sm"><b>Acc #:</b> 820471-03</p>
                 <div class="mt-4 pt-4 border-t border-blue-900/50">
-                    <p class="text-yellow-400 text-[10px] uppercase font-bold">Important: Use this Memo Code</p>
-                    <p id="displayRefCode" class="text-3xl font-mono font-black text-white bg-blue-950 p-2 mt-1 rounded text-center"></p>
+                    <p class="text-yellow-400 text-[10px] uppercase font-bold tracking-widest">Crucial Memo Code</p>
+                    <p id="displayRefCode" class="text-3xl font-mono font-black text-white bg-blue-950 p-2 mt-1 rounded text-center border border-blue-600/30 shadow-inner"></p>
                 </div>
             </div>
 
-            <p class="text-[10px] text-gray-500 mt-6 italic">Please allow 24 hours for bank verification. See you on April 15th!</p>
-            <button onclick="window.location.reload()" class="mt-4 text-blue-400 text-xs underline">Back to start</button>
+            <p class="text-[10px] text-gray-500 mt-6 italic">Transfer confirmation is required to lock in your spot.</p>
+            <button onclick="window.location.reload()" class="mt-6 text-blue-400 text-[10px] uppercase tracking-widest underline underline-offset-4">Back to home</button>
         </div>
     </div>
 
     <script>
-        // Generate the random code once per page load
+        // Generate a unique code (e.g., AI-5829)
         const randomCode = "AI-" + Math.floor(1000 + Math.random() * 8999);
         document.getElementById('refCodeInput').value = randomCode;
         document.getElementById('displayRefCode').innerText = randomCode;
@@ -110,16 +130,22 @@
         form.onsubmit = async (e) => {
             e.preventDefault();
             const submitBtn = form.querySelector('button');
-            submitBtn.innerText = "SQUARING AWAY YOUR SEAT...";
+            submitBtn.innerHTML = "<span class='animate-pulse tracking-widest'>SECURING SEAT...</span>";
             submitBtn.disabled = true;
 
             const formData = new FormData(form);
             try {
-                await fetch(form.action, { method: "POST", body: formData });
+                // Sending to Formspark
+                await fetch(form.action, { 
+                    method: "POST", 
+                    body: formData,
+                    headers: { 'Accept': 'application/json' }
+                });
+                // Switch to payment view
                 document.getElementById('reg-card').classList.add('hidden');
                 document.getElementById('payment-modal').classList.remove('hidden');
             } catch (err) {
-                // Show modal even if fetch fails so user gets bank info
+                // If it fails but internet is okay, still show payment as backup
                 document.getElementById('reg-card').classList.add('hidden');
                 document.getElementById('payment-modal').classList.remove('hidden');
             }
