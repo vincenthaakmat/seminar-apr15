@@ -14,83 +14,90 @@
         .rsvp-button:hover { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(0, 180, 216, 0.5); }
         .hidden { display: none !important; }
         .faq-answer { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; }
-        .faq-item:hover .faq-answer { max-height: 100px; }
-        .wa-float { position: fixed; bottom: 20px; right: 20px; background: #25D366; border-radius: 50%; width: 50px; height: 50px; display: flex; items-center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 100; }
+        .faq-item:hover .faq-answer { max-height: 100px; padding-top: 8px; }
+        .wa-float { position: fixed; bottom: 20px; right: 20px; background: #25D366; border-radius: 50%; width: 55px; height: 55px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.4); z-index: 100; transition: transform 0.2s; }
+        .wa-float:hover { transform: scale(1.1); }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-10 px-4">
 
     <a href="https://wa.me/17215208613?text=I%20have%20a%20question%20about%20the%20AI%20Seminar" target="_blank" class="wa-float">
-        <svg width="30" height="30" fill="white" viewBox="0 0 24 24"><path d="M12.031 6.172c-2.203 0-4.004 1.801-4.004 4.004 0 2.203 1.801 4.004 4.004 4.004 2.203 0 4.004-1.801 4.004-4.004 0-2.203-1.801-4.004-4.004-4.004zM12 2C6.477 2 2 6.477 2 12c0 1.891.531 3.655 1.449 5.156L2 22l4.981-1.343A9.948 9.948 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm0 18c-1.722 0-3.328-.535-4.66-1.445l-.332-.227-2.836.765.777-2.734-.246-.356A7.954 7.954 0 014 12c0-4.411 3.589-8 8-8s8 3.589 8 8-3.589 8-8 8z"/></svg>
+        <svg width="32" height="32" fill="white" viewBox="0 0 24 24"><path d="M12.031 6.172c-2.203 0-4.004 1.801-4.004 4.004 0 2.203 1.801 4.004 4.004 4.004 2.203 0 4.004-1.801 4.004-4.004 0-2.203-1.801-4.004-4.004-4.004zM12 2C6.477 2 2 6.477 2 12c0 1.891.531 3.655 1.449 5.156L2 22l4.981-1.343A9.948 9.948 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm0 18c-1.722 0-3.328-.535-4.66-1.445l-.332-.227-2.836.765.777-2.734-.246-.356A7.954 7.954 0 014 12c0-4.411 3.589-8 8-8s8 3.589 8 8-3.589 8-8 8z"/></svg>
     </a>
 
-    <div class="mb-8 text-center bg-blue-900/30 p-4 rounded-2xl border border-blue-500/30 glass-card">
-        <p class="text-[10px] uppercase tracking-widest text-blue-400 font-bold mb-2">Event Starts In:</p>
-        <div id="countdown" class="text-2xl font-black font-mono flex gap-4 justify-center">
-            <div><span id="days">00</span><p class="text-[8px] uppercase">Days</p></div>
-            <div><span id="hours">00</span><p class="text-[8px] uppercase">Hrs</p></div>
-            <div><span id="mins">00</span><p class="text-[8px] uppercase">Min</p></div>
-            <div><span id="secs">00</span><p class="text-[8px] uppercase">Sec</p></div>
+    <div class="mb-8 text-center bg-blue-900/20 p-5 rounded-2xl border border-blue-500/30 glass-card max-w-sm w-full">
+        <p class="text-[10px] uppercase tracking-[0.2em] text-blue-400 font-black mb-3">Event Countdown</p>
+        <div id="countdown" class="text-3xl font-black font-mono flex gap-4 justify-center">
+            <div class="flex flex-col"><span id="days" class="neon-glow">00</span><span class="text-[9px] uppercase font-bold text-gray-500">Days</span></div>
+            <div class="flex flex-col"><span id="hours" class="neon-glow">00</span><span class="text-[9px] uppercase font-bold text-gray-500">Hrs</span></div>
+            <div class="flex flex-col"><span id="mins" class="neon-glow">00</span><span class="text-[9px] uppercase font-bold text-gray-500">Min</span></div>
+            <div class="flex flex-col"><span id="secs" class="neon-glow text-blue-400">00</span><span class="text-[9px] uppercase font-bold text-gray-500">Sec</span></div>
         </div>
     </div>
 
     <div class="max-w-xl w-full">
         <div id="reg-card" class="glass-card rounded-2xl p-8 relative overflow-hidden mb-8">
-            <div class="absolute top-0 left-0 w-full py-2 text-center text-[10px] font-black bg-red-600 uppercase">
+            <div class="absolute top-0 left-0 w-full py-2 text-center text-[10px] font-black bg-red-600 uppercase tracking-widest shadow-lg">
                 ⚠️ ONLY <span id="spots-left">15</span> SPOTS REMAINING
             </div>
 
-            <div class="text-center mb-8 mt-8">
-                <h1 class="text-3xl font-extrabold neon-glow uppercase tracking-tighter">Double Your Business Account</h1>
-                <p class="text-blue-400 font-bold text-lg italic uppercase">WITH AI</p>
-                <p class="text-[11px] text-gray-300 mt-2 font-bold tracking-widest">HOLLAND HOUSE | APRIL 15 | 6PM - 8PM</p>
+            <div class="text-center mb-8 mt-10">
+                <h1 class="text-3xl font-extrabold neon-glow uppercase tracking-tighter leading-none">Double Your Business Account</h1>
+                <p class="text-blue-400 font-bold text-lg italic uppercase mt-2">WITH AI</p>
+                <div class="mt-6 text-[11px] text-gray-300 bg-blue-950/50 py-2 px-4 rounded-lg border border-blue-800/40 inline-block uppercase tracking-widest font-bold">
+                    📍 Holland House | April 15 | 6PM - 8PM
+                </div>
             </div>
 
             <form id="ajaxForm" class="space-y-4">
                 <input type="text" id="userName" placeholder="Full Name" required class="form-input w-full rounded-lg p-4 text-sm">
                 <input type="email" id="userEmail" placeholder="Email Address" required class="form-input w-full rounded-lg p-4 text-sm">
                 <input type="tel" id="userPhone" placeholder="WhatsApp Number" required class="form-input w-full rounded-lg p-4 text-sm">
-                <button type="submit" id="submitBtn" class="rsvp-button w-full text-white font-black py-5 rounded-xl text-lg uppercase shadow-lg">
+                
+                <button type="submit" id="submitBtn" class="rsvp-button w-full text-white font-black py-5 rounded-xl text-lg uppercase shadow-lg mt-2">
                     YES, I WANT TO BE THERE! ($15)
                 </button>
+                <p class="text-[9px] text-center text-gray-500 uppercase tracking-widest mt-4 leading-relaxed font-bold">First Paid, First Served Policy applies.</p>
             </form>
 
-            <div class="mt-10 pt-6 border-t border-white/10">
-                <h3 class="text-xs font-bold uppercase tracking-widest text-blue-400 mb-4">Common Questions</h3>
-                <div class="space-y-3 text-sm">
-                    <div class="faq-item cursor-pointer bg-black/30 p-3 rounded-lg">
-                        <p class="font-bold">📍 Is parking available?</p>
-                        <p class="faq-answer text-gray-400 mt-1">Yes, street parking or the nearby pay-lots in Philipsburg.</p>
+            <div class="mt-12 pt-8 border-t border-white/10">
+                <h3 class="text-[10px] font-black uppercase tracking-[0.3em] text-blue-500 mb-6 text-center">Frequently Asked Questions</h3>
+                <div class="space-y-4 text-sm">
+                    <div class="faq-item cursor-pointer bg-blue-950/30 p-4 rounded-xl border border-white/5 hover:border-blue-500/30 transition">
+                        <p class="font-bold flex items-center gap-2 italic">💻 Do I need to bring my laptop?</p>
+                        <p class="faq-answer text-gray-400 leading-relaxed">No. We recommend a notepad for taking down AI prompts and strategy notes.</p>
                     </div>
-                    <div class="faq-item cursor-pointer bg-black/30 p-3 rounded-lg">
-                        <p class="font-bold">💻 Do I need a laptop?</p>
-                        <p class="faq-answer text-gray-400 mt-1">Recommended but not required. Bring a notepad for AI prompts!</p>
+                    <div class="faq-item cursor-pointer bg-blue-950/30 p-4 rounded-xl border border-white/5 hover:border-blue-500/30 transition">
+                        <p class="font-bold flex items-center gap-2 italic">💵 Can I pay cash at the door?</p>
+                        <p class="faq-answer text-gray-400 leading-relaxed">Pre-paid only due to limited seating, unless pre-approved by the organizers via WhatsApp.</p>
                     </div>
                 </div>
             </div>
         </div>
 
         <div id="bank-card" class="hidden glass-card rounded-3xl p-8 border-blue-500 border-2 text-center shadow-2xl">
-            <div class="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-green-500/20 border-2 border-green-500 mb-4 text-green-500">
-                <svg width="30" height="30" fill="currentColor" viewBox="0 0 20 20"><path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/></svg>
+            <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-500/20 border-2 border-green-500 mb-6 text-green-500">
+                <svg width="35" height="35" fill="currentColor" viewBox="0 0 20 20"><path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/></svg>
             </div>
-            <h2 class="text-2xl font-black neon-glow uppercase mb-4 italic">Registration Sent!</h2>
+            <h2 class="text-3xl font-black neon-glow uppercase mb-2 italic">Registration Sent!</h2>
+            <p class="text-blue-400 text-xs font-bold mb-8 uppercase tracking-[0.2em]">Step 2: Complete Payment</p>
             
-            <div class="bg-black/80 p-6 rounded-2xl text-left border border-blue-900/50 mb-6">
-                <img src="image_16d907.png" class="h-10 mb-4 rounded" onerror="this.style.display='none'">
-                <p class="text-sm"><b>Bank:</b> WIB Bank (SXM)</p>
-                <p class="text-sm"><b>Acc #:</b> 820471-03</p>
-                <div class="mt-4 pt-4 border-t border-blue-900/50 text-center">
-                    <p class="text-yellow-400 text-[10px] font-bold mb-1 tracking-widest">MEMO CODE</p>
-                    <p id="finalCodeDisplay" class="text-3xl font-mono font-black bg-blue-950/50 py-2 rounded-lg border border-blue-600"></p>
+            <div class="bg-black/80 p-6 rounded-2xl text-left border border-blue-900/50 mb-8 shadow-inner">
+                <img src="image_16d907.png" class="h-10 mb-4 rounded opacity-90" onerror="this.style.display='none'">
+                <p class="text-sm text-gray-200"><b>Bank:</b> <a href="https://www.wib-bank.net/personal" target="_blank" class="text-blue-400 underline underline-offset-4">WIB Bank (SXM)</a></p>
+                <p class="text-sm text-gray-200"><b>Name:</b> VHC Solutions BV</p>
+                <p class="text-sm text-gray-200"><b>Acc #:</b> 820471-03</p>
+                <div class="mt-6 pt-5 border-t border-blue-900/50 text-center">
+                    <p class="text-yellow-400 text-[10px] font-black uppercase tracking-[0.2em] mb-2 italic">REQUIRED MEMO CODE</p>
+                    <p id="finalCodeDisplay" class="text-4xl font-mono font-black text-white bg-blue-950/50 py-3 rounded-lg border-2 border-blue-600 shadow-lg tracking-widest"></p>
                 </div>
             </div>
 
-            <a id="calendarLink" target="_blank" class="block w-full bg-white/10 hover:bg-white/20 py-4 rounded-xl text-xs uppercase font-bold tracking-widest transition mb-4 border border-white/10">
+            <a id="calendarLink" target="_blank" class="block w-full bg-white/5 hover:bg-white/10 py-5 rounded-xl text-xs uppercase font-black tracking-widest transition mb-6 border border-white/10 text-blue-300">
                 📅 Add to Google Calendar
             </a>
 
-            <p class="text-[10px] text-gray-500 italic">Please take a screenshot of your code for verification.</p>
+            <p class="text-[10px] text-gray-500 uppercase font-bold tracking-widest">Please screenshot this page now.</p>
         </div>
     </div>
 
@@ -100,36 +107,47 @@
         const randomCode = "AI-" + Math.floor(1000 + Math.random() * 8999);
         document.getElementById('spots-left').innerText = SPOTS_REMAINING;
 
-        // Countdown Logic
+        // Countdown Timer Logic
         const eventDate = new Date("April 15, 2026 18:00:00").getTime();
         setInterval(() => {
             const now = new Date().getTime();
             const diff = eventDate - now;
-            document.getElementById('days').innerText = Math.floor(diff / (1000 * 60 * 60 * 24));
-            document.getElementById('hours').innerText = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            document.getElementById('mins').innerText = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-            document.getElementById('secs').innerText = Math.floor((diff % (1000 * 60)) / 1000);
+            if (diff > 0) {
+                document.getElementById('days').innerText = Math.floor(diff / (1000 * 60 * 60 * 24)).toString().padStart(2, '0');
+                document.getElementById('hours').innerText = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)).toString().padStart(2, '0');
+                document.getElementById('mins').innerText = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)).toString().padStart(2, '0');
+                document.getElementById('secs').innerText = Math.floor((diff % (1000 * 60)) / 1000).toString().padStart(2, '0');
+            }
         }, 1000);
 
-        // Submit Logic
+        // AJAX Submission Logic
         document.getElementById('ajaxForm').onsubmit = async (e) => {
             e.preventDefault();
-            const btn = document.getElementById('submitBtn'); btn.innerText = "SENDING..."; btn.disabled = true;
+            const btn = document.getElementById('submitBtn'); btn.innerHTML = "<span class='animate-pulse'>PROCESSING...</span>"; btn.disabled = true;
 
             const name = document.getElementById('userName').value;
             const payload = { name, email: document.getElementById('userEmail').value, phone: document.getElementById('userPhone').value, reference_code: randomCode };
 
             try {
-                await fetch(`https://submit-form.com/${FORMSPARK_ID}`, { method: "POST", headers: { "Content-Type": "application/json", "Accept": "application/json" }, body: JSON.stringify(payload) });
+                await fetch(`https://submit-form.com/${FORMSPARK_ID}`, { 
+                    method: "POST", 
+                    headers: { "Content-Type": "application/json", "Accept": "application/json" }, 
+                    body: JSON.stringify(payload) 
+                });
                 
-                // Set Calendar Link
-                const calUrl = `https://www.google.com/calendar/render?action=TEMPLATE&text=AI+Seminar+Holland+House&dates=20260415T220000Z/20260416T000000Z&details=Your+Ref+Code:+${randomCode}+Please+complete+transfer+of+$15+to+WIB+Acc+820471-03&location=Holland+House+Beach+Hotel,+Sint+Maarten`;
+                // Calendar URL Construction
+                const calUrl = `https://www.google.com/calendar/render?action=TEMPLATE&text=AI+Seminar+Holland+House&dates=20260415T220000Z/20260416T000000Z&details=Your+Reference+Code:+${randomCode}%0A%0APlease+complete+your+$15+transfer+to+WIB+Acc+820471-03+to+secure+your+seat.&location=Holland+House+Beach+Hotel,+Front+St,+Philipsburg,+Sint+Maarten`;
                 document.getElementById('calendarLink').href = calUrl;
 
                 document.getElementById('reg-card').classList.add('hidden');
                 document.getElementById('bank-card').classList.remove('hidden');
                 document.getElementById('finalCodeDisplay').innerText = randomCode;
-            } catch (err) { alert("Success! Check your banking info."); }
+            } catch (err) {
+                // Fallback: show bank info regardless
+                document.getElementById('reg-card').classList.add('hidden');
+                document.getElementById('bank-card').classList.remove('hidden');
+                document.getElementById('finalCodeDisplay').innerText = randomCode;
+            }
         };
     </script>
 </body>
