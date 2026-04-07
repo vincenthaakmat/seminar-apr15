@@ -6,100 +6,124 @@
     <title>AI Seminar Registration | April 15</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Custom styles to mimic the flyer's tech aesthetic */
         body {
-            /* Using a subtle pattern overlay to get the tech-node vibe from the flyer */
-            background-color: #010a17; /* Darkest blue from flyer */
+            background-color: #010a17;
             background-image: radial-gradient(rgba(0, 119, 255, 0.2) 1.5px, transparent 1.5px), 
                               radial-gradient(rgba(0, 119, 255, 0.2) 1.5px, transparent 1.5px);
             background-size: 60px 60px;
             background-position: 0 0, 30px 30px;
             color: white;
-            font-family: 'Inter', sans-serif;
-            overflow-x: hidden;
+            font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
         }
-
-        /* Animated glowing line across the top, similar to the flyer edges */
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 2px;
-            background: linear-gradient(90deg, #010a17, #0077ff, #010a17);
-            z-index: 99;
-            box-shadow: 0 0 10px #0077ff;
-        }
-
-        /* Glassmorphism card: blurred and semi-transparent */
         .glass-card {
-            background: rgba(1, 15, 30, 0.7);
+            background: rgba(1, 15, 30, 0.85);
             backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
             border: 1px solid rgba(0, 119, 255, 0.3);
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
         }
-
-        /* Bright glowing neon text for the main headline */
         .neon-glow {
-            color: #fff;
-            text-shadow: 0 0 5px #fff, 0 0 10px #0077ff, 0 0 20px #0077ff, 0 0 30px #0077ff;
+            text-shadow: 0 0 10px #0077ff, 0 0 20px #0077ff;
         }
-
-        /* Input field style to match the flyer's dark/blue theme */
         .form-input {
-            background: rgba(0, 0, 0, 0.4) !important;
+            background: rgba(0, 0, 0, 0.5) !important;
             border: 1px solid rgba(0, 119, 255, 0.4);
             color: white !important;
-            transition: all 0.2s ease;
         }
-        .form-input:focus {
-            border-color: #0077ff;
-            box-shadow: 0 0 10px rgba(0, 119, 255, 0.5);
-            outline: none;
-        }
-
-        /* The exciting RSVP button */
         .rsvp-button {
             background: linear-gradient(135deg, #0077ff 0%, #00b4d8 100%);
             transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            position: relative;
-            overflow: hidden;
         }
         .rsvp-button:hover {
             box-shadow: 0 0 20px rgba(0, 180, 216, 0.7);
             transform: translateY(-2px);
         }
-        .rsvp-button::after {
-            content: '';
-            position: absolute;
-            top: -50%; left: -60%; width: 20%; height: 200%;
-            background: rgba(255, 255, 255, 0.1);
-            transform: rotate(30deg);
-            transition: all 0.7s ease;
-        }
-        .rsvp-button:hover::after {
-            left: 120%;
-        }
-
         .hidden { display: none !important; }
     </style>
 </head>
-<body class="min-h-screen flex items-center justify-center p-4 md:p-10">
+<body class="min-h-screen flex items-center justify-center p-4">
 
-    <div id="reg-card" class="max-w-xl w-full glass-card rounded-2xl p-6 md:p-10 shadow-2xl relative">
-        
-        <svg class="absolute -top-10 -right-10 opacity-30" width="200" height="200" viewBox="0 0 100 100">
-            <circle cx="50" cy="50" r="2" fill="#0077ff" />
-            <circle cx="80" cy="20" r="1.5" fill="#0077ff" />
-            <circle cx="20" cy="80" r="1.5" fill="#0077ff" />
-            <line x1="50" y1="50" x2="80" y2="20" stroke="#0077ff" stroke-width="0.5" />
-            <line x1="50" y1="50" x2="20" y2="80" stroke="#0077ff" stroke-width="0.5" />
-        </svg>
+    <div id="reg-card" class="max-w-xl w-full glass-card rounded-2xl p-8 shadow-2xl">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-extrabold neon-glow uppercase tracking-tighter">Double Your Business Account</h1>
+            <p class="text-blue-400 font-bold mt-2 text-lg italic">WITH AI</p>
+            <div class="mt-4 text-sm text-gray-300 bg-blue-900/20 py-2 rounded-lg border border-blue-800/30">
+                🗓️ April 15th, 2026 | 6pm - 8pm | Holland House
+            </div>
+        </div>
 
-        <div class="text-center mb-10 border-b border-gray-800 pb-6">
-            <p class="text-xs uppercase text-blue-300 tracking-widest mb-1">Exclusive Event for Entrepreneurs</p>
-            <h1 class="text-3xl md:text-4xl font-extrabold neon-glow uppercase tracking-wider leading-none">Double Your Business Account</h1>
-            <p class="text-blue-400 font-bold mt-2 text-xl underline italic">WITH AI</p>
+        <form id="registrationForm" action="https://submit-form.com/YOUR_FORMSPARK_ID" method="POST" class="space-y-5">
+            <input type="hidden" name="reference_code" id="refCodeInput">
             
-            <div class="mt-6
+            <div>
+                <label class="block text-xs uppercase text-gray-400 mb-1">Full Name</label>
+                <input type="text" name="name" required class="form-input w-full rounded-lg p-3">
+            </div>
+            
+            <div>
+                <label class="block text-xs uppercase text-gray-400 mb-1">Email Address</label>
+                <input type="email" name="email" required class="form-input w-full rounded-lg p-3">
+            </div>
+
+            <div>
+                <label class="block text-xs uppercase text-gray-400 mb-1">WhatsApp / Phone</label>
+                <input type="tel" name="phone" required class="form-input w-full rounded-lg p-3" placeholder="+1 721...">
+            </div>
+
+            <button type="submit" class="rsvp-button w-full text-white font-black py-4 rounded-xl text-lg uppercase tracking-widest mt-4">
+                YES, I WANT TO BE THERE
+            </button>
+            <p class="text-center text-[10px] text-gray-500 uppercase tracking-widest mt-4">Fee: $15.00 USD</p>
+        </form>
+    </div>
+
+    <div id="payment-modal" class="hidden fixed inset-0 bg-black/95 flex items-center justify-center p-4 z-50">
+        <div class="glass-card p-8 rounded-3xl max-w-md border-blue-500 border-2 text-center">
+            <div class="flex justify-center mb-4">
+                <img src="https://i.imgur.com/vH3yY5t.png" alt="WIB Logo" class="h-16 w-auto rounded-md border border-white/20 shadow-lg">
+            </div>
+            
+            <h2 class="text-2xl font-bold mb-2 neon-glow">Registration Received!</h2>
+            <p class="text-gray-300 text-sm mb-6">To confirm your seat, please complete the bank transfer below.</p>
+            
+            <div class="bg-black/60 p-5 rounded-xl text-left border border-blue-900/50 space-y-2">
+                <p class="text-xs text-blue-400 uppercase font-bold tracking-widest">Bank Account Info</p>
+                <p class="text-white"><b>Bank:</b> Windward Islands Bank (WIB)</p>
+                <p class="text-white"><b>Account:</b> VHC Solutions BV</p>
+                <p class="text-white"><b>Number:</b> 820471-03</p>
+                <div class="mt-4 pt-4 border-t border-blue-900/50">
+                    <p class="text-yellow-400 text-[10px] uppercase font-bold">Important: Use this Memo Code</p>
+                    <p id="displayRefCode" class="text-3xl font-mono font-black text-white bg-blue-950 p-2 mt-1 rounded text-center"></p>
+                </div>
+            </div>
+
+            <p class="text-[10px] text-gray-500 mt-6 italic">Please allow 24 hours for bank verification. See you on April 15th!</p>
+            <button onclick="window.location.reload()" class="mt-4 text-blue-400 text-xs underline">Back to start</button>
+        </div>
+    </div>
+
+    <script>
+        // Generate the random code once per page load
+        const randomCode = "AI-" + Math.floor(1000 + Math.random() * 8999);
+        document.getElementById('refCodeInput').value = randomCode;
+        document.getElementById('displayRefCode').innerText = randomCode;
+
+        const form = document.getElementById('registrationForm');
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            const submitBtn = form.querySelector('button');
+            submitBtn.innerText = "SQUARING AWAY YOUR SEAT...";
+            submitBtn.disabled = true;
+
+            const formData = new FormData(form);
+            try {
+                await fetch(form.action, { method: "POST", body: formData });
+                document.getElementById('reg-card').classList.add('hidden');
+                document.getElementById('payment-modal').classList.remove('hidden');
+            } catch (err) {
+                // Show modal even if fetch fails so user gets bank info
+                document.getElementById('reg-card').classList.add('hidden');
+                document.getElementById('payment-modal').classList.remove('hidden');
+            }
+        };
+    </script>
+</body>
+</html>
