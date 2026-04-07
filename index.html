@@ -10,9 +10,9 @@
         .glass-card { background: rgba(1, 15, 30, 0.95); backdrop-filter: blur(12px); border: 1px solid rgba(0, 119, 255, 0.3); box-shadow: 0 0 50px rgba(0,0,0,0.8); }
         .neon-glow { text-shadow: 0 0 15px #0077ff; }
         .form-input { background: rgba(0, 0, 0, 0.7) !important; border: 1px solid rgba(0, 119, 255, 0.3); color: white !important; }
-        .rsvp-button { background: linear-gradient(135deg, #0077ff 0%, #00b4d8 100%); transition: transform 0.2s; }
+        .rsvp-button { background: linear-gradient(135deg, #0077ff 0%, #00b4d8 100%); transition: transform 0.2s; cursor: pointer; }
         .rsvp-button:hover { transform: scale(1.02); box-shadow: 0 0 20px rgba(0, 180, 216, 0.6); }
-        .counter-badge { background: linear-gradient(90deg, #ef4444, #991b1b); box-shadow: 0 0 15px rgba(239, 68, 68, 0.5); }
+        .counter-badge { background: linear-gradient(90deg, #ef4444, #991b1b); border-bottom: 1px solid rgba(255,255,255,0.2); }
     </style>
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">
@@ -20,8 +20,8 @@
     <div id="main-container" class="max-w-xl w-full">
         <div id="reg-card" class="glass-card rounded-2xl p-8 relative overflow-hidden">
             
-            <div class="counter-badge absolute top-0 left-0 w-full py-2 text-center text-[11px] font-black uppercase tracking-[0.2em] z-10 border-b border-white/20">
-                ⚠️ URGENT: ONLY <span id="spots-left-display" class="text-white underline">15</span> SPOTS REMAINING
+            <div class="counter-badge absolute top-0 left-0 w-full py-2 text-center text-[10px] font-black uppercase tracking-[0.2em] z-10">
+                ⚠️ URGENT: ONLY <span id="spots-left-display">15</span> SPOTS REMAINING
             </div>
 
             <div class="text-center mb-8 mt-6">
@@ -32,74 +32,79 @@
                 </div>
             </div>
 
-            <form action="https://submit-form.com/6p8OWQR0U" method="POST" class="space-y-4">
+            <form action="https://submit-form.com/6p8OWQR0U" method="POST" class="space-y-4" onsubmit="preSubmit()">
                 <input type="hidden" name="reference_code" id="refCodeInput">
-                <input type="hidden" name="_next" id="redirectUrl">
                 
-                <input type="hidden" name="_subject" value="New AI Seminar Registration">
+                <input type="hidden" name="_next" value="https://vincenthaakmat.github.io/seminar-apr15/?status=success">
+                
+                <input type="hidden" name="_error" value="https://vincenthaakmat.github.io/seminar-apr15/?status=error">
 
                 <div>
                     <label class="block text-[10px] uppercase text-gray-400 mb-1 tracking-widest font-bold">Full Name</label>
-                    <input type="text" name="name" required class="form-input w-full rounded-lg p-4 text-sm focus:border-blue-500 outline-none">
+                    <input type="text" name="name" required class="form-input w-full rounded-lg p-4 text-sm outline-none focus:border-blue-500">
                 </div>
                 
                 <div>
                     <label class="block text-[10px] uppercase text-gray-400 mb-1 tracking-widest font-bold">Email Address</label>
-                    <input type="email" name="email" required class="form-input w-full rounded-lg p-4 text-sm focus:border-blue-500 outline-none">
+                    <input type="email" name="email" required class="form-input w-full rounded-lg p-4 text-sm outline-none focus:border-blue-500">
                 </div>
 
                 <div>
                     <label class="block text-[10px] uppercase text-gray-400 mb-1 tracking-widest font-bold">WhatsApp Number</label>
-                    <input type="tel" name="phone" required class="form-input w-full rounded-lg p-4 text-sm focus:border-blue-500 outline-none" placeholder="+1 721...">
+                    <input type="tel" name="phone" required class="form-input w-full rounded-lg p-4 text-sm outline-none focus:border-blue-500" placeholder="+1 721...">
                 </div>
 
                 <button type="submit" class="rsvp-button w-full text-white font-black py-5 rounded-xl text-lg uppercase tracking-tighter mt-4 flex flex-col items-center shadow-lg">
                     <span>YES, I WANT TO BE THERE!</span>
-                    <span class="text-[11px] mt-1 opacity-90 font-medium tracking-normal text-blue-100 italic">SUBMIT & RECEIVE BANK INFO VIA EMAIL</span>
+                    <span class="text-[11px] mt-1 opacity-90 font-medium tracking-normal text-blue-100 italic tracking-wide">SUBMIT & SECURE MY SPOT ($15)</span>
                 </button>
-                
-                <p class="text-center text-[10px] text-gray-500 uppercase tracking-widest mt-4 leading-relaxed">Check your email immediately after submitting for payment details.</p>
             </form>
         </div>
     </div>
 
     <script>
+        // EDIT THIS NUMBER AS SPOTS SELL
         const SPOTS_REMAINING = 15; 
         document.getElementById('spots-left-display').innerText = SPOTS_REMAINING;
 
+        // Code Generation
         const randomCode = "AI-" + Math.floor(1000 + Math.random() * 8999);
         document.getElementById('refCodeInput').value = randomCode;
 
-        const seminarPath = "https://vincenthaakmat.github.io/seminar-apr15/";
-        document.getElementById('redirectUrl').value = seminarPath + "?status=success&code=" + randomCode;
+        function preSubmit() {
+            // Save the code to browser memory so we can show it when we come back
+            sessionStorage.setItem('temp_ref_code', randomCode);
+        }
 
+        // Logic to show banking info if landing back with ?status=success
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('status') === 'success') {
-            const submittedCode = urlParams.get('code');
+            const finalCode = sessionStorage.getItem('temp_ref_code') || "AI-REG";
+            
             document.getElementById('main-container').innerHTML = `
-                <div class="glass-card rounded-3xl p-8 border-blue-500 border-2 text-center shadow-[0_0_30px_rgba(0,119,255,0.4)] relative">
+                <div class="glass-card rounded-3xl p-8 border-blue-500 border-2 text-center shadow-[0_0_30px_rgba(0,119,255,0.4)]">
                     <div class="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-green-900/40 border-2 border-green-500 mb-6">
                         <svg class="h-8 w-8 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
                     </div>
-                    <h2 class="text-3xl font-black mb-1 text-white uppercase tracking-tighter italic neon-glow">Check Your Email!</h2>
-                    <p class="text-blue-400 text-xs font-black mb-8 uppercase tracking-[0.2em]">Bank Details Sent to Inbox</p>
+                    <h2 class="text-3xl font-black mb-1 text-white uppercase tracking-tighter italic neon-glow leading-none">Registration Sent!</h2>
+                    <p class="text-blue-400 text-xs font-black mb-8 uppercase tracking-[0.2em] mt-2">Final Step: Pay $15.00</p>
                     
                     <div class="bg-black/80 p-6 rounded-2xl text-left border border-blue-900/50 space-y-3 mb-8 shadow-inner">
                         <img src="image_16d907.png" class="h-12 mb-4 rounded opacity-90" onerror="this.style.display='none'">
-                        <p class="text-sm text-gray-200"><b>Bank:</b> Windward Islands Bank (WIB)</p>
+                        <p class="text-sm text-gray-200"><b>Bank:</b> <a href="https://www.wib-bank.net/personal" target="_blank" class="text-blue-400 underline font-bold tracking-wide">Windward Islands Bank (WIB)</a></p>
                         <p class="text-sm text-gray-200"><b>Name:</b> VHC Solutions BV</p>
                         <p class="text-sm text-gray-200"><b>Acc #:</b> 820471-03</p>
                         <div class="mt-6 pt-5 border-t border-blue-900/50 text-center">
-                            <p class="text-yellow-400 text-[10px] uppercase font-black tracking-[0.2em] mb-2 italic tracking-widest">MEMO CODE (Check Email too!)</p>
-                            <p class="text-4xl font-mono font-black text-white bg-blue-950/50 py-3 rounded-lg border-2 border-blue-600 shadow-[0_0_15px_rgba(0,119,255,0.3)] tracking-widest">${submittedCode}</p>
+                            <p class="text-yellow-400 text-[10px] uppercase font-black tracking-[0.2em] mb-2 italic tracking-widest">REQUIRED MEMO CODE</p>
+                            <p class="text-4xl font-mono font-black text-white bg-blue-950/50 py-3 rounded-lg border-2 border-blue-600 shadow-[0_0_15px_rgba(0,119,255,0.3)] tracking-widest">${finalCode}</p>
                         </div>
                     </div>
                     
-                    <p class="text-[10px] text-gray-400 mb-8 leading-relaxed px-4 font-medium uppercase tracking-wider">
-                        Please transfer <span class="text-white">$15.00</span> now. A copy of these instructions has been sent to your email.
+                    <p class="text-[10px] text-gray-400 mb-8 leading-relaxed px-4 uppercase tracking-wider font-bold italic">
+                        Take a screenshot now. Your seat is only confirmed once payment is verified via the code above.
                     </p>
                     
-                    <a href="${seminarPath}" class="text-blue-400 text-[10px] font-black uppercase tracking-[0.3em] hover:text-white transition-colors underline decoration-2 underline-offset-8">
+                    <a href="https://vincenthaakmat.github.io/seminar-apr15/" class="text-blue-400 text-[10px] font-black uppercase tracking-[0.3em] hover:text-white transition-colors underline decoration-2 underline-offset-8">
                         Register another person
                     </a>
                 </div>`;
