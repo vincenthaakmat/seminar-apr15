@@ -9,12 +9,35 @@
         body { background-color: #010a17; color: white; font-family: ui-sans-serif, system-ui; background-image: radial-gradient(rgba(0, 119, 255, 0.15) 1px, transparent 1px); background-size: 30px 30px; -webkit-font-smoothing: antialiased; }
         .glass-card { background: rgba(1, 15, 30, 0.96); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid rgba(0, 119, 255, 0.3); }
         .neon-glow { text-shadow: 0 0 15px #0077ff, 0 0 5px #ffffff; }
-        .form-input { background: rgba(0, 0, 0, 0.8) !important; border: 1px solid rgba(0, 119, 255, 0.3); color: white !important; font-size: 16px !important; } /* 16px prevents iOS zoom on focus */
+        .form-input { background: rgba(0, 0, 0, 0.8) !important; border: 1px solid rgba(0, 119, 255, 0.3); color: white !important; font-size: 16px !important; }
         .rsvp-button { background: linear-gradient(135deg, #0077ff 0%, #00b4d8 100%); transition: all 0.3s; }
         .hidden { display: none !important; }
         .faq-answer { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; }
         .faq-item:active .faq-answer, .faq-item:hover .faq-answer { max-height: 120px; padding-top: 10px; }
         .wa-float { position: fixed; bottom: 20px; right: 20px; background: #25D366; border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 20px rgba(0,0,0,0.5); z-index: 100; }
+        
+        /* NEW STYLES FOR THE BIG BOLD COUNTER */
+        .counter-badge { 
+            background: linear-gradient(90deg, #991b1b, #ef4444, #991b1b); 
+            border-bottom: 2px solid rgba(255,255,255,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+        .big-number {
+            font-size: 28px;
+            color: #ffffff;
+            font-weight: 900;
+            text-shadow: 0 0 15px #fff;
+            animation: pulse 1.5s infinite;
+            line-height: 1;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.9; }
+            100% { transform: scale(1); opacity: 1; }
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-6 px-4 mb-20">
@@ -35,11 +58,13 @@
 
     <div class="max-w-xl w-full">
         <div id="reg-card" class="glass-card rounded-3xl p-6 md:p-8 relative overflow-hidden mb-6">
-            <div class="absolute top-0 left-0 w-full py-2 text-center text-[10px] font-black bg-red-600 uppercase tracking-widest">
-                ⚠️ LIMITED: <span id="spots-left">18</span> SPOTS LEFT
+            <div class="counter-badge absolute top-0 left-0 w-full py-3 z-10">
+                <span class="text-[11px] font-black uppercase tracking-[0.2em]">⚠️ LIMITED:</span>
+                <span id="spots-left" class="big-number">13</span>
+                <span class="text-[11px] font-black uppercase tracking-[0.2em]">SPOTS LEFT</span>
             </div>
 
-            <div class="text-center mb-8 mt-10">
+            <div class="text-center mb-8 mt-12">
                 <h1 class="text-2xl md:text-3xl font-extrabold neon-glow uppercase tracking-tighter leading-tight">Double Your Business Account</h1>
                 <p class="text-blue-400 font-bold text-lg italic uppercase mt-1">WITH AI</p>
                 <p class="text-[10px] text-gray-400 mt-3 font-bold tracking-widest uppercase">Holland House | April 15 | 6pm - 8pm</p>
@@ -98,6 +123,7 @@
     </div>
 
     <script>
+        // EDIT THIS NUMBER
         const SPOTS_REMAINING = 13;
         const FORMSPARK_ID = "6p8OWQR0U";
         const randomCode = "AI-" + Math.floor(1000 + Math.random() * 8999);
