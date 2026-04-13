@@ -470,6 +470,249 @@ tr.tier-change td { border-top: 1px solid var(--blue-soft) !important; }
 }
 
 .disclaimer strong { color: var(--text-muted); font-weight: 600; }
+
+/* ── Settings button in hero ── */
+.settings-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 1.5rem;
+  padding: 9px 18px;
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 8px;
+  color: #fff;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.settings-btn:hover { background: rgba(255,255,255,0.25); }
+
+/* ── Overlay ── */
+.overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(15,23,42,0.45);
+  z-index: 100;
+  backdrop-filter: blur(2px);
+}
+.overlay.open { display: block; }
+
+/* ── Settings panel ── */
+.settings-panel {
+  position: fixed;
+  top: 0; right: 0;
+  width: min(480px, 100vw);
+  height: 100vh;
+  background: var(--white);
+  border-left: 1px solid var(--border);
+  z-index: 101;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
+  box-shadow: -8px 0 32px rgba(15,23,42,0.12);
+}
+.settings-panel.open { transform: translateX(0); }
+
+.sp-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 1.5rem 1.5rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+  flex-shrink: 0;
+}
+
+.sp-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 3px;
+}
+
+.sp-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.sp-close {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-size: 14px;
+  width: 30px; height: 30px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.13s;
+  display: flex; align-items: center; justify-content: center;
+}
+.sp-close:hover { background: var(--border); color: var(--text); }
+
+.sp-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.25rem 1.5rem;
+}
+
+/* Each package row in settings */
+.sp-pkg-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+  align-items: end;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.sp-pkg-row:last-child { border-bottom: none; }
+
+.sp-pkg-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+
+.sp-pkg-range {
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+.sp-field label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.sp-input-wrap {
+  position: relative;
+}
+
+.sp-input-wrap input {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 7px 28px 7px 10px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  -moz-appearance: textfield;
+}
+.sp-input-wrap input::-webkit-outer-spin-button,
+.sp-input-wrap input::-webkit-inner-spin-button { -webkit-appearance: none; }
+.sp-input-wrap input:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+  background: #fff;
+}
+
+.sp-input-wrap .sp-unit {
+  position: absolute;
+  right: 9px; top: 50%;
+  transform: translateY(-50%);
+  font-size: 11px;
+  color: var(--text-dim);
+  pointer-events: none;
+}
+
+.sp-monthly-out {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.sp-footer {
+  display: flex;
+  gap: 10px;
+  padding: 1.25rem 1.5rem;
+  border-top: 1px solid var(--border);
+  background: var(--surface2);
+  flex-shrink: 0;
+}
+
+.sp-reset {
+  flex: 1;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-muted);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 10px;
+  cursor: pointer;
+  transition: all 0.13s;
+}
+.sp-reset:hover { border-color: var(--border-mid); color: var(--text); background: var(--border); }
+
+.sp-save {
+  flex: 2;
+  background: var(--blue);
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px;
+  cursor: pointer;
+  transition: background 0.15s;
+  box-shadow: 0 2px 8px rgba(37,99,235,0.25);
+}
+.sp-save:hover { background: var(--blue-mid); }
+
+.sp-changed { color: var(--blue) !important; }
+
+/* ── Export bar ── */
+.export-bar {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-bottom: 1.25rem;
+}
+
+.export-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 18px;
+  border-radius: 8px;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  border: 1px solid;
+}
+
+.export-btn.excel {
+  background: #16A34A;
+  border-color: #15803D;
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(22,163,74,0.25);
+}
+.export-btn.excel:hover { background: #15803D; }
+
+.export-btn.pdf {
+  background: #DC2626;
+  border-color: #B91C1C;
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(220,38,38,0.25);
+}
+.export-btn.pdf:hover { background: #B91C1C; }
 </style>
 </head>
 <body>
@@ -479,6 +722,27 @@ tr.tier-change td { border-top: 1px solid var(--blue-soft) !important; }
       <p class="wordmark">Aurum</p>
       <h1>Daily ROI Calculator</h1>
       <p class="subtitle">Enter your amount — your package is assigned automatically and upgrades as your balance grows</p>
+      <button class="settings-btn" onclick="openSettings()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Package settings
+      </button>
+    </div>
+  </div>
+
+  <div class="overlay" id="overlay" onclick="closeSettings()"></div>
+
+  <div class="settings-panel" id="settingsPanel">
+    <div class="sp-header">
+      <div>
+        <p class="sp-title">Package settings</p>
+        <p class="sp-sub">Adjust the daily interest rate for each package.<br>Monthly rate is calculated automatically.</p>
+      </div>
+      <button class="sp-close" onclick="closeSettings()">✕</button>
+    </div>
+    <div class="sp-body" id="spBody"></div>
+    <div class="sp-footer">
+      <button class="sp-reset" onclick="resetDefaults()">Reset to defaults</button>
+      <button class="sp-save" onclick="saveSettings()">Apply changes</button>
     </div>
   </div>
 
@@ -592,6 +856,17 @@ tr.tier-change td { border-top: 1px solid var(--blue-soft) !important; }
         </div>
       </div>
 
+      <div class="export-bar">
+        <button class="export-btn excel" onclick="exportExcel()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
+          Export to Excel
+        </button>
+        <button class="export-btn pdf" onclick="exportPDF()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Export to PDF
+        </button>
+      </div>
+
       <p class="disclaimer">
         <strong>Disclaimer:</strong> This calculator is for illustrative purposes only. Package tiers are determined by your running balance and upgrade automatically when a threshold is crossed. In compounding mode the balance used each day includes prior profits; in simple mode the principal stays fixed and profits are set aside. Daily returns include a randomised offset and will vary on each calculation. This is not financial advice.
       </p>
@@ -600,11 +875,14 @@ tr.tier-change td { border-top: 1px solid var(--blue-soft) !important; }
   </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
 <script>
 const PKGS = [
   { key:'basic',    label:'Basic',    min:100,   max:249.99,   daily:0.0035,            monthly:0.105  },
   { key:'standard', label:'Standard', min:250,   max:999.99,   daily:0.00379,           monthly:0.1137 },
-  { key:'comfort',  label:'Comfort',  min:1000,  max:2499.99,  daily:0.004166666666667, monthly:0.125  },
+  { key:'comfort',  label:'Comfort',  min:1000,  max:2499.99,  daily:0.004083333333333, monthly:0.1225 },
   { key:'optimal',  label:'Optimal',  min:2500,  max:4999.99,  daily:0.004373333333333, monthly:0.1312 },
   { key:'business', label:'Business', min:5000,  max:9999.99,  daily:0.004666666666667, monthly:0.14   },
   { key:'vip',      label:'VIP',      min:10000, max:24999.99, daily:0.00496,           monthly:0.1488 },
@@ -856,8 +1134,307 @@ function setView(view) {
   });
 }
 
+/* ─────────────────────────────────────────
+   Package settings panel
+───────────────────────────────────────── */
+const PKG_DEFAULTS = PKGS.map(p => ({ ...p }));
+
+// Restore any previously saved rates from localStorage
+(function loadSavedRates() {
+  try {
+    const saved = localStorage.getItem('aurum_pkg_rates');
+    if (!saved) return;
+    const rates = JSON.parse(saved);
+    rates.forEach((r, i) => {
+      if (PKGS[i] && typeof r.daily === 'number' && typeof r.monthly === 'number') {
+        PKGS[i].daily   = r.daily;
+        PKGS[i].monthly = r.monthly;
+      }
+    });
+  } catch(e) {}
+})();
+
 onAmountInput();
 onCompoundToggle();
+
+function openSettings() {
+  buildSettingsRows();
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('settingsPanel').classList.add('open');
+}
+
+function closeSettings() {
+  document.getElementById('overlay').classList.remove('open');
+  document.getElementById('settingsPanel').classList.remove('open');
+}
+
+function buildSettingsRows() {
+  const body = document.getElementById('spBody');
+  body.innerHTML = '';
+
+  PKGS.forEach((pkg, i) => {
+    const def       = PKG_DEFAULTS[i];
+    const dailyPct  = +(pkg.daily * 100).toFixed(6);
+    const monthlyPct= +(pkg.monthly * 100).toFixed(4);
+    const isChanged = Math.abs(pkg.daily - def.daily) > 1e-10;
+
+    const row = document.createElement('div');
+    row.className = 'sp-pkg-row';
+    row.innerHTML = `
+      <div>
+        <p class="sp-pkg-name ${isChanged ? 'sp-changed' : ''}">${pkg.label}</p>
+        <p class="sp-pkg-range">$${pkg.min.toLocaleString()} – ${pkg.max >= 99999 ? '$99,999+' : '$'+pkg.max.toLocaleString()}</p>
+      </div>
+      <div class="sp-field">
+        <label>Daily %</label>
+        <div class="sp-input-wrap">
+          <input type="number" id="sp-daily-${i}" value="${dailyPct}" min="0" max="5" step="0.0001"
+            oninput="onSpDailyInput(${i})">
+          <span class="sp-unit">%</span>
+        </div>
+      </div>
+      <div class="sp-field">
+        <label>Monthly %</label>
+        <div class="sp-input-wrap">
+          <input type="number" id="sp-monthly-${i}" value="${monthlyPct}" min="0" max="100" step="0.01"
+            oninput="onSpMonthlyInput(${i})">
+          <span class="sp-unit">%</span>
+        </div>
+      </div>
+    `;
+    body.appendChild(row);
+  });
+}
+
+function onSpDailyInput(i) {
+  const dailyVal   = parseFloat(document.getElementById(`sp-daily-${i}`).value) || 0;
+  const monthlyFld = document.getElementById(`sp-monthly-${i}`);
+  // auto-calculate monthly from daily: (1+d)^30 - 1
+  const monthly = (Math.pow(1 + dailyVal / 100, 30) - 1) * 100;
+  monthlyFld.value = monthly.toFixed(4);
+}
+
+function onSpMonthlyInput(i) {
+  const monthlyVal = parseFloat(document.getElementById(`sp-monthly-${i}`).value) || 0;
+  const dailyFld   = document.getElementById(`sp-daily-${i}`);
+  // back-calculate daily from monthly: (1+m)^(1/30) - 1
+  const daily = (Math.pow(1 + monthlyVal / 100, 1 / 30) - 1) * 100;
+  dailyFld.value = daily.toFixed(6);
+}
+
+function saveSettings() {
+  PKGS.forEach((pkg, i) => {
+    const d = parseFloat(document.getElementById(`sp-daily-${i}`).value);
+    const m = parseFloat(document.getElementById(`sp-monthly-${i}`).value);
+    if (!isNaN(d) && d >= 0) pkg.daily   = d / 100;
+    if (!isNaN(m) && m >= 0) pkg.monthly = m / 100;
+  });
+  // Persist to localStorage so rates survive page reloads
+  try {
+    localStorage.setItem('aurum_pkg_rates', JSON.stringify(
+      PKGS.map(p => ({ key: p.key, daily: p.daily, monthly: p.monthly }))
+    ));
+  } catch(e) {}
+  closeSettings();
+  onAmountInput();
+}
+
+function resetDefaults() {
+  PKG_DEFAULTS.forEach((def, i) => {
+    PKGS[i].daily   = def.daily;
+    PKGS[i].monthly = def.monthly;
+  });
+  // Clear persisted overrides
+  try { localStorage.removeItem('aurum_pkg_rates'); } catch(e) {}
+  buildSettingsRows();
+  onAmountInput();
+}
+
+/* ─────────────────────────────────────────
+   Export helpers
+───────────────────────────────────────── */
+function getExportMeta() {
+  const initial  = parseFloat(document.getElementById('amount').value);
+  const years    = parseFloat(document.getElementById('years').value) || 1;
+  const variance = parseFloat(document.getElementById('variance').value) || 0;
+  const compound = document.getElementById('compoundToggle').checked;
+  const numDays  = Math.round(years * 365);
+  const yLabel   = years === 1 ? '1 year' : years + ' years';
+  return { initial, years, numDays, variance, compound, yLabel };
+}
+
+function buildAllViewsData() {
+  const views = ['daily','weekly','monthly','quarterly','yearly'];
+  const out = {};
+  views.forEach(v => { out[v] = aggregate(allRows, v); });
+  return out;
+}
+
+/* ── Excel export ── */
+function exportExcel() {
+  if (!allRows.length) return alert('Run a calculation first.');
+  const meta   = getExportMeta();
+  const views  = buildAllViewsData();
+  const wb     = XLSX.utils.book_new();
+
+  // Summary sheet
+  const summaryData = [
+    ['Aurum ROI Projection Summary'],
+    [],
+    ['Starting amount',    fmt(meta.initial)],
+    ['Projection period',  meta.yLabel + ' (' + meta.numDays + ' days)'],
+    ['Compounding',        meta.compound ? 'Yes' : 'No (simple interest)'],
+    ['Daily variance',     meta.variance + '%'],
+    [],
+    ['Starting amount',    parseFloat(document.getElementById('m-start').textContent.replace(/[$,]/g,''))],
+    ['Total profit',       parseFloat(document.getElementById('m-profit').textContent.replace(/[$,]/g,''))],
+    ['Final balance',      parseFloat(document.getElementById('m-final').textContent.replace(/[$,]/g,''))],
+    ['Overall ROI (%)',    parseFloat(document.getElementById('m-roi').textContent)],
+    [],
+    ['Package rates used:'],
+    ['Package','Min ($)','Max ($)','Daily (%)','Monthly (%)'],
+    ...PKGS.map(p => [p.label, p.min, p.max, +(p.daily*100).toFixed(6), +(p.monthly*100).toFixed(4)])
+  ];
+  const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+  wsSummary['!cols'] = [{wch:22},{wch:18}];
+  XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary');
+
+  // One sheet per view
+  const VIEW_LABELS_MAP = { daily:'Daily', weekly:'Weekly', monthly:'Monthly', quarterly:'Quarterly', yearly:'Yearly' };
+  Object.entries(views).forEach(([view, buckets]) => {
+    const header = ['Period','Package','Starting Balance ($)','Profit ($)','Ending Balance ($)'];
+    const rows   = buckets.map(b => [
+      b.label, b.pkgLabel,
+      +b.start.toFixed(2), +b.profit.toFixed(2), +b.end.toFixed(2)
+    ]);
+    const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
+    ws['!cols'] = [{wch:14},{wch:12},{wch:22},{wch:16},{wch:22}];
+    XLSX.utils.book_append_sheet(wb, ws, VIEW_LABELS_MAP[view]);
+  });
+
+  const filename = `aurum-roi-${meta.yLabel.replace(' ','-')}-${Date.now()}.xlsx`;
+  XLSX.writeFile(wb, filename);
+}
+
+/* ── PDF export ── */
+function exportPDF() {
+  if (!allRows.length) return alert('Run a calculation first.');
+  const { jsPDF } = window.jspdf;
+  const doc  = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const meta = getExportMeta();
+  const blue = [37, 99, 235];
+  const W    = 210;
+
+  // Header band
+  doc.setFillColor(...blue);
+  doc.rect(0, 0, W, 28, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(18);
+  doc.setFont('helvetica', 'bold');
+  doc.text('AURUM', 14, 12);
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Daily ROI Projection Report', 14, 20);
+  doc.setFontSize(9);
+  doc.setTextColor(200, 220, 255);
+  doc.text('Generated ' + new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' }), W - 14, 20, { align: 'right' });
+
+  // Summary box
+  doc.setTextColor(15, 23, 42);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Projection Summary', 14, 38);
+
+  const summaryRows = [
+    ['Starting amount',    fmt(meta.initial)],
+    ['Period',             meta.yLabel + ' · ' + meta.numDays + ' days'],
+    ['Interest mode',      meta.compound ? 'Compounding' : 'Simple (no compounding)'],
+    ['Daily variance',     meta.variance + '%'],
+    ['Total profit',       document.getElementById('m-profit').textContent],
+    ['Final balance',      document.getElementById('m-final').textContent],
+    ['Overall ROI',        document.getElementById('m-roi').textContent],
+  ];
+
+  doc.autoTable({
+    startY: 41,
+    body: summaryRows,
+    theme: 'plain',
+    styles: { fontSize: 9, cellPadding: 2.5 },
+    columnStyles: {
+      0: { fontStyle: 'bold', textColor: [100,116,139], cellWidth: 50 },
+      1: { textColor: [15,23,42] }
+    },
+    margin: { left: 14, right: 14 }
+  });
+
+  // Package rates table
+  let y = doc.lastAutoTable.finalY + 8;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(15, 23, 42);
+  doc.text('Package Rates', 14, y);
+
+  doc.autoTable({
+    startY: y + 3,
+    head: [['Package', 'Min ($)', 'Max ($)', 'Daily (%)', 'Monthly (%)']],
+    body: PKGS.map(p => [
+      p.label,
+      p.min.toLocaleString('en-US'),
+      p.max >= 99999 ? '99,999+' : p.max.toLocaleString('en-US'),
+      (p.daily*100).toFixed(4) + '%',
+      (p.monthly*100).toFixed(2) + '%'
+    ]),
+    theme: 'striped',
+    headStyles: { fillColor: blue, textColor: 255, fontSize: 8, fontStyle: 'bold' },
+    bodyStyles: { fontSize: 8 },
+    columnStyles: {
+      0: { fontStyle: 'bold' },
+      3: { halign: 'right' },
+      4: { halign: 'right' }
+    },
+    margin: { left: 14, right: 14 }
+  });
+
+  // Breakdown table — use current view
+  y = doc.lastAutoTable.finalY + 8;
+  const viewBuckets = aggregate(allRows, curView);
+  const viewLabel   = { daily:'Daily', weekly:'Weekly', monthly:'Monthly', quarterly:'Quarterly', yearly:'Yearly' }[curView];
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.text(`Breakdown — ${viewLabel} view`, 14, y);
+
+  doc.autoTable({
+    startY: y + 3,
+    head: [['Period', 'Package', 'Starting Balance', 'Profit', 'Ending Balance']],
+    body: viewBuckets.map(b => [
+      b.label, b.pkgLabel,
+      fmt(b.start), '+' + fmt(b.profit), fmt(b.end)
+    ]),
+    theme: 'striped',
+    headStyles: { fillColor: blue, textColor: 255, fontSize: 8, fontStyle: 'bold' },
+    bodyStyles: { fontSize: 7.5 },
+    columnStyles: {
+      0: { cellWidth: 22 },
+      1: { cellWidth: 22 },
+      2: { halign: 'right' },
+      3: { halign: 'right', textColor: [22, 163, 74] },
+      4: { halign: 'right', fontStyle: 'bold', textColor: blue }
+    },
+    margin: { left: 14, right: 14 }
+  });
+
+  // Footer
+  const pageCount = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFontSize(7.5);
+    doc.setTextColor(148, 163, 184);
+    doc.text('Aurum ROI Calculator · For illustrative purposes only · Not financial advice', 14, 292);
+    doc.text(`Page ${i} of ${pageCount}`, W - 14, 292, { align: 'right' });
+  }
+
+  doc.save(`aurum-roi-${meta.yLabel.replace(' ','-')}-${Date.now()}.pdf`);
+}
 </script>
 </body>
 </html>
