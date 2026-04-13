@@ -1423,7 +1423,7 @@ function calculate() {
   }
 
   const finalBalance = allRows[allRows.length - 1].end;
-  const totalProfit  = finalBalance - initial;
+  const totalProfit  = allRows.reduce((sum, r) => sum + r.profit, 0);
   const roi          = (totalProfit / initial) * 100;
   const yLabel       = years === 1 ? '1 year' : years + ' years';
 
