@@ -830,6 +830,51 @@ tr.switch-day-row td { border-top: 1px solid #FDE68A !important; }
   box-shadow: 0 2px 6px rgba(220,38,38,0.25);
 }
 .export-btn.pdf:hover { background: #B91C1C; }
+
+/* ── Saved schedules ── */
+.saved-schedule-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  font-size: 12px;
+}
+
+.saved-schedule-name {
+  flex: 1;
+  font-weight: 500;
+  color: var(--text-mid);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.saved-schedule-meta {
+  font-size: 10px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.ss-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 9px;
+  cursor: pointer;
+  transition: all 0.13s;
+  white-space: nowrap;
+}
+
+.ss-btn.load  { color: var(--blue); border-color: var(--blue-soft); }
+.ss-btn.load:hover  { background: var(--blue-light); }
+.ss-btn.del   { color: #DC2626; border-color: #FECACA; }
+.ss-btn.del:hover   { background: #FEF2F2; }
 </style>
 </head>
 <body>
@@ -901,6 +946,19 @@ tr.switch-day-row td { border-top: 1px solid #FDE68A !important; }
           </div>
           <div id="switchList" style="display:flex; flex-direction:column; gap:6px;"></div>
           <p class="hint" id="switchHint">Add a switch to flip compounding on or off from a specific day onward.</p>
+
+          <!-- Save / recall -->
+          <div id="switchSaveWrap" style="margin-top:10px; display:none;">
+            <div style="display:flex; gap:6px; align-items:center;">
+              <input type="text" id="scheduleName" placeholder="Schedule name…" style="flex:1; font-size:12px; padding:6px 10px; border-radius:7px; border:1px solid var(--border); background:var(--surface2); color:var(--text); font-family:'Inter',sans-serif; outline:none;">
+              <button class="add-switch-btn" onclick="saveSchedule()" style="white-space:nowrap;">Save</button>
+            </div>
+          </div>
+
+          <div id="savedSchedulesWrap" style="display:none; margin-top:8px;">
+            <p style="font-size:10px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px;">Saved schedules</p>
+            <div id="savedSchedulesList" style="display:flex; flex-direction:column; gap:5px;"></div>
+          </div>
         </div>
       </div>
 
@@ -1114,24 +1172,24 @@ function renderSwitchList() {
   const hint    = document.getElementById('switchHint');
   const startOn = document.getElementById('compoundToggle').checked;
 
-  // Sort by day
   switches.sort((a, b) => a.day - b.day);
 
   list.innerHTML = '';
   hint.style.display = switches.length ? 'none' : '';
 
+  // Show/hide save wrap
+  document.getElementById('switchSaveWrap').style.display = switches.length ? '' : 'none';
+
   switches.forEach((sw, i) => {
     const row = document.createElement('div');
     row.className = 'switch-row';
 
-    // What the mode BEFORE this switch is
     const prevMode = i === 0
       ? (startOn ? 'on' : 'off')
       : switches[i - 1].mode;
 
-    const fromLabel = prevMode === 'on' ? '↑ Compound' : '→ Simple';
-    const toOnCls   = sw.mode === 'on'  ? 'mode-btn active-on'  : 'mode-btn';
-    const toOffCls  = sw.mode === 'off' ? 'mode-btn active-off' : 'mode-btn';
+    const toOnCls  = sw.mode === 'on'  ? 'mode-btn active-on'  : 'mode-btn';
+    const toOffCls = sw.mode === 'off' ? 'mode-btn active-off' : 'mode-btn';
 
     row.innerHTML = `
       <div class="switch-row-top">
@@ -1147,6 +1205,77 @@ function renderSwitchList() {
         </div>
         <button class="switch-remove" onclick="removeSwitch(${i})" title="Remove">✕</button>
       </div>
+    `;
+    list.appendChild(row);
+  });
+
+  renderSavedSchedules();
+}
+
+/* ── Schedule persistence ── */
+const SCHED_KEY = 'aurum_switch_schedules';
+
+function loadSchedulesFromStorage() {
+  try { return JSON.parse(localStorage.getItem(SCHED_KEY)) || []; }
+  catch(e) { return []; }
+}
+
+function saveSchedulesToStorage(schedules) {
+  try { localStorage.setItem(SCHED_KEY, JSON.stringify(schedules)); } catch(e) {}
+}
+
+function saveSchedule() {
+  const name = document.getElementById('scheduleName').value.trim();
+  if (!name) { document.getElementById('scheduleName').focus(); return; }
+  if (!switches.length) return;
+
+  const startOn   = document.getElementById('compoundToggle').checked;
+  const schedules = loadSchedulesFromStorage();
+  schedules.push({
+    id: Date.now(),
+    name,
+    startOn,
+    switches: switches.map(s => ({ ...s }))
+  });
+  saveSchedulesToStorage(schedules);
+  document.getElementById('scheduleName').value = '';
+  renderSavedSchedules();
+}
+
+function loadSchedule(id) {
+  const schedules = loadSchedulesFromStorage();
+  const sched = schedules.find(s => s.id === id);
+  if (!sched) return;
+
+  switches = sched.switches.map(s => ({ ...s }));
+  document.getElementById('compoundToggle').checked = sched.startOn;
+  onCompoundToggle();  // updates sublabel + re-renders list
+}
+
+function deleteSchedule(id) {
+  const schedules = loadSchedulesFromStorage().filter(s => s.id !== id);
+  saveSchedulesToStorage(schedules);
+  renderSavedSchedules();
+}
+
+function renderSavedSchedules() {
+  const schedules = loadSchedulesFromStorage();
+  const wrap = document.getElementById('savedSchedulesWrap');
+  const list = document.getElementById('savedSchedulesList');
+
+  if (!schedules.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = '';
+  list.innerHTML = '';
+
+  schedules.forEach(sched => {
+    const row = document.createElement('div');
+    row.className = 'saved-schedule-row';
+    const meta = `${sched.switches.length} switch${sched.switches.length !== 1 ? 'es' : ''} · starts ${sched.startOn ? '↑ compound' : '→ simple'}`;
+    row.innerHTML = `
+      <span class="saved-schedule-name" title="${sched.name}">${sched.name}</span>
+      <span class="saved-schedule-meta">${meta}</span>
+      <button class="ss-btn load" onclick="loadSchedule(${sched.id})">Load</button>
+      <button class="ss-btn del"  onclick="deleteSchedule(${sched.id})">✕</button>
     `;
     list.appendChild(row);
   });
@@ -1477,6 +1606,7 @@ const PKG_DEFAULTS = PKGS.map(p => ({ ...p }));
 onAmountInput();
 onCompoundToggle();
 renderSwitchList();
+renderSavedSchedules();
 
 function openSettings() {
   buildSettingsRows();
