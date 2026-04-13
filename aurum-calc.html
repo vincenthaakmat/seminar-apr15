@@ -292,7 +292,31 @@ input[type="number"]:focus {
   gap: 1rem;
 }
 
-@media (max-width: 600px) { .summary-banner { grid-template-columns: 1fr 1fr; } }
+.summary-banner.has-switches {
+  grid-template-columns: repeat(5, 1fr);
+}
+
+@media (max-width: 600px) {
+  .summary-banner,
+  .summary-banner.has-switches { grid-template-columns: 1fr 1fr; }
+}
+
+/* Switch indicator pill in table */
+.switch-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 7px;
+  border-radius: 20px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.switch-pill.on  { background: #DCFCE7; color: #15803D; border: 1px solid #BBF7D0; }
+.switch-pill.off { background: #FEF9C3; color: #A16207; border: 1px solid #FDE68A; }
 
 .metric { text-align: center; }
 
@@ -438,6 +462,8 @@ td.col-end { color: var(--blue); font-weight: 600; }
 
 tr.tier-change { background: var(--blue-light); }
 tr.tier-change td { border-top: 1px solid var(--blue-soft) !important; }
+tr.switch-day-row { background: #FFFBEB; }
+tr.switch-day-row td { border-top: 1px solid #FDE68A !important; }
 
 /* ── Mode badge ── */
 .mode-badge {
@@ -676,6 +702,97 @@ tr.tier-change td { border-top: 1px solid var(--blue-soft) !important; }
 
 .sp-changed { color: var(--blue) !important; }
 
+/* ── Compounding switch schedule ── */
+.add-switch-btn {
+  background: var(--blue);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 11px;
+  cursor: pointer;
+  transition: background 0.13s;
+  white-space: nowrap;
+}
+.add-switch-btn:hover { background: var(--blue-mid); }
+
+.switch-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.switch-row-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.switch-row-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.switch-row input[type="number"] {
+  font-size: 13px;
+  padding: 5px 10px;
+  height: auto;
+  width: 90px;
+  flex-shrink: 0;
+}
+
+.switch-row-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.switch-row-mode {
+  display: flex;
+  gap: 5px;
+  flex: 1;
+}
+
+.mode-btn {
+  padding: 4px 10px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  background: transparent;
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.13s;
+  color: var(--text-muted);
+}
+.mode-btn.active-on  { background: #DCFCE7; border-color: #86EFAC; color: #15803D; }
+.mode-btn.active-off { background: #FEF9C3; border-color: #FDE047; color: #A16207; }
+
+.switch-remove {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text-dim);
+  font-size: 13px;
+  width: 26px; height: 26px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.13s;
+  flex-shrink: 0;
+}
+.switch-remove:hover { border-color: #FCA5A5; color: #DC2626; background: #FEF2F2; }
+
 /* ── Export bar ── */
 .export-bar {
   display: flex;
@@ -766,14 +883,24 @@ tr.tier-change td { border-top: 1px solid var(--blue-soft) !important; }
         <div class="field">
           <div class="toggle-row">
             <div class="toggle-label-group">
-              <label>Compound interest</label>
-              <p class="toggle-sublabel" id="compound-sublabel">Profits re-invested — balance grows exponentially</p>
+              <label>Starting mode</label>
+              <p class="toggle-sublabel" id="compound-sublabel">Compounding on — profits re-invested daily</p>
             </div>
             <label class="toggle-switch">
               <input type="checkbox" id="compoundToggle" checked onchange="onCompoundToggle()">
               <span class="toggle-track"></span>
             </label>
           </div>
+        </div>
+
+        <!-- Switch schedule -->
+        <div class="field">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+            <label style="margin:0;">Compounding switches</label>
+            <button class="add-switch-btn" onclick="addSwitch()">+ Add switch</button>
+          </div>
+          <div id="switchList" style="display:flex; flex-direction:column; gap:6px;"></div>
+          <p class="hint" id="switchHint">Add a switch to flip compounding on or off from a specific day onward.</p>
         </div>
       </div>
 
@@ -799,7 +926,7 @@ tr.tier-change td { border-top: 1px solid var(--blue-soft) !important; }
 
     <div class="results" id="results">
 
-      <div class="summary-banner">
+      <div class="summary-banner" id="summaryBanner">
         <div class="metric">
           <p class="metric-label">Starting amount</p>
           <p class="metric-value" id="m-start">—</p>
@@ -817,10 +944,20 @@ tr.tier-change td { border-top: 1px solid var(--blue-soft) !important; }
           <p class="metric-value" id="m-roi">—</p>
           <p class="metric-sub" id="m-sub">—</p>
         </div>
+        <div class="metric" id="m-switches-card" style="display:none;">
+          <p class="metric-label">Compound switches</p>
+          <p class="metric-value" id="m-switches" style="font-size:18px;">—</p>
+          <p class="metric-sub" id="m-switches-sub">—</p>
+        </div>
       </div>
 
       <div class="section-box">
         <p class="section-title" id="chart-label">Portfolio growth</p>
+        <div id="chartLegend" style="display:none; gap:16px; margin-bottom:12px; font-size:11px; font-weight:500; color:var(--text-muted);">
+          <span style="display:flex;align-items:center;gap:5px;"><span style="width:24px;height:3px;background:#2563EB;border-radius:2px;display:inline-block;"></span>Compounding</span>
+          <span style="display:flex;align-items:center;gap:5px;"><span style="width:24px;height:3px;background:#D97706;border-radius:2px;display:inline-block;"></span>Simple</span>
+          <span style="display:flex;align-items:center;gap:5px;"><span style="width:8px;height:8px;border-radius:50%;background:#16A34A;display:inline-block;border:2px solid white;box-shadow:0 0 0 1px #16A34A;"></span>Switch point</span>
+        </div>
         <div class="chart-canvas-wrap">
           <canvas id="growthChart" role="img" aria-label="Line chart showing portfolio growth over the projection period"></canvas>
         </div>
@@ -939,8 +1076,80 @@ function onAmountInput() {
 function onCompoundToggle() {
   const on = document.getElementById('compoundToggle').checked;
   document.getElementById('compound-sublabel').textContent = on
-    ? 'Profits re-invested — balance grows exponentially'
-    : 'Profits set aside — principal stays fixed throughout';
+    ? 'Compounding on — profits re-invested daily'
+    : 'Compounding off — profits set aside, principal fixed';
+  renderSwitchList();
+}
+
+/* ── Switch schedule management ── */
+let switches = []; // [{day, mode: 'on'|'off'}]
+
+function addSwitch() {
+  const startOn  = document.getElementById('compoundToggle').checked;
+  // Suggest next logical mode (alternating from last)
+  const lastMode = switches.length ? switches[switches.length - 1].mode : (startOn ? 'on' : 'off');
+  const nextMode = lastMode === 'on' ? 'off' : 'on';
+  const lastDay  = switches.length ? switches[switches.length - 1].day : 1;
+  switches.push({ day: lastDay + 30, mode: nextMode });
+  renderSwitchList();
+}
+
+function removeSwitch(i) {
+  switches.splice(i, 1);
+  renderSwitchList();
+}
+
+function setSwitchMode(i, mode) {
+  switches[i].mode = mode;
+  renderSwitchList();
+}
+
+function setSwitchDay(i, val) {
+  const d = parseInt(val);
+  if (!isNaN(d) && d >= 1) switches[i].day = d;
+}
+
+function renderSwitchList() {
+  const list    = document.getElementById('switchList');
+  const hint    = document.getElementById('switchHint');
+  const startOn = document.getElementById('compoundToggle').checked;
+
+  // Sort by day
+  switches.sort((a, b) => a.day - b.day);
+
+  list.innerHTML = '';
+  hint.style.display = switches.length ? 'none' : '';
+
+  switches.forEach((sw, i) => {
+    const row = document.createElement('div');
+    row.className = 'switch-row';
+
+    // What the mode BEFORE this switch is
+    const prevMode = i === 0
+      ? (startOn ? 'on' : 'off')
+      : switches[i - 1].mode;
+
+    const fromLabel = prevMode === 'on' ? '↑ Compound' : '→ Simple';
+    const toOnCls   = sw.mode === 'on'  ? 'mode-btn active-on'  : 'mode-btn';
+    const toOffCls  = sw.mode === 'off' ? 'mode-btn active-off' : 'mode-btn';
+
+    row.innerHTML = `
+      <div class="switch-row-top">
+        <span class="switch-row-label">From day</span>
+        <input type="number" min="1" value="${sw.day}"
+          onchange="setSwitchDay(${i}, this.value); renderSwitchList()"
+          oninput="setSwitchDay(${i}, this.value)">
+      </div>
+      <div class="switch-row-bottom">
+        <div class="switch-row-mode">
+          <button class="${toOnCls}"  onclick="setSwitchMode(${i},'on')">↑ Compound</button>
+          <button class="${toOffCls}" onclick="setSwitchMode(${i},'off')">→ Simple</button>
+        </div>
+        <button class="switch-remove" onclick="removeSwitch(${i})" title="Remove">✕</button>
+      </div>
+    `;
+    list.appendChild(row);
+  });
 }
 
 let allRows   = [];
@@ -952,32 +1161,71 @@ function calculate() {
   const years    = Math.min(10, Math.max(0.0833, parseFloat(document.getElementById('years').value) || 1));
   const numDays  = Math.round(years * 365);
   const variance = Math.min(30, Math.max(0, parseFloat(document.getElementById('variance').value) || 0));
-  const compound = document.getElementById('compoundToggle').checked;
+  const startOn  = document.getElementById('compoundToggle').checked;
 
   if (!initial || initial < 100) return;
 
+  // Build switch map: day → mode ('on'|'off')
+  const switchMap = {};
+  switches.forEach(sw => { if (sw.day >= 1 && sw.day <= numDays) switchMap[sw.day] = sw.mode; });
+  const hasSwitches = Object.keys(switchMap).length > 0;
+
   allRows = [];
-  let balance    = initial;
-  let profitPool = 0;
+  let balance        = initial;
+  let profitPool     = 0;        // profits accumulated during current simple phase
+  let simplePrincipal = initial; // the balance locked in when switching to simple
+  let isCompound     = startOn;
+  let switchCount    = 0;
+  let compoundDays   = 0;
+  let simpleDays     = 0;
 
   for (let d = 1; d <= numDays; d++) {
-    const pkg    = getPkg(compound ? balance : initial);
-    const offset = rnd(variance);
-    let actualProfit;
+    const switched = switchMap[d] !== undefined;
+    if (switched) {
+      const newMode = switchMap[d] === 'on';
 
-    if (compound) {
-      actualProfit = balance * pkg.daily * offset;
-      const start  = balance;
-      balance     += actualProfit;
-      allRows.push({ day: d, pkgKey: pkg.key, pkgLabel: pkg.label, start, profit: actualProfit, end: balance });
-    } else {
-      actualProfit = initial * pkg.daily * offset;
-      profitPool  += actualProfit;
-      allRows.push({ day: d, pkgKey: pkg.key, pkgLabel: pkg.label, start: initial, profit: actualProfit, end: initial + profitPool });
+      if (!isCompound && newMode) {
+        // simple → compound: resume from the locked principal only
+        // profits earned during simple phase are assumed withdrawn
+        balance    = simplePrincipal;
+        profitPool = 0;
+      } else if (isCompound && !newMode) {
+        // compound → simple: lock in current balance as the new principal; profits start fresh
+        simplePrincipal = balance;
+        profitPool      = 0;
+      }
+
+      isCompound = newMode;
+      switchCount++;
     }
+
+    const pkg    = getPkg(isCompound ? balance : simplePrincipal);
+    const offset = rnd(variance);
+    let actualProfit, startBal, endBal;
+
+    if (isCompound) {
+      compoundDays++;
+      actualProfit = balance * pkg.daily * offset;
+      startBal     = balance;
+      balance     += actualProfit;
+      endBal       = balance;
+    } else {
+      simpleDays++;
+      actualProfit  = simplePrincipal * pkg.daily * offset;
+      profitPool   += actualProfit;
+      startBal      = simplePrincipal;
+      endBal        = simplePrincipal + profitPool;
+    }
+
+    allRows.push({
+      day: d,
+      pkgKey: pkg.key, pkgLabel: pkg.label,
+      start: startBal, profit: actualProfit, end: endBal,
+      isCompound, switched
+    });
   }
 
-  const finalBalance = compound ? balance : initial + profitPool;
+  const finalBalance = allRows[allRows.length - 1].end;
   const totalProfit  = finalBalance - initial;
   const roi          = (totalProfit / initial) * 100;
   const yLabel       = years === 1 ? '1 year' : years + ' years';
@@ -988,20 +1236,40 @@ function calculate() {
   document.getElementById('m-roi').textContent    = roi.toFixed(1) + '%';
   document.getElementById('m-sub').textContent    = `${yLabel} · ${numDays} days`;
   document.getElementById('chart-label').textContent =
-    `Portfolio growth · ${yLabel} · ${compound ? 'compounding' : 'simple'} · start ${fmt(initial)}`;
+    `Portfolio growth · ${yLabel} · start ${fmt(initial)}` +
+    (hasSwitches ? ` · ${switchCount} switch${switchCount !== 1 ? 'es' : ''}` : '');
 
   const badge = document.getElementById('mode-badge');
-  badge.className   = compound ? 'mode-badge compound' : 'mode-badge simple';
-  badge.textContent = compound ? 'Compounding' : 'Simple (no compounding)';
+  if (hasSwitches) {
+    badge.className   = 'mode-badge simple';
+    badge.textContent = `${switchCount} compounding switch${switchCount !== 1 ? 'es' : ''}`;
+  } else {
+    badge.className   = startOn ? 'mode-badge compound' : 'mode-badge simple';
+    badge.textContent = startOn ? 'Compounding' : 'Simple (no compounding)';
+  }
 
-  buildChart();
+  // Switches metric card
+  const switchCard = document.getElementById('m-switches-card');
+  const banner     = document.getElementById('summaryBanner');
+  if (hasSwitches) {
+    switchCard.style.display = '';
+    banner.classList.add('has-switches');
+    document.getElementById('m-switches').textContent = switchCount;
+    document.getElementById('m-switches-sub').textContent =
+      `${compoundDays}d compound · ${simpleDays}d simple`;
+  } else {
+    switchCard.style.display = 'none';
+    banner.classList.remove('has-switches');
+  }
+
+  buildChart(hasSwitches);
   setView(curView);
 
   document.getElementById('results').className = 'results visible';
   setTimeout(() => document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
 }
 
-function buildChart() {
+function buildChart(randomMode) {
   if (chartInst) { chartInst.destroy(); chartInst = null; }
 
   const maxPts = 120;
@@ -1014,18 +1282,33 @@ function buildChart() {
   grad.addColorStop(0, 'rgba(37,99,235,0.18)');
   grad.addColorStop(1, 'rgba(37,99,235,0.01)');
 
+  // Build per-point colors: green when compounding, amber when simple
+  const pointColors = pts.map(r => r.isCompound ? '#16A34A' : '#D97706');
+  const pointRadii  = pts.map(r => r.switched ? 5 : 0);
+
   chartInst = new Chart(ctx, {
     type: 'line',
     data: {
       labels: pts.map(r => 'Day ' + r.day),
       datasets: [{
         data: pts.map(r => +r.end.toFixed(2)),
-        borderColor: '#2563EB',
+        borderColor: randomMode
+          ? pts.map(r => r.isCompound ? '#2563EB' : '#D97706')
+          : '#2563EB',
         backgroundColor: grad,
         borderWidth: 2.5,
-        pointRadius: 0,
+        pointRadius: randomMode ? pointRadii : 0,
+        pointBackgroundColor: pointColors,
+        pointBorderColor: '#fff',
+        pointBorderWidth: 1.5,
         fill: true,
-        tension: 0.35
+        tension: 0.35,
+        segment: randomMode ? {
+          borderColor: ctx => {
+            const i = ctx.p0DataIndex;
+            return pts[i] && pts[i].isCompound ? '#2563EB' : '#D97706';
+          }
+        } : undefined
       }]
     },
     options: {
@@ -1038,7 +1321,11 @@ function buildChart() {
             label: c => fmt(c.parsed.y),
             afterLabel: c => {
               const ri = Math.min(Math.round(c.dataIndex * step), allRows.length - 1);
-              return 'Package: ' + allRows[ri].pkgLabel;
+              const r  = allRows[ri];
+              const lines = ['Package: ' + r.pkgLabel];
+              if (randomMode) lines.push('Mode: ' + (r.isCompound ? '⬆ Compounding' : '➡ Simple'));
+              if (r.switched) lines.push('⚡ Switch day!');
+              return lines;
             }
           },
           backgroundColor: '#0F172A',
@@ -1068,6 +1355,14 @@ function buildChart() {
       }
     }
   });
+
+  // Chart legend for random mode
+  const legendEl = document.getElementById('chartLegend');
+  if (randomMode) {
+    legendEl.style.display = 'flex';
+  } else {
+    legendEl.style.display = 'none';
+  }
 }
 
 const VIEW_SIZE   = { daily:1, weekly:7, monthly:30, quarterly:91, yearly:365 };
@@ -1078,7 +1373,8 @@ function aggregate(rows, view) {
     return rows.map(r => ({
       label: 'Day ' + r.day,
       pkgKey: r.pkgKey, pkgLabel: r.pkgLabel,
-      start: r.start, profit: r.profit, end: r.end
+      start: r.start, profit: r.profit, end: r.end,
+      isCompound: r.isCompound, switched: r.switched
     }));
   }
 
@@ -1091,6 +1387,8 @@ function aggregate(rows, view) {
     const start  = chunk[0].start;
     const end    = chunk[chunk.length - 1].end;
     const profit = chunk.reduce((s, r) => s + r.profit, 0);
+    const hasSwitches = chunk.some(r => r.switched);
+    const compoundDays = chunk.filter(r => r.isCompound).length;
 
     const counts = {};
     chunk.forEach(r => { counts[r.pkgKey] = (counts[r.pkgKey] || 0) + 1; });
@@ -1098,7 +1396,13 @@ function aggregate(rows, view) {
     const pkg    = PKGS.find(p => p.key === topKey);
 
     const prefix = view === 'quarterly' ? 'Q' : VIEW_LABELS[view] + ' ';
-    buckets.push({ label: prefix + num, pkgKey: pkg.key, pkgLabel: pkg.label, start, profit, end });
+    buckets.push({
+      label: prefix + num,
+      pkgKey: pkg.key, pkgLabel: pkg.label,
+      start, profit, end,
+      switched: hasSwitches,
+      isCompound: compoundDays > chunk.length / 2  // dominant mode
+    });
     num++;
   }
 
@@ -1116,14 +1420,30 @@ function setView(view) {
   const tbody     = document.getElementById('tableBody');
   tbody.innerHTML = '';
   let prevPkgKey  = null;
+  const hasSwitches = switches.length > 0;
 
   buckets.forEach(b => {
     const tierChanged = prevPkgKey && b.pkgKey !== prevPkgKey;
     const tr = document.createElement('tr');
-    if (tierChanged) tr.className = 'tier-change';
+    const classes = [];
+    if (tierChanged) classes.push('tier-change');
+    if (b.switched) classes.push('switch-day-row');
+    if (classes.length) tr.className = classes.join(' ');
+
+    let modePill = '';
+    if (hasSwitches) {
+      if (b.isCompound !== undefined) {
+        modePill = b.isCompound
+          ? '<span class="switch-pill on">↑ C</span>'
+          : '<span class="switch-pill off">→ S</span>';
+      }
+      if (b.switched) {
+        modePill += '<span class="switch-pill" style="background:#EFF6FF;color:#2563EB;border-color:#BFDBFE;">⚡</span>';
+      }
+    }
 
     tr.innerHTML =
-      `<td>${b.label}</td>` +
+      `<td>${b.label}${modePill}</td>` +
       `<td><span class="pkg-pill">${b.pkgLabel}</span></td>` +
       `<td class="col-start">${fmt(b.start)}</td>` +
       `<td class="col-profit">+${fmt(b.profit)}</td>` +
@@ -1156,6 +1476,7 @@ const PKG_DEFAULTS = PKGS.map(p => ({ ...p }));
 
 onAmountInput();
 onCompoundToggle();
+renderSwitchList();
 
 function openSettings() {
   buildSettingsRows();
