@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aurum ROI Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* ── Aurum brand blue (from screenshot) ── */
+  --blue:       #2563EB;   /* primary cobalt blue */
+  --blue-mid:   #1D4ED8;   /* deeper blue for hover/depth */
+  --blue-light: #EFF6FF;   /* pale blue tint for surfaces */
+  --blue-soft:  #DBEAFE;   /* subtle blue border/bg */
+
+  /* ── Neutral light palette — frost blue ── */
+  --bg:         #D8E8F7;   /* overall page: cool blue wash */
+  --white:      #C8DCF2;   /* cards: frost blue */
+  --surface:    #C8DCF2;
+  --surface2:   #BBCFE8;   /* table header / input bg */
+
+  /* ── Borders ── */
+  --border:     #A3BDD9;   /* blue-tinted border */
+  --border-mid: #8AAECF;
+
+  /* ── Text ── */
+  --text:       #0F172A;   /* near-black */
+  --text-mid:   #334155;
+  --text-muted: #64748B;
+  --text-dim:   #94A3B8;
+
+  /* ── Semantic ── */
+  --green:      #10B981;
+  --green-bg:   #ECFDF5;
+}
+
+body {
+  font-family: 'Inter', -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding: 0 0 5rem;
+}
+
+.shell { max-width: 1000px; margin: 0 auto; padding: 0 1.25rem; }
+
+/* ── Hero banner ── */
+.hero {
+  background: var(--blue);
+  padding: 3.5rem 1.25rem 3rem;
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.hero-inner { max-width: 1000px; margin: 0 auto; }
+
+.wordmark {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.55);
+  margin-bottom: 1rem;
+}
+
+h1 {
+  font-size: clamp(26px, 4.5vw, 40px);
+  font-weight: 700;
+  color: #FFFFFF;
+  line-height: 1.18;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.75rem;
+}
+
+.subtitle {
+  font-size: 15px;
+  color: rgba(255,255,255,0.7);
+  max-width: 500px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+/* ── Cards ── */
+.input-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+@media (max-width: 580px) { .input-row { grid-template-columns: 1fr; } }
+
+.card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(15,23,42,0.06);
+}
+
+.card-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--blue);
+  margin-bottom: 1.25rem;
+}
+
+.field { margin-bottom: 1.1rem; }
+.field:last-child { margin-bottom: 0; }
+
+label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-mid);
+  margin-bottom: 5px;
+}
+
+/* ── Inputs ── */
+input[type="number"] {
+  width: 100%;
+  background: #BBCFE8;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  padding: 10px 14px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  -moz-appearance: textfield;
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+input[type="number"]:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+  background: #FFFFFF;
+}
+
+/* ── Package info block ── */
+.pkg-info {
+  margin-top: 10px;
+  padding: 11px 14px;
+  background: var(--blue-light);
+  border: 1px solid var(--blue-soft);
+  border-radius: 10px;
+}
+
+.pkg-info.warn {
+  background: #FEF2F2;
+  border-color: #FECACA;
+}
+
+.pkg-info-name {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--blue);
+  margin-bottom: 3px;
+}
+
+.pkg-info-name .dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--blue);
+  flex-shrink: 0;
+}
+
+.pkg-info.warn .pkg-info-name { color: #DC2626; }
+.pkg-info.warn .dot { background: #DC2626; }
+
+.pkg-info-rates {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-mid);
+  margin-bottom: 2px;
+}
+
+.pkg-info-range {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.pkg-info-range span { color: var(--blue-mid); font-weight: 500; }
+
+/* ── Toggle switch ── */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 1.1rem;
+}
+
+.toggle-label-group { flex: 1; }
+.toggle-label-group label { margin-bottom: 2px; }
+
+.toggle-sublabel {
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+.toggle-switch {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+
+.toggle-track {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  background: var(--border-mid);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.toggle-switch input:checked + .toggle-track { background: var(--blue); }
+
+.toggle-track::after {
+  content: '';
+  position: absolute;
+  top: 3px; left: 3px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  transition: transform 0.2s;
+}
+
+.toggle-switch input:checked + .toggle-track::after {
+  transform: translateX(20px);
+}
+
+/* ── Hint ── */
+.hint {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+/* ── Button ── */
+.btn {
+  width: 100%;
+  background: var(--blue);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  padding: 14px;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 8px rgba(37,99,235,0.25);
+}
+
+.btn:hover { background: var(--blue-mid); box-shadow: 0 4px 12px rgba(37,99,235,0.35); }
+.btn:active { transform: scale(0.99); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+
+/* ── Results ── */
+.results { display: none; }
+.results.visible { display: block; }
+
+/* ── Summary banner (blue) ── */
+.summary-banner {
+  background: var(--blue);
+  border-radius: 14px;
+  padding: 1.75rem 1.5rem;
+  margin-bottom: 1.25rem;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+}
+
+@media (max-width: 600px) { .summary-banner { grid-template-columns: 1fr 1fr; } }
+
+.metric { text-align: center; }
+
+.metric-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.55);
+  margin-bottom: 6px;
+}
+
+.metric-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.metric-value.profit { color: #6EE7B7; }
+
+.metric-sub { font-size: 11px; color: rgba(255,255,255,0.45); margin-top: 3px; }
+
+/* ── Section box ── */
+.section-box {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1.5rem;
+  margin-bottom: 1.25rem;
+  box-shadow: 0 1px 3px rgba(15,23,42,0.05);
+}
+
+.section-title {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--blue);
+  margin-bottom: 1.25rem;
+}
+
+.chart-canvas-wrap { position: relative; width: 100%; height: 270px; }
+
+/* ── Table ── */
+.table-wrap {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  margin-bottom: 1.25rem;
+  box-shadow: 0 1px 3px rgba(15,23,42,0.05);
+}
+
+.table-header {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  background: var(--surface2);
+}
+
+.filter-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+
+.filter-tab {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 11px;
+  cursor: pointer;
+  transition: all 0.13s;
+}
+
+.filter-tab:hover { border-color: var(--blue); color: var(--blue); }
+
+.filter-tab.active {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: #fff;
+}
+
+.table-scroll { overflow-y: auto; max-height: 440px; }
+
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+
+thead th {
+  background: var(--surface2);
+  padding: 9px 14px;
+  text-align: right;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--border);
+}
+
+thead th:first-child,
+thead th:nth-child(2) { text-align: left; }
+
+tbody tr { border-bottom: 1px solid var(--border); }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: var(--blue-light); }
+
+tbody td {
+  padding: 9px 14px;
+  text-align: right;
+  color: var(--text-mid);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+tbody td:first-child { text-align: left; color: var(--text-muted); font-size: 12px; }
+tbody td:nth-child(2) { text-align: left; }
+
+.pkg-pill {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  background: var(--blue-light);
+  color: var(--blue);
+  border: 1px solid var(--blue-soft);
+}
+
+td.col-start { color: var(--text); font-weight: 500; }
+td.col-profit { color: var(--green); font-weight: 500; }
+td.col-end { color: var(--blue); font-weight: 600; }
+
+tr.tier-change { background: var(--blue-light); }
+tr.tier-change td { border-top: 1px solid var(--blue-soft) !important; }
+
+/* ── Mode badge ── */
+.mode-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border: 1px solid;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+.mode-badge.compound { background: var(--green-bg); border-color: #A7F3D0; color: #065F46; }
+.mode-badge.simple   { background: var(--blue-light); border-color: var(--blue-soft); color: var(--blue); }
+
+/* ── Disclaimer ── */
+.disclaimer {
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.8;
+  background: var(--white);
+}
+
+.disclaimer strong { color: var(--text-muted); font-weight: 600; }
+</style>
+</head>
+<body>
+
+  <div class="hero">
+    <div class="hero-inner">
+      <p class="wordmark">Aurum</p>
+      <h1>Daily ROI Calculator</h1>
+      <p class="subtitle">Enter your amount — your package is assigned automatically and upgrades as your balance grows</p>
+    </div>
+  </div>
+
+  <div class="shell">
+
+    <div class="input-row">
+
+      <div class="card">
+        <p class="card-label">Your Investment</p>
+
+        <div class="field">
+          <label for="amount">Starting amount ($)</label>
+          <input type="number" id="amount" value="7700" min="100" step="100" oninput="onAmountInput()">
+          <div id="pkg-info" class="pkg-info">
+            <div class="pkg-info-name"><span class="dot"></span><span id="pkg-name">Business</span></div>
+            <div class="pkg-info-rates" id="pkg-rates">0.4667%/day · 14.00%/month</div>
+            <div class="pkg-info-range" id="pkg-range">Qualifies for balances from <span>$5,000</span> to <span>$9,999.99</span></div>
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="toggle-row">
+            <div class="toggle-label-group">
+              <label>Compound interest</label>
+              <p class="toggle-sublabel" id="compound-sublabel">Profits re-invested — balance grows exponentially</p>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="compoundToggle" checked onchange="onCompoundToggle()">
+              <span class="toggle-track"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="card-label">Projection Settings</p>
+
+        <div class="field">
+          <label for="years">Projection period (years)</label>
+          <input type="number" id="years" value="1" min="0.25" max="10" step="0.25">
+          <p class="hint">E.g. 1 = 365 days · 2 = 730 days · 5 = 1,825 days. Decimals allowed (0.5 = 6 months).</p>
+        </div>
+
+        <div class="field">
+          <label for="variance">Daily variance / offset (%)</label>
+          <input type="number" id="variance" value="10" min="0" max="30" step="1">
+          <p class="hint">Randomises the daily rate slightly to reflect real-world conditions. Set to 0 for a flat projection.</p>
+        </div>
+      </div>
+
+    </div>
+
+    <button class="btn" id="calcBtn" onclick="calculate()">Calculate projection</button>
+
+    <div class="results" id="results">
+
+      <div class="summary-banner">
+        <div class="metric">
+          <p class="metric-label">Starting amount</p>
+          <p class="metric-value" id="m-start">—</p>
+        </div>
+        <div class="metric">
+          <p class="metric-label">Total profit</p>
+          <p class="metric-value profit" id="m-profit">—</p>
+        </div>
+        <div class="metric">
+          <p class="metric-label">Final balance</p>
+          <p class="metric-value" id="m-final">—</p>
+        </div>
+        <div class="metric">
+          <p class="metric-label">Overall ROI</p>
+          <p class="metric-value" id="m-roi">—</p>
+          <p class="metric-sub" id="m-sub">—</p>
+        </div>
+      </div>
+
+      <div class="section-box">
+        <p class="section-title" id="chart-label">Portfolio growth</p>
+        <div class="chart-canvas-wrap">
+          <canvas id="growthChart" role="img" aria-label="Line chart showing portfolio growth over the projection period"></canvas>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <div class="table-header">
+          <p class="section-title" style="margin:0">
+            Breakdown
+            <span class="mode-badge compound" id="mode-badge">Compounding</span>
+          </p>
+          <div class="filter-tabs">
+            <button class="filter-tab active" data-v="daily"     onclick="setView('daily')">Daily</button>
+            <button class="filter-tab"        data-v="weekly"    onclick="setView('weekly')">Weekly</button>
+            <button class="filter-tab"        data-v="monthly"   onclick="setView('monthly')">Monthly</button>
+            <button class="filter-tab"        data-v="quarterly" onclick="setView('quarterly')">Quarterly</button>
+            <button class="filter-tab"        data-v="yearly"    onclick="setView('yearly')">Yearly</button>
+          </div>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th id="th-period" style="text-align:left">Period</th>
+                <th style="text-align:left">Package</th>
+                <th>Starting balance</th>
+                <th>Profit</th>
+                <th>Ending balance</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <p class="disclaimer">
+        <strong>Disclaimer:</strong> This calculator is for illustrative purposes only. Package tiers are determined by your running balance and upgrade automatically when a threshold is crossed. In compounding mode the balance used each day includes prior profits; in simple mode the principal stays fixed and profits are set aside. Daily returns include a randomised offset and will vary on each calculation. This is not financial advice.
+      </p>
+
+    </div>
+  </div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const PKGS = [
+  { key:'basic',    label:'Basic',    min:100,   max:249.99,   daily:0.0035,            monthly:0.105  },
+  { key:'standard', label:'Standard', min:250,   max:999.99,   daily:0.00379,           monthly:0.1137 },
+  { key:'comfort',  label:'Comfort',  min:1000,  max:2499.99,  daily:0.004166666666667, monthly:0.125  },
+  { key:'optimal',  label:'Optimal',  min:2500,  max:4999.99,  daily:0.004373333333333, monthly:0.1312 },
+  { key:'business', label:'Business', min:5000,  max:9999.99,  daily:0.004666666666667, monthly:0.14   },
+  { key:'vip',      label:'VIP',      min:10000, max:24999.99, daily:0.00496,           monthly:0.1488 },
+  { key:'luxury',   label:'Luxury',   min:25000, max:49999.99, daily:0.00525,           monthly:0.1575 },
+  { key:'ultimate', label:'Ultimate', min:50000, max:99999,    daily:0.00554,           monthly:0.1662 }
+];
+
+function getPkg(balance) {
+  for (let i = PKGS.length - 1; i >= 0; i--) {
+    if (balance >= PKGS[i].min) return PKGS[i];
+  }
+  return PKGS[0];
+}
+
+function fmt(n) {
+  return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function fmtRange(min, max) {
+  return {
+    lo: '$' + min.toLocaleString('en-US'),
+    hi: max >= 99999 ? '$99,999+' : '$' + max.toLocaleString('en-US')
+  };
+}
+
+function rnd(variance) {
+  const f = variance / 100;
+  return 1 - f + Math.random() * f * 2;
+}
+
+function onAmountInput() {
+  const val  = parseFloat(document.getElementById('amount').value);
+  const info = document.getElementById('pkg-info');
+  const btn  = document.getElementById('calcBtn');
+
+  if (!val || val < 100) {
+    info.className = 'pkg-info warn';
+    document.getElementById('pkg-name').textContent  = 'Minimum $100 required';
+    document.getElementById('pkg-rates').textContent = '';
+    document.getElementById('pkg-range').innerHTML   = '';
+    btn.disabled = true;
+    return;
+  }
+
+  btn.disabled = false;
+  const p = getPkg(val);
+  const r = fmtRange(p.min, p.max);
+  info.className = 'pkg-info';
+  document.getElementById('pkg-name').textContent  = p.label;
+  document.getElementById('pkg-rates').textContent = `${(p.daily*100).toFixed(4)}%/day · ${(p.monthly*100).toFixed(2)}%/month`;
+  document.getElementById('pkg-range').innerHTML   = `Qualifies for balances from <span>${r.lo}</span> to <span>${r.hi}</span>`;
+}
+
+function onCompoundToggle() {
+  const on = document.getElementById('compoundToggle').checked;
+  document.getElementById('compound-sublabel').textContent = on
+    ? 'Profits re-invested — balance grows exponentially'
+    : 'Profits set aside — principal stays fixed throughout';
+}
+
+let allRows   = [];
+let chartInst = null;
+let curView   = 'daily';
+
+function calculate() {
+  const initial  = parseFloat(document.getElementById('amount').value);
+  const years    = Math.min(10, Math.max(0.0833, parseFloat(document.getElementById('years').value) || 1));
+  const numDays  = Math.round(years * 365);
+  const variance = Math.min(30, Math.max(0, parseFloat(document.getElementById('variance').value) || 0));
+  const compound = document.getElementById('compoundToggle').checked;
+
+  if (!initial || initial < 100) return;
+
+  allRows = [];
+  let balance    = initial;
+  let profitPool = 0;
+
+  for (let d = 1; d <= numDays; d++) {
+    const pkg    = getPkg(compound ? balance : initial);
+    const offset = rnd(variance);
+    let actualProfit;
+
+    if (compound) {
+      actualProfit = balance * pkg.daily * offset;
+      const start  = balance;
+      balance     += actualProfit;
+      allRows.push({ day: d, pkgKey: pkg.key, pkgLabel: pkg.label, start, profit: actualProfit, end: balance });
+    } else {
+      actualProfit = initial * pkg.daily * offset;
+      profitPool  += actualProfit;
+      allRows.push({ day: d, pkgKey: pkg.key, pkgLabel: pkg.label, start: initial, profit: actualProfit, end: initial + profitPool });
+    }
+  }
+
+  const finalBalance = compound ? balance : initial + profitPool;
+  const totalProfit  = finalBalance - initial;
+  const roi          = (totalProfit / initial) * 100;
+  const yLabel       = years === 1 ? '1 year' : years + ' years';
+
+  document.getElementById('m-start').textContent  = fmt(initial);
+  document.getElementById('m-profit').textContent = fmt(totalProfit);
+  document.getElementById('m-final').textContent  = fmt(finalBalance);
+  document.getElementById('m-roi').textContent    = roi.toFixed(1) + '%';
+  document.getElementById('m-sub').textContent    = `${yLabel} · ${numDays} days`;
+  document.getElementById('chart-label').textContent =
+    `Portfolio growth · ${yLabel} · ${compound ? 'compounding' : 'simple'} · start ${fmt(initial)}`;
+
+  const badge = document.getElementById('mode-badge');
+  badge.className   = compound ? 'mode-badge compound' : 'mode-badge simple';
+  badge.textContent = compound ? 'Compounding' : 'Simple (no compounding)';
+
+  buildChart();
+  setView(curView);
+
+  document.getElementById('results').className = 'results visible';
+  setTimeout(() => document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+}
+
+function buildChart() {
+  if (chartInst) { chartInst.destroy(); chartInst = null; }
+
+  const maxPts = 120;
+  const step   = Math.max(1, Math.floor(allRows.length / maxPts));
+  const pts    = allRows.filter((_, i) => i % step === 0 || i === allRows.length - 1);
+
+  const ctx = document.getElementById('growthChart').getContext('2d');
+
+  const grad = ctx.createLinearGradient(0, 0, 0, 270);
+  grad.addColorStop(0, 'rgba(37,99,235,0.18)');
+  grad.addColorStop(1, 'rgba(37,99,235,0.01)');
+
+  chartInst = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: pts.map(r => 'Day ' + r.day),
+      datasets: [{
+        data: pts.map(r => +r.end.toFixed(2)),
+        borderColor: '#2563EB',
+        backgroundColor: grad,
+        borderWidth: 2.5,
+        pointRadius: 0,
+        fill: true,
+        tension: 0.35
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: c => fmt(c.parsed.y),
+            afterLabel: c => {
+              const ri = Math.min(Math.round(c.dataIndex * step), allRows.length - 1);
+              return 'Package: ' + allRows[ri].pkgLabel;
+            }
+          },
+          backgroundColor: '#0F172A',
+          borderColor: '#334155',
+          borderWidth: 1,
+          titleColor: '#94A3B8',
+          bodyColor: '#FFFFFF',
+          padding: 10,
+          cornerRadius: 8
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: '#F1F5F9' },
+          ticks: { color: '#94A3B8', font: { size: 11, family: 'Inter' }, maxTicksLimit: 8 }
+        },
+        y: {
+          grid: { color: '#F1F5F9' },
+          ticks: {
+            color: '#94A3B8',
+            font: { size: 11, family: 'Inter' },
+            callback: v => v >= 1e6 ? '$'+(v/1e6).toFixed(1)+'M'
+                        : v >= 1000 ? '$'+(v/1000).toFixed(0)+'k'
+                        : '$'+v.toFixed(0)
+          }
+        }
+      }
+    }
+  });
+}
+
+const VIEW_SIZE   = { daily:1, weekly:7, monthly:30, quarterly:91, yearly:365 };
+const VIEW_LABELS = { daily:'Day', weekly:'Week', monthly:'Month', quarterly:'Quarter', yearly:'Year' };
+
+function aggregate(rows, view) {
+  if (view === 'daily') {
+    return rows.map(r => ({
+      label: 'Day ' + r.day,
+      pkgKey: r.pkgKey, pkgLabel: r.pkgLabel,
+      start: r.start, profit: r.profit, end: r.end
+    }));
+  }
+
+  const size    = VIEW_SIZE[view];
+  const buckets = [];
+  let num = 1;
+
+  for (let i = 0; i < rows.length; i += size) {
+    const chunk  = rows.slice(i, i + size);
+    const start  = chunk[0].start;
+    const end    = chunk[chunk.length - 1].end;
+    const profit = chunk.reduce((s, r) => s + r.profit, 0);
+
+    const counts = {};
+    chunk.forEach(r => { counts[r.pkgKey] = (counts[r.pkgKey] || 0) + 1; });
+    const topKey = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+    const pkg    = PKGS.find(p => p.key === topKey);
+
+    const prefix = view === 'quarterly' ? 'Q' : VIEW_LABELS[view] + ' ';
+    buckets.push({ label: prefix + num, pkgKey: pkg.key, pkgLabel: pkg.label, start, profit, end });
+    num++;
+  }
+
+  return buckets;
+}
+
+function setView(view) {
+  curView = view;
+  document.querySelectorAll('.filter-tab').forEach(t =>
+    t.classList.toggle('active', t.dataset.v === view)
+  );
+  document.getElementById('th-period').textContent = VIEW_LABELS[view];
+
+  const buckets   = aggregate(allRows, view);
+  const tbody     = document.getElementById('tableBody');
+  tbody.innerHTML = '';
+  let prevPkgKey  = null;
+
+  buckets.forEach(b => {
+    const tierChanged = prevPkgKey && b.pkgKey !== prevPkgKey;
+    const tr = document.createElement('tr');
+    if (tierChanged) tr.className = 'tier-change';
+
+    tr.innerHTML =
+      `<td>${b.label}</td>` +
+      `<td><span class="pkg-pill">${b.pkgLabel}</span></td>` +
+      `<td class="col-start">${fmt(b.start)}</td>` +
+      `<td class="col-profit">+${fmt(b.profit)}</td>` +
+      `<td class="col-end">${fmt(b.end)}</td>`;
+
+    tbody.appendChild(tr);
+    prevPkgKey = b.pkgKey;
+  });
+}
+
+onAmountInput();
+onCompoundToggle();
+</script>
+</body>
+</html>
