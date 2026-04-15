@@ -16,7 +16,7 @@
   --secondary: #06b6d4;
   --tertiary: #8b5cf6;
 
-  --bg: #eef3ff;
+  --bg: #dde6f7;
   --bg-accent: #e6eefc;
   --surface: rgba(255,255,255,0.72);
   --surface-solid: #f7f9ff;
@@ -319,21 +319,28 @@ input[type="number"]:focus {
   position: absolute;
   inset: 0;
   border-radius: 12px;
-  background: var(--border-mid);
+  background: #94A3B8;
+  border: 1px solid #7C8EA5;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+  box-shadow: inset 0 1px 2px rgba(15,23,42,0.10);
 }
 
-.toggle-switch input:checked + .toggle-track { background: var(--blue); }
+.toggle-switch input:checked + .toggle-track {
+  background: #2563EB;
+  border-color: #1D4ED8;
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.16);
+}
 
 .toggle-track::after {
   content: '';
   position: absolute;
-  top: 3px; left: 3px;
+  top: 2px; left: 2px;
   width: 18px; height: 18px;
   border-radius: 50%;
-  background: white;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  background: #FFFFFF;
+  border: 1px solid rgba(15,23,42,0.08);
+  box-shadow: 0 2px 6px rgba(15,23,42,0.22);
   transition: transform 0.2s;
 }
 
@@ -551,6 +558,7 @@ tbody td:nth-child(2) { text-align: left; }
 
 td.col-start { color: var(--text); font-weight: 500; }
 td.col-rate  { color: var(--text-muted); font-size: 12px; }
+td.col-rate .rate-trend { margin-left: 6px; padding: 2px 6px; font-size: 9px; }
 td.col-profit { color: var(--green); font-weight: 500; }
 td.col-end { color: var(--blue); font-weight: 600; }
 
@@ -601,6 +609,83 @@ tr.subtotal-row-compound td:first-child { color: #15803D; text-align: left; }
 
 .mode-badge.compound { background: var(--green-bg); border-color: #A7F3D0; color: #065F46; }
 .mode-badge.simple   { background: var(--blue-light); border-color: var(--blue-soft); color: var(--blue); }
+
+
+
+/* ── Projection insights ── */
+.insights-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+@media (max-width: 860px) {
+  .insights-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 520px) {
+  .insights-grid { grid-template-columns: 1fr; }
+}
+
+.insight-card {
+  background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(244,248,255,0.94));
+  border: 1px solid rgba(163,189,217,0.9);
+  border-radius: 22px;
+  padding: 1rem 1rem 0.95rem;
+  box-shadow: 0 14px 28px rgba(37,99,235,0.08), 0 2px 8px rgba(15,23,42,0.05);
+}
+
+.insight-top {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-bottom: 0.8rem;
+}
+
+.insight-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 14px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background: linear-gradient(135deg, rgba(37,99,235,0.14), rgba(29,78,216,0.22));
+  color: var(--blue);
+  font-size: 20px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.55);
+}
+
+.insight-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 3px;
+}
+
+.insight-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.insight-value {
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  margin-bottom: 0.35rem;
+}
+
+.insight-value.emphasis { color: var(--blue); }
+.insight-value.good { color: #15803D; }
+
+.insight-note {
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--text-muted);
+}
 
 /* ── Disclaimer ── */
 .disclaimer {
@@ -873,19 +958,20 @@ tr.subtotal-row-compound td:first-child { color: #15803D; text-align: left; }
 
 /* ── Compounding switch schedule ── */
 .add-switch-btn {
-  background: var(--blue);
-  color: #fff;
-  border: none;
-  border-radius: 6px;
+  background: #1D4ED8;
+  color: #FFFFFF;
+  border: 1px solid #1E40AF;
+  border-radius: 10px;
   font-family: 'Inter', sans-serif;
   font-size: 11px;
-  font-weight: 600;
-  padding: 4px 11px;
+  font-weight: 700;
+  padding: 6px 12px;
   cursor: pointer;
-  transition: background 0.13s;
+  transition: background 0.13s, transform 0.13s, box-shadow 0.13s;
   white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(29,78,216,0.22);
 }
-.add-switch-btn:hover { background: var(--blue-mid); }
+.add-switch-btn:hover { background: #1E40AF; transform: translateY(-1px); box-shadow: 0 4px 10px rgba(29,78,216,0.26); }
 
 .switch-row {
   display: flex;
@@ -935,27 +1021,28 @@ tr.subtotal-row-compound td:first-child { color: #15803D; text-align: left; }
 }
 
 .mode-btn {
-  padding: 4px 10px;
-  border-radius: 5px;
-  border: 1px solid var(--border);
-  background: transparent;
+  padding: 5px 11px;
+  border-radius: 9px;
+  border: 1px solid #B8C6DA;
+  background: #EEF3FA;
   font-family: 'Inter', sans-serif;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.13s;
-  color: var(--text-muted);
+  color: #475569;
 }
-.mode-btn.active-on  { background: #DCFCE7; border-color: #86EFAC; color: #15803D; }
-.mode-btn.active-off { background: #FEF9C3; border-color: #FDE047; color: #A16207; }
+.mode-btn:hover { border-color: #93A8C4; background: #E2EAF5; }
+.mode-btn.active-on  { background: #DCFCE7; border-color: #86EFAC; color: #166534; box-shadow: inset 0 0 0 1px rgba(22,101,52,0.05); }
+.mode-btn.active-off { background: #FEE2E2; border-color: #FCA5A5; color: #B91C1C; box-shadow: inset 0 0 0 1px rgba(185,28,28,0.05); }
 
 .switch-remove {
-  background: none;
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  color: var(--text-dim);
+  background: #FFFFFF;
+  border: 1px solid #D5DFEC;
+  border-radius: 9px;
+  color: #64748B;
   font-size: 13px;
-  width: 26px; height: 26px;
+  width: 28px; height: 28px;
   cursor: pointer;
   display: flex; align-items: center; justify-content: center;
   transition: all 0.13s;
@@ -1184,6 +1271,56 @@ tr.subtotal-row-compound td:first-child { color: #15803D; text-align: left; }
         </div>
       </div>
 
+      <div class="insights-grid" id="insightsGrid">
+        <div class="insight-card">
+          <div class="insight-top">
+            <div class="insight-icon"><span class="material-symbols-rounded">north_east</span></div>
+            <div>
+              <p class="insight-label">Projection insight</p>
+              <p class="insight-title">Best package reached</p>
+            </div>
+          </div>
+          <div class="insight-value emphasis" id="insight-best-package">—</div>
+          <p class="insight-note" id="insight-best-package-note">—</p>
+        </div>
+
+        <div class="insight-card">
+          <div class="insight-top">
+            <div class="insight-icon"><span class="material-symbols-rounded">trending_up</span></div>
+            <div>
+              <p class="insight-label">Projection insight</p>
+              <p class="insight-title">Highest daily profit</p>
+            </div>
+          </div>
+          <div class="insight-value good" id="insight-high-profit">—</div>
+          <p class="insight-note" id="insight-high-profit-note">—</p>
+        </div>
+
+        <div class="insight-card">
+          <div class="insight-top">
+            <div class="insight-icon"><span class="material-symbols-rounded">calendar_month</span></div>
+            <div>
+              <p class="insight-label">Projection insight</p>
+              <p class="insight-title">Time to double</p>
+            </div>
+          </div>
+          <div class="insight-value" id="insight-double">—</div>
+          <p class="insight-note" id="insight-double-note">—</p>
+        </div>
+
+        <div class="insight-card">
+          <div class="insight-top">
+            <div class="insight-icon"><span class="material-symbols-rounded">monitoring</span></div>
+            <div>
+              <p class="insight-label">Projection insight</p>
+              <p class="insight-title">Average daily profit</p>
+            </div>
+          </div>
+          <div class="insight-value" id="insight-avg-profit">—</div>
+          <p class="insight-note" id="insight-avg-profit-note">—</p>
+        </div>
+      </div>
+
       <div class="section-box">
         <p class="section-title" id="chart-label">Portfolio growth</p>
         <div id="chartLegend" style="display:none; gap:16px; margin-bottom:12px; font-size:11px; font-weight:500; color:var(--text-muted);">
@@ -1294,6 +1431,22 @@ function getRateTrendBadge(index, short = false) {
   const trend = getRateTrend(index);
   const text = short ? trend.arrow : `${trend.arrow} ${trend.label}`;
   return `<span class="rate-trend ${trend.cls}" title="${trend.label}">${text}</span>`;
+}
+
+function getRateDeltaBadge(currRate, prevRate, short = false) {
+  if (typeof currRate !== 'number') {
+    return `<span class="rate-trend flat">—</span>`;
+  }
+  if (typeof prevRate !== 'number') {
+    return `<span class="rate-trend flat" title="First visible rate">${short ? '→' : '→ First rate'}</span>`;
+  }
+  if (currRate > prevRate) {
+    return `<span class="rate-trend up" title="Higher than previous visible rate">${short ? '▲' : '▲ Higher'}</span>`;
+  }
+  if (currRate < prevRate) {
+    return `<span class="rate-trend down" title="Lower than previous visible rate">${short ? '▼' : '▼ Lower'}</span>`;
+  }
+  return `<span class="rate-trend flat" title="Same as previous visible rate">${short ? '→' : '→ Same'}</span>`;
 }
 
 function rnd(variance) {
@@ -1479,6 +1632,47 @@ let allRows   = [];
 let chartInst = null;
 let curView   = 'daily';
 
+function setInsights(initial, numDays, totalProfit, finalBalance, startOn, switchCount, compoundDays, simpleDays) {
+  const bestPkg = allRows.reduce((best, row) => {
+    const bestIdx = PKGS.findIndex(p => p.key === best.pkgKey);
+    const rowIdx  = PKGS.findIndex(p => p.key === row.pkgKey);
+    return rowIdx > bestIdx ? row : best;
+  }, allRows[0]);
+  const highestProfitRow = allRows.reduce((best, row) => row.profit > best.profit ? row : best, allRows[0]);
+  const avgDailyProfit = totalProfit / numDays;
+
+  let doubledRow = allRows.find(row => {
+    const totalValue = row.isCompound ? row.end : initial + allRows.slice(0, row.day).reduce((s, r) => s + r.profit, 0);
+    return totalValue >= initial * 2;
+  });
+  if (!doubledRow) {
+    const running = [];
+    let sum = 0;
+    for (const row of allRows) {
+      sum += row.profit;
+      if (!row.isCompound && initial + sum >= initial * 2) { doubledRow = row; break; }
+    }
+  }
+
+  const firstBestDay = allRows.find(r => r.pkgKey === bestPkg.pkgKey)?.day || 1;
+  document.getElementById('insight-best-package').textContent = bestPkg.pkgLabel;
+  document.getElementById('insight-best-package-note').textContent = `Reached on day ${firstBestDay} · Final balance ${fmt(finalBalance)}`;
+
+  document.getElementById('insight-high-profit').textContent = fmt(highestProfitRow.profit);
+  document.getElementById('insight-high-profit-note').textContent = `Day ${highestProfitRow.day} · ${highestProfitRow.pkgLabel} · ${(highestProfitRow.rate * 100).toFixed(4)}% daily`; 
+
+  document.getElementById('insight-double').textContent = doubledRow ? `Day ${doubledRow.day}` : 'Not reached';
+  document.getElementById('insight-double-note').textContent = doubledRow
+    ? `Your projected value crosses ${fmt(initial * 2)} on day ${doubledRow.day}`
+    : `Projection ends at ${fmt(initial + totalProfit)} total projected value`;
+
+  document.getElementById('insight-avg-profit').textContent = fmt(avgDailyProfit);
+  document.getElementById('insight-avg-profit-note').textContent = switchCount
+    ? `${compoundDays} days compound · ${simpleDays} days simple`
+    : `${startOn ? 'Compounding' : 'Simple'} mode for all ${numDays} days`;
+}
+
+
 function calculate() {
   const initial  = parseFloat(document.getElementById('amount').value);
   const years    = Math.min(10, Math.max(0.0833, parseFloat(document.getElementById('years').value) || 1));
@@ -1571,6 +1765,8 @@ function calculate() {
     badge.className   = startOn ? 'mode-badge compound' : 'mode-badge simple';
     badge.textContent = startOn ? 'Compounding' : 'Simple (no compounding)';
   }
+
+  setInsights(initial, numDays, totalProfit, finalBalance, startOn, switchCount, compoundDays, simpleDays);
 
   // Switches metric card
   const switchCard = document.getElementById('m-switches-card');
@@ -1816,11 +2012,16 @@ function setView(view) {
       }
     }
 
+    const prevRate = prevBucket && prevBucket.rate !== undefined ? prevBucket.rate : undefined;
+    const rateHtml = b.rate !== undefined
+      ? `${(b.rate * 100).toFixed(4)}% ${getRateDeltaBadge(b.rate, prevRate, true)}`
+      : '—';
+
     tr.innerHTML =
       `<td>${b.label}${modePill}</td>` +
       `<td><span class="pkg-pill">${b.pkgLabel}</span></td>` +
       `<td class="col-start">${fmt(b.start)}</td>` +
-      `<td class="col-rate">${b.rate !== undefined ? (b.rate * 100).toFixed(4) + '%' : '—'}</td>` +
+      `<td class="col-rate">${rateHtml}</td>` +
       `<td class="col-profit">+${fmt(b.profit)}</td>` +
       `<td class="col-end">${fmt(b.end)}</td>`;
 
