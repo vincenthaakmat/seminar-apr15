@@ -11,6 +11,11 @@
 
 :root {
   --primary: #2752e7;
+  --blue: #2752e7;
+  --blue-mid: #173fcf;
+  --blue-light: #edf3ff;
+  --blue-soft: #d7e3ff;
+  --white: #ffffff;
   --primary-strong: #173fcf;
   --primary-soft: #dfe7ff;
   --secondary: #06b6d4;
@@ -1132,6 +1137,147 @@ tr.subtotal-row-compound td:first-child { color: #15803D; text-align: left; }
 .ss-btn.load:hover  { background: var(--blue-light); }
 .ss-btn.del   { color: #DC2626; border-color: #FECACA; }
 .ss-btn.del:hover   { background: #FEF2F2; }
+
+
+/* ── Helpers / tooltips / presets ── */
+.helper-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.helper-tip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: rgba(39,82,231,0.10);
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 800;
+  cursor: help;
+  border: 1px solid rgba(39,82,231,0.18);
+}
+.preset-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.preset-btn {
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.80);
+  color: var(--text-mid);
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.preset-btn:hover {
+  border-color: rgba(39,82,231,0.35);
+  color: var(--primary);
+  transform: translateY(-1px);
+}
+.action-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 2rem;
+}
+.action-row .btn { margin-bottom: 0; }
+.secondary-btn {
+  flex: 0 0 170px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.82);
+  color: var(--text-mid);
+  border-radius: 22px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.15s;
+  box-shadow: var(--shadow-1);
+}
+.secondary-btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-2); }
+.compare-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+@media (max-width: 860px) { .compare-grid { grid-template-columns: 1fr; } }
+.compare-card {
+  background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(244,248,255,0.94));
+  border: 1px solid rgba(163,189,217,0.9);
+  border-radius: 24px;
+  padding: 1.15rem;
+  box-shadow: var(--shadow-1);
+}
+.compare-head {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 12px;
+  margin-bottom: 0.9rem;
+}
+.compare-title { font-size: 13px; font-weight: 800; color: var(--text); }
+.compare-kicker { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-dim); font-weight: 700; }
+.compare-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.compare-stat {
+  background: rgba(255,255,255,0.70);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 0.9rem;
+}
+.compare-stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim); font-weight: 700; margin-bottom: 5px; }
+.compare-stat-value { font-size: 22px; font-weight: 800; letter-spacing: -0.03em; color: var(--text); }
+.compare-stat-note { font-size: 11px; color: var(--text-muted); margin-top: 5px; }
+.compare-highlight { background: linear-gradient(135deg, rgba(22,163,74,0.10), rgba(39,82,231,0.10)); border-color: rgba(39,82,231,0.18); }
+.compare-mini { display:flex; flex-direction:column; gap: 10px; }
+.compare-pill {
+  display:flex; align-items:center; justify-content:space-between; gap: 12px;
+  background: rgba(255,255,255,0.76); border: 1px solid var(--border); border-radius: 18px; padding: 0.9rem 1rem;
+}
+.compare-pill-title { font-size: 12px; font-weight: 700; color: var(--text-mid); }
+.compare-pill-value { font-size: 16px; font-weight: 800; color: var(--text); }
+.milestones-wrap { margin-bottom: 1.25rem; }
+.milestones-chips { display: flex; flex-wrap: wrap; gap: 10px; }
+.milestone-chip {
+  display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 999px;
+  background: rgba(255,255,255,0.88); border: 1px solid var(--border); box-shadow: var(--shadow-1);
+  font-size: 12px; color: var(--text-mid); font-weight: 700;
+}
+.milestone-chip .material-symbols-rounded { font-size: 17px; color: var(--primary); }
+.dark-toggle {
+  display:inline-flex; align-items:center; gap: 8px; padding: 11px 16px; margin-top: 1rem;
+  border-radius: 999px; border: 1px solid rgba(255,255,255,0.24); background: rgba(255,255,255,0.12);
+  color: #fff; font-size: 12px; font-weight: 700; cursor: pointer; backdrop-filter: blur(10px); transition: all 0.15s;
+}
+.dark-toggle:hover { background: rgba(255,255,255,0.18); transform: translateY(-1px); }
+body.dark-mode {
+  --primary: #7aa2ff; --primary-strong: #5d8cff; --blue: #7aa2ff; --blue-mid: #5d8cff;
+  --blue-light: rgba(122,162,255,0.14); --blue-soft: rgba(122,162,255,0.22);
+  --bg: #0f172a; --bg-accent: #16213e; --surface: rgba(17,24,39,0.78); --surface-solid: #111827;
+  --surface-2: rgba(25,33,51,0.94); --surface-3: #182335; --border: rgba(148,163,184,0.16);
+  --border-strong: rgba(148,163,184,0.26); --text: #e5eefc; --text-mid: #c3d0ea; --text-muted: #93a4c4; --text-dim: #7d90b6;
+  --shadow-1: 0 12px 30px rgba(0,0,0,0.28); --shadow-2: 0 18px 40px rgba(0,0,0,0.36); --shadow-3: 0 28px 70px rgba(0,0,0,0.42);
+}
+body.dark-mode {
+  background: radial-gradient(circle at top left, rgba(67, 97, 238, 0.16), transparent 26%), radial-gradient(circle at top right, rgba(6, 182, 212, 0.10), transparent 22%), linear-gradient(180deg, #0b1020 0%, #11192d 54%, #0d1529 100%);
+}
+body.dark-mode input[type="number"], body.dark-mode input[type="text"], body.dark-mode .sp-input-wrap input, body.dark-mode .preset-btn,
+body.dark-mode .filter-tab, body.dark-mode .secondary-btn, body.dark-mode .mode-btn, body.dark-mode .switch-remove,
+body.dark-mode .saved-schedule-row, body.dark-mode .pkg-info, body.dark-mode .table-header, body.dark-mode thead th,
+body.dark-mode tbody tr:hover, body.dark-mode .sp-header, body.dark-mode .sp-footer, body.dark-mode .compare-card,
+body.dark-mode .insight-card, body.dark-mode .compare-pill, body.dark-mode .compare-stat, body.dark-mode .milestone-chip,
+body.dark-mode .site-footer, body.dark-mode .section-box, body.dark-mode .table-wrap, body.dark-mode .card, body.dark-mode .settings-panel,
+body.dark-mode .disclaimer {
+  background: rgba(17,24,39,0.74); color: var(--text-mid);
+}
+
 </style>
 </head>
 <body>
@@ -1150,6 +1296,12 @@ tr.subtotal-row-compound td:first-child { color: #15803D; text-align: left; }
         <span class="material-symbols-rounded">tune</span>
         Package settings
       </button>
+      <div>
+        <button class="dark-toggle" id="themeToggle" onclick="toggleTheme()">
+          <span class="material-symbols-rounded" id="themeToggleIcon">dark_mode</span>
+          <span id="themeToggleLabel">Dark mode</span>
+        </button>
+      </div>
     </div>
   </div>
 
@@ -1178,8 +1330,14 @@ tr.subtotal-row-compound td:first-child { color: #15803D; text-align: left; }
         <p class="card-label">Your Investment</p>
 
         <div class="field">
-          <label for="amount">Starting amount ($)</label>
+          <label for="amount" class="helper-inline">Starting amount ($) <span class="helper-tip" title="Choose your starting capital. Package tier changes automatically as the running balance grows.">?</span></label>
           <input type="number" id="amount" value="7700" min="100" step="100" oninput="onAmountInput()">
+          <div class="preset-wrap">
+            <button class="preset-btn" onclick="applyAmountPreset(500)">$500</button>
+            <button class="preset-btn" onclick="applyAmountPreset(1000)">$1,000</button>
+            <button class="preset-btn" onclick="applyAmountPreset(5000)">$5,000</button>
+            <button class="preset-btn" onclick="applyAmountPreset(10000)">$10,000</button>
+          </div>
           <div id="pkg-info" class="pkg-info">
             <div class="pkg-info-name"><span class="dot"></span><span id="pkg-name">Business</span></div>
             <div class="pkg-info-rates" id="pkg-rates">0.4667%/day · 14.00%/month</div>
@@ -1190,7 +1348,7 @@ tr.subtotal-row-compound td:first-child { color: #15803D; text-align: left; }
         <div class="field">
           <div class="toggle-row">
             <div class="toggle-label-group">
-              <label>Starting mode</label>
+              <label class="helper-inline">Starting mode <span class="helper-tip" title="Compounding reinvests profit into the next day. Simple mode keeps principal fixed and treats profit as set aside.">?</span></label>
               <p class="toggle-sublabel" id="compound-sublabel">Compounding on — profits re-invested daily</p>
             </div>
             <label class="toggle-switch">
@@ -1203,7 +1361,7 @@ tr.subtotal-row-compound td:first-child { color: #15803D; text-align: left; }
         <!-- Switch schedule -->
         <div class="field">
           <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
-            <label style="margin:0;">Compounding switches</label>
+            <label style="margin:0;" class="helper-inline">Compounding switches <span class="helper-tip" title="Create a schedule that flips between compound and simple mode on specific days.">?</span></label>
             <button class="add-switch-btn" onclick="addSwitch()">+ Add switch</button>
           </div>
           <div id="switchList" style="display:flex; flex-direction:column; gap:6px;"></div>
@@ -1228,13 +1386,19 @@ tr.subtotal-row-compound td:first-child { color: #15803D; text-align: left; }
         <p class="card-label">Projection Settings</p>
 
         <div class="field">
-          <label for="years">Projection period (years)</label>
+          <label for="years" class="helper-inline">Projection period (years) <span class="helper-tip" title="You can use decimals. Example: 0.5 means 6 months and 2 means 730 days.">?</span></label>
           <input type="number" id="years" value="1" min="0.25" max="10" step="0.25">
+          <div class="preset-wrap">
+            <button class="preset-btn" onclick="applyYearPreset(0.5)">6 months</button>
+            <button class="preset-btn" onclick="applyYearPreset(1)">1 year</button>
+            <button class="preset-btn" onclick="applyYearPreset(2)">2 years</button>
+            <button class="preset-btn" onclick="applyYearPreset(5)">5 years</button>
+          </div>
           <p class="hint">E.g. 1 = 365 days · 2 = 730 days · 5 = 1,825 days. Decimals allowed (0.5 = 6 months).</p>
         </div>
 
         <div class="field">
-          <label for="variance">Daily variance / offset (%)</label>
+          <label for="variance" class="helper-inline">Daily variance / offset (%) <span class="helper-tip" title="Downward-only variance lowers the base daily rate by a random amount up to the selected percentage. It never increases above the package rate.">?</span></label>
           <input type="number" id="variance" value="30" min="0" max="60" step="1">
           <p class="hint">Applies a downward-only random offset to the daily rate. Set to 0 for a flat projection.</p>
         </div>
@@ -1242,7 +1406,10 @@ tr.subtotal-row-compound td:first-child { color: #15803D; text-align: left; }
 
     </div>
 
-    <button class="btn" id="calcBtn" onclick="calculate()">Calculate projection</button>
+    <div class="action-row">
+      <button class="btn" id="calcBtn" onclick="calculate()">Calculate projection</button>
+      <button class="secondary-btn" onclick="resetCalculator()"><span class="material-symbols-rounded" style="font-size:18px;vertical-align:middle;margin-right:6px;">restart_alt</span>Reset / clear</button>
+    </div>
 
     <div class="results" id="results">
 
@@ -1321,12 +1488,65 @@ tr.subtotal-row-compound td:first-child { color: #15803D; text-align: left; }
         </div>
       </div>
 
+      <div class="compare-grid">
+        <div class="compare-card">
+          <div class="compare-head">
+            <div>
+              <p class="compare-kicker">Compare modes</p>
+              <p class="compare-title">Compound vs. simple result</p>
+            </div>
+            <span class="material-symbols-rounded" style="font-size:24px;color:var(--primary);">compare_arrows</span>
+          </div>
+          <div class="compare-stats">
+            <div class="compare-stat compare-highlight">
+              <div class="compare-stat-label">Compound final value</div>
+              <div class="compare-stat-value" id="compare-compound-final">—</div>
+              <div class="compare-stat-note" id="compare-compound-note">—</div>
+            </div>
+            <div class="compare-stat">
+              <div class="compare-stat-label">Simple total value</div>
+              <div class="compare-stat-value" id="compare-simple-final">—</div>
+              <div class="compare-stat-note" id="compare-simple-note">—</div>
+            </div>
+          </div>
+        </div>
+        <div class="compare-card compare-mini">
+          <div class="compare-head" style="margin-bottom:0;">
+            <div>
+              <p class="compare-kicker">Advantage</p>
+              <p class="compare-title">Compounding edge</p>
+            </div>
+          </div>
+          <div class="compare-pill"><div class="compare-pill-title">Extra value</div><div class="compare-pill-value" id="compare-difference">—</div></div>
+          <div class="compare-pill"><div class="compare-pill-title">Extra return</div><div class="compare-pill-value" id="compare-difference-pct">—</div></div>
+        </div>
+        <div class="compare-card compare-mini">
+          <div class="compare-head" style="margin-bottom:0;">
+            <div>
+              <p class="compare-kicker">Fast read</p>
+              <p class="compare-title">What changed</p>
+            </div>
+          </div>
+          <div class="compare-pill"><div class="compare-pill-title">Best outcome mode</div><div class="compare-pill-value" id="compare-best-mode">—</div></div>
+          <div class="compare-pill"><div class="compare-pill-title">Estimated double day</div><div class="compare-pill-value" id="compare-crossover-day">—</div></div>
+        </div>
+      </div>
+
+      <div class="milestones-wrap">
+        <div class="table-header" style="border-radius:24px; margin-bottom:0.85rem;">
+          <p class="section-title" style="margin:0">Milestones</p>
+        </div>
+        <div class="milestones-chips" id="milestonesList"></div>
+      </div>
+
       <div class="section-box">
         <p class="section-title" id="chart-label">Portfolio growth</p>
         <div id="chartLegend" style="display:none; gap:16px; margin-bottom:12px; font-size:11px; font-weight:500; color:var(--text-muted);">
           <span style="display:flex;align-items:center;gap:5px;"><span style="width:24px;height:3px;background:#2563EB;border-radius:2px;display:inline-block;"></span>Compounding</span>
           <span style="display:flex;align-items:center;gap:5px;"><span style="width:24px;height:3px;background:#D97706;border-radius:2px;display:inline-block;"></span>Simple</span>
           <span style="display:flex;align-items:center;gap:5px;"><span style="width:8px;height:8px;border-radius:50%;background:#16A34A;display:inline-block;border:2px solid white;box-shadow:0 0 0 1px #16A34A;"></span>Switch point</span>
+          <span style="display:flex;align-items:center;gap:5px;"><span style="width:8px;height:8px;border-radius:50%;background:#8B5CF6;display:inline-block;border:2px solid white;box-shadow:0 0 0 1px #8B5CF6;"></span>Package upgrade</span>
+          <span style="display:flex;align-items:center;gap:5px;"><span style="width:8px;height:8px;border-radius:50%;background:#06B6D4;display:inline-block;border:2px solid white;box-shadow:0 0 0 1px #06B6D4;"></span>Milestone</span>
         </div>
         <div class="chart-canvas-wrap">
           <canvas id="growthChart" role="img" aria-label="Line chart showing portfolio growth over the projection period"></canvas>
@@ -1557,6 +1777,7 @@ function renderSwitchList() {
   });
 
   renderSavedSchedules();
+try { applyTheme(localStorage.getItem('aurum_theme') || 'light'); } catch (e) { applyTheme('light'); }
 }
 
 /* ── Schedule persistence ── */
@@ -1631,6 +1852,113 @@ function renderSavedSchedules() {
 let allRows   = [];
 let chartInst = null;
 let curView   = 'daily';
+let lastCalcSummary = null;
+let lastCompareSummary = null;
+let lastMilestones = [];
+
+function applyAmountPreset(amount) {
+  document.getElementById('amount').value = amount;
+  onAmountInput();
+}
+
+function applyYearPreset(years) {
+  document.getElementById('years').value = years;
+}
+
+function resetCalculator() {
+  document.getElementById('amount').value = 7700;
+  document.getElementById('years').value = 1;
+  document.getElementById('variance').value = 30;
+  document.getElementById('compoundToggle').checked = true;
+  switches = [];
+  document.getElementById('scheduleName').value = '';
+  document.getElementById('results').className = 'results';
+  lastCalcSummary = null;
+  lastCompareSummary = null;
+  lastMilestones = [];
+  if (chartInst) { chartInst.destroy(); chartInst = null; }
+  onCompoundToggle();
+  onAmountInput();
+}
+
+function animateValue(el, endValue, formatter, duration = 800) {
+  const start = performance.now();
+  function frame(now) {
+    const p = Math.min(1, (now - start) / duration);
+    const eased = 1 - Math.pow(1 - p, 3);
+    const value = endValue * eased;
+    el.textContent = formatter(value);
+    if (p < 1) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+
+function simulateMode(initial, numDays, forceCompound, offsets) {
+  let balance = initial;
+  let totalProfit = 0;
+  let cumulativeValue = initial;
+  let crossoverDay = null;
+  for (let d = 1; d <= numDays; d++) {
+    const pkg = getPkg(forceCompound ? balance : initial);
+    const offset = offsets[d - 1];
+    const principal = forceCompound ? balance : initial;
+    const profit = principal * pkg.daily * offset;
+    totalProfit += profit;
+    if (forceCompound) {
+      balance += profit;
+      cumulativeValue = balance;
+    } else {
+      cumulativeValue = initial + totalProfit;
+    }
+    if (crossoverDay === null && cumulativeValue >= initial * 2) crossoverDay = d;
+  }
+  return {
+    finalValue: forceCompound ? balance : initial + totalProfit,
+    totalProfit,
+    crossoverDay
+  };
+}
+
+function setCompare(summary) {
+  lastCompareSummary = summary;
+  document.getElementById('compare-compound-final').textContent = fmt(summary.compound.finalValue);
+  document.getElementById('compare-compound-note').textContent = `Profit ${fmt(summary.compound.totalProfit)} · ${summary.compound.crossoverDay ? 'Doubles on day ' + summary.compound.crossoverDay : 'No double within period'}`;
+  document.getElementById('compare-simple-final').textContent = fmt(summary.simple.finalValue);
+  document.getElementById('compare-simple-note').textContent = `Profit ${fmt(summary.simple.totalProfit)} · ${summary.simple.crossoverDay ? 'Doubles on day ' + summary.simple.crossoverDay : 'No double within period'}`;
+  const diff = summary.compound.finalValue - summary.simple.finalValue;
+  document.getElementById('compare-difference').textContent = fmt(diff);
+  document.getElementById('compare-difference-pct').textContent = summary.simple.finalValue > 0 ? ((diff / summary.simple.finalValue) * 100).toFixed(1) + '%' : '—';
+  document.getElementById('compare-best-mode').textContent = diff >= 0 ? 'Compound' : 'Simple';
+  document.getElementById('compare-crossover-day').textContent = summary.compound.crossoverDay ? 'Day ' + summary.compound.crossoverDay : '—';
+}
+
+function setMilestones(milestones) {
+  lastMilestones = milestones;
+  const list = document.getElementById('milestonesList');
+  list.innerHTML = '';
+  if (!milestones.length) {
+    list.innerHTML = '<span class="milestone-chip"><span class="material-symbols-rounded">flag</span>No milestone crossed within this projection yet</span>';
+    return;
+  }
+  milestones.slice(0, 12).forEach(item => {
+    const chip = document.createElement('span');
+    chip.className = 'milestone-chip';
+    chip.innerHTML = `<span class="material-symbols-rounded">${item.icon || 'flag'}</span>${item.label}`;
+    list.appendChild(chip);
+  });
+}
+
+function applyTheme(mode) {
+  const dark = mode === 'dark';
+  document.body.classList.toggle('dark-mode', dark);
+  document.getElementById('themeToggleLabel').textContent = dark ? 'Light mode' : 'Dark mode';
+  document.getElementById('themeToggleIcon').textContent = dark ? 'light_mode' : 'dark_mode';
+  try { localStorage.setItem('aurum_theme', mode); } catch (e) {}
+}
+
+function toggleTheme() {
+  applyTheme(document.body.classList.contains('dark-mode') ? 'light' : 'dark');
+}
 
 function setInsights(initial, numDays, totalProfit, finalBalance, startOn, switchCount, compoundDays, simpleDays) {
   const bestPkg = allRows.reduce((best, row) => {
@@ -1677,69 +2005,53 @@ function calculate() {
   const initial  = parseFloat(document.getElementById('amount').value);
   const years    = Math.min(10, Math.max(0.0833, parseFloat(document.getElementById('years').value) || 1));
   const numDays  = Math.round(years * 365);
-  const variance = Math.min(30, Math.max(0, parseFloat(document.getElementById('variance').value) || 0));
+  const variance = Math.min(60, Math.max(0, parseFloat(document.getElementById('variance').value) || 0));
   const startOn  = document.getElementById('compoundToggle').checked;
-
   if (!initial || initial < 100) return;
 
-  // Build switch map: day → mode ('on'|'off')
   const switchMap = {};
   switches.forEach(sw => { if (sw.day >= 1 && sw.day <= numDays) switchMap[sw.day] = sw.mode; });
   const hasSwitches = Object.keys(switchMap).length > 0;
 
   allRows = [];
-  let balance        = initial;
-  let profitPool     = 0;        // profits accumulated during current simple phase
-  let simplePrincipal = initial; // the balance locked in when switching to simple
-  let isCompound     = startOn;
-  let switchCount    = 0;
-  let compoundDays   = 0;
-  let simpleDays     = 0;
+  let balance = initial, profitPool = 0, simplePrincipal = initial, isCompound = startOn;
+  let switchCount = 0, compoundDays = 0, simpleDays = 0, cumulativeProfit = 0;
+  const offsets = [];
 
   for (let d = 1; d <= numDays; d++) {
     const switched = switchMap[d] !== undefined;
     if (switched) {
       const newMode = switchMap[d] === 'on';
-
-      if (!isCompound && newMode) {
-        // simple → compound: resume from the locked principal only
-        // profits earned during simple phase are assumed withdrawn
-        balance    = simplePrincipal;
-        profitPool = 0;
-      } else if (isCompound && !newMode) {
-        // compound → simple: lock in current balance as the new principal; profits start fresh
-        simplePrincipal = balance;
-        profitPool      = 0;
-      }
-
+      if (!isCompound && newMode) { balance = simplePrincipal; profitPool = 0; }
+      else if (isCompound && !newMode) { simplePrincipal = balance; profitPool = 0; }
       isCompound = newMode;
       switchCount++;
     }
-
-    const pkg    = getPkg(isCompound ? balance : simplePrincipal);
+    const pkg = getPkg(isCompound ? balance : simplePrincipal);
     const offset = rnd(variance);
+    offsets.push(offset);
     let actualProfit, startBal, endBal;
-
     if (isCompound) {
       compoundDays++;
       actualProfit = balance * pkg.daily * offset;
-      startBal     = balance;
-      balance     += actualProfit;
-      endBal       = balance;
+      startBal = balance;
+      balance += actualProfit;
+      endBal = balance;
     } else {
       simpleDays++;
-      actualProfit  = simplePrincipal * pkg.daily * offset;
-      profitPool   += actualProfit;
-      startBal      = simplePrincipal;
-      endBal        = simplePrincipal;   // balance stays fixed; profit is withdrawn
+      actualProfit = simplePrincipal * pkg.daily * offset;
+      profitPool += actualProfit;
+      startBal = simplePrincipal;
+      endBal = simplePrincipal;
     }
-
+    cumulativeProfit += actualProfit;
     allRows.push({
       day: d,
       pkgKey: pkg.key, pkgLabel: pkg.label,
       start: startBal, profit: actualProfit, end: endBal,
       rate: pkg.daily * offset,
-      isCompound, switched
+      isCompound, switched,
+      projectedValue: isCompound ? endBal : initial + cumulativeProfit
     });
   }
 
@@ -1748,73 +2060,91 @@ function calculate() {
   const roi          = (totalProfit / initial) * 100;
   const yLabel       = years === 1 ? '1 year' : years + ' years';
 
-  document.getElementById('m-start').textContent  = fmt(initial);
-  document.getElementById('m-profit').textContent = fmt(totalProfit);
-  document.getElementById('m-final').textContent  = fmt(finalBalance);
-  document.getElementById('m-roi').textContent    = roi.toFixed(1) + '%';
-  document.getElementById('m-sub').textContent    = `${yLabel} · ${numDays} days`;
-  document.getElementById('chart-label').textContent =
-    `Portfolio growth · ${yLabel} · start ${fmt(initial)}` +
-    (hasSwitches ? ` · ${switchCount} switch${switchCount !== 1 ? 'es' : ''}` : '');
+  animateValue(document.getElementById('m-start'), initial, fmt, 700);
+  animateValue(document.getElementById('m-profit'), totalProfit, fmt, 850);
+  animateValue(document.getElementById('m-final'), finalBalance, fmt, 900);
+  animateValue(document.getElementById('m-roi'), roi, v => v.toFixed(1) + '%', 1000);
+  document.getElementById('m-sub').textContent = `${yLabel} · ${numDays} days`;
+  document.getElementById('chart-label').textContent = `Portfolio growth · ${yLabel} · start ${fmt(initial)}` + (hasSwitches ? ` · ${switchCount} switch${switchCount !== 1 ? 'es' : ''}` : '');
 
   const badge = document.getElementById('mode-badge');
   if (hasSwitches) {
-    badge.className   = 'mode-badge simple';
+    badge.className = 'mode-badge simple';
     badge.textContent = `${switchCount} compounding switch${switchCount !== 1 ? 'es' : ''}`;
   } else {
-    badge.className   = startOn ? 'mode-badge compound' : 'mode-badge simple';
+    badge.className = startOn ? 'mode-badge compound' : 'mode-badge simple';
     badge.textContent = startOn ? 'Compounding' : 'Simple (no compounding)';
   }
 
   setInsights(initial, numDays, totalProfit, finalBalance, startOn, switchCount, compoundDays, simpleDays);
 
-  // Switches metric card
   const switchCard = document.getElementById('m-switches-card');
-  const banner     = document.getElementById('summaryBanner');
+  const banner = document.getElementById('summaryBanner');
   if (hasSwitches) {
     switchCard.style.display = '';
     banner.classList.add('has-switches');
-    document.getElementById('m-switches').textContent = switchCount;
-    document.getElementById('m-switches-sub').textContent =
-      `${compoundDays}d compound · ${simpleDays}d simple`;
+    animateValue(document.getElementById('m-switches'), switchCount, v => Math.round(v).toString(), 650);
+    document.getElementById('m-switches-sub').textContent = `${compoundDays}d compound · ${simpleDays}d simple`;
   } else {
     switchCard.style.display = 'none';
     banner.classList.remove('has-switches');
   }
 
+  setCompare({
+    compound: simulateMode(initial, numDays, true, offsets),
+    simple: simulateMode(initial, numDays, false, offsets)
+  });
+
+  const milestones = [];
+  const seenPkg = new Set();
+  allRows.forEach(row => {
+    if (!seenPkg.has(row.pkgKey)) {
+      seenPkg.add(row.pkgKey);
+      const idx = PKGS.findIndex(p => p.key === row.pkgKey);
+      if (idx > 0) milestones.push({ day: row.day, label: `${row.pkgLabel} reached on day ${row.day}`, icon: 'workspace_premium' });
+    }
+  });
+  [10000, 25000, 50000, 100000, initial * 2].forEach(target => {
+    const hit = allRows.find(r => r.projectedValue >= target);
+    if (hit) milestones.push({ day: hit.day, label: target === initial * 2 ? `Capital doubled by day ${hit.day}` : `${fmt(target)} reached on day ${hit.day}`, icon: target === initial * 2 ? 'bolt' : 'flag' });
+  });
+  const highProfitRow = allRows.reduce((best, row) => row.profit > best.profit ? row : best, allRows[0]);
+  milestones.push({ day: highProfitRow.day, label: `Highest daily profit ${fmt(highProfitRow.profit)} on day ${highProfitRow.day}`, icon: 'trending_up' });
+  milestones.sort((a, b) => a.day - b.day);
+  setMilestones(milestones);
+
+  lastCalcSummary = { initial, years, numDays, variance, startOn, switchCount, compoundDays, simpleDays, finalBalance, totalProfit, roi, yLabel, offsets };
+
   buildChart(hasSwitches);
   setView(curView);
-
   document.getElementById('results').className = 'results visible';
   setTimeout(() => document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
 }
 
 function buildChart(randomMode) {
   if (chartInst) { chartInst.destroy(); chartInst = null; }
-
   const maxPts = 120;
   const step   = Math.max(1, Math.floor(allRows.length / maxPts));
   const pts    = allRows.filter((_, i) => i % step === 0 || i === allRows.length - 1);
-
   const ctx = document.getElementById('growthChart').getContext('2d');
-
   const grad = ctx.createLinearGradient(0, 0, 0, 270);
-  grad.addColorStop(0, 'rgba(37,99,235,0.18)');
-  grad.addColorStop(1, 'rgba(37,99,235,0.01)');
-
-  // Build per-point colors: green when compounding, amber when simple
+  grad.addColorStop(0, 'rgba(37,99,235,0.22)');
+  grad.addColorStop(1, 'rgba(37,99,235,0.02)');
   const pointColors = pts.map(r => r.isCompound ? '#16A34A' : '#D97706');
   const pointRadii  = pts.map(r => r.switched ? 5 : 0);
-
+  const packageUpgradePts = pts.filter((r, i) => i > 0 && r.pkgKey !== pts[i - 1].pkgKey);
+  const milestonePts = [];
+  [10000, 25000, 50000, 100000].forEach(target => {
+    const hit = pts.find(p => p.projectedValue >= target);
+    if (hit) milestonePts.push(hit);
+  });
   chartInst = new Chart(ctx, {
     type: 'line',
     data: {
       labels: pts.map(r => 'Day ' + r.day),
       datasets: [{
         data: pts.map(r => +r.end.toFixed(2)),
-        borderColor: randomMode
-          ? pts.map(r => r.isCompound ? '#2563EB' : '#D97706')
-          : '#2563EB',
+        borderColor: randomMode ? pts.map(r => r.isCompound ? '#2563EB' : '#D97706') : '#2563EB',
         backgroundColor: grad,
         borderWidth: 2.5,
         pointRadius: randomMode ? pointRadii : 0,
@@ -1823,66 +2153,45 @@ function buildChart(randomMode) {
         pointBorderWidth: 1.5,
         fill: true,
         tension: 0.35,
-        segment: randomMode ? {
-          borderColor: ctx => {
-            const i = ctx.p0DataIndex;
-            return pts[i] && pts[i].isCompound ? '#2563EB' : '#D97706';
-          }
-        } : undefined
+        segment: randomMode ? { borderColor: c => pts[c.p0DataIndex] && pts[c.p0DataIndex].isCompound ? '#2563EB' : '#D97706' } : undefined
+      }, {
+        type: 'scatter', label: 'Package upgrade',
+        data: packageUpgradePts.map(p => ({ x: 'Day ' + p.day, y: +p.end.toFixed(2), pkg: p.pkgLabel, day: p.day })),
+        pointRadius: 5, pointHoverRadius: 6, pointBackgroundColor: '#8B5CF6', pointBorderColor: '#fff', pointBorderWidth: 2
+      }, {
+        type: 'scatter', label: 'Milestone',
+        data: milestonePts.map(p => ({ x: 'Day ' + p.day, y: +p.end.toFixed(2), day: p.day })),
+        pointRadius: 4, pointHoverRadius: 5, pointBackgroundColor: '#06B6D4', pointBorderColor: '#fff', pointBorderWidth: 2
       }]
     },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
+      responsive: true, maintainAspectRatio: false,
       plugins: {
         legend: { display: false },
         tooltip: {
           callbacks: {
             label: c => fmt(c.parsed.y),
             afterLabel: c => {
+              if (c.dataset.label === 'Package upgrade') return `Package upgrade · ${c.raw.pkg}`;
+              if (c.dataset.label === 'Milestone') return `Milestone hit around day ${c.raw.day}`;
               const ri = Math.min(Math.round(c.dataIndex * step), allRows.length - 1);
-              const r  = allRows[ri];
-              const lines = ['Package: ' + r.pkgLabel];
+              const r = allRows[ri];
+              const lines = ['Package: ' + r.pkgLabel, 'Projected value: ' + fmt(r.projectedValue)];
               if (randomMode) lines.push('Mode: ' + (r.isCompound ? '⬆ Compounding' : '➡ Simple'));
-              if (r.switched) lines.push('⚡ Switch day!');
+              if (r.switched) lines.push('⚡ Switch day');
               return lines;
             }
           },
-          backgroundColor: '#0F172A',
-          borderColor: '#334155',
-          borderWidth: 1,
-          titleColor: '#94A3B8',
-          bodyColor: '#FFFFFF',
-          padding: 10,
-          cornerRadius: 8
+          backgroundColor: '#0F172A', borderColor: '#334155', borderWidth: 1, titleColor: '#94A3B8', bodyColor: '#FFFFFF', padding: 10, cornerRadius: 8
         }
       },
       scales: {
-        x: {
-          grid: { color: '#F1F5F9' },
-          ticks: { color: '#94A3B8', font: { size: 11, family: 'Inter' }, maxTicksLimit: 8 }
-        },
-        y: {
-          grid: { color: '#F1F5F9' },
-          ticks: {
-            color: '#94A3B8',
-            font: { size: 11, family: 'Inter' },
-            callback: v => v >= 1e6 ? '$'+(v/1e6).toFixed(1)+'M'
-                        : v >= 1000 ? '$'+(v/1000).toFixed(0)+'k'
-                        : '$'+v.toFixed(0)
-          }
-        }
+        x: { grid: { color: 'rgba(148,163,184,0.14)' }, ticks: { color: '#94A3B8', font: { size: 11, family: 'Inter' }, maxTicksLimit: 8 } },
+        y: { grid: { color: 'rgba(148,163,184,0.14)' }, ticks: { color: '#94A3B8', font: { size: 11, family: 'Inter' }, callback: v => v >= 1e6 ? '$'+(v/1e6).toFixed(1)+'M' : v >= 1000 ? '$'+(v/1000).toFixed(0)+'k' : '$'+v.toFixed(0) } }
       }
     }
   });
-
-  // Chart legend for random mode
-  const legendEl = document.getElementById('chartLegend');
-  if (randomMode) {
-    legendEl.style.display = 'flex';
-  } else {
-    legendEl.style.display = 'none';
-  }
+  document.getElementById('chartLegend').style.display = 'flex';
 }
 
 const VIEW_SIZE   = { daily:1, weekly:7, monthly:30, quarterly:91, yearly:365 };
@@ -2174,170 +2483,87 @@ function buildAllViewsData() {
 
 /* ── Excel export ── */
 function exportExcel() {
-  if (!allRows.length) return alert('Run a calculation first.');
+  if (!allRows.length || !lastCalcSummary) return alert('Run a calculation first.');
   const meta   = getExportMeta();
   const views  = buildAllViewsData();
   const wb     = XLSX.utils.book_new();
-
-  // Summary sheet
   const summaryData = [
-    ['Aurum ROI Projection Summary'],
-    [],
-    ['Starting amount',    fmt(meta.initial)],
-    ['Projection period',  meta.yLabel + ' (' + meta.numDays + ' days)'],
-    ['Compounding',        meta.compound ? 'Yes' : 'No (simple interest)'],
-    ['Daily variance',     meta.variance + '%'],
-    [],
-    ['Starting amount',    parseFloat(document.getElementById('m-start').textContent.replace(/[$,]/g,''))],
-    ['Total profit',       parseFloat(document.getElementById('m-profit').textContent.replace(/[$,]/g,''))],
-    ['Final balance',      parseFloat(document.getElementById('m-final').textContent.replace(/[$,]/g,''))],
-    ['Overall ROI (%)',    parseFloat(document.getElementById('m-roi').textContent)],
-    [],
-    ['Package rates used:'],
-    ['Package','Min ($)','Max ($)','Daily (%)','Monthly (%)'],
-    ...PKGS.map(p => [p.label, p.min, p.max, +(p.daily*100).toFixed(6), +(p.monthly*100).toFixed(4)])
+    ['Aurum ROI Projection Summary'], [],
+    ['Starting amount', fmt(meta.initial)],
+    ['Projection period', meta.yLabel + ' (' + meta.numDays + ' days)'],
+    ['Interest mode', meta.compound ? 'Compounding' : 'Simple (no compounding)'],
+    ['Daily variance', meta.variance + '%'],
+    ['Total profit', document.getElementById('m-profit').textContent],
+    ['Final balance', document.getElementById('m-final').textContent],
+    ['Overall ROI', document.getElementById('m-roi').textContent], [],
+    ['Best package reached', document.getElementById('insight-best-package').textContent],
+    ['Highest daily profit', document.getElementById('insight-high-profit').textContent],
+    ['Time to double', document.getElementById('insight-double').textContent],
+    ['Average daily profit', document.getElementById('insight-avg-profit').textContent], [],
+    ['Compound final value', document.getElementById('compare-compound-final').textContent],
+    ['Simple total value', document.getElementById('compare-simple-final').textContent],
+    ['Compounding edge', document.getElementById('compare-difference').textContent],
+    ['Extra return', document.getElementById('compare-difference-pct').textContent],
   ];
   const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
-  wsSummary['!cols'] = [{wch:22},{wch:18}];
+  wsSummary['!cols'] = [{wch:24},{wch:24}];
   XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary');
-
-  // One sheet per view
-  const VIEW_LABELS_MAP = { daily:'Daily', weekly:'Weekly', monthly:'Monthly', quarterly:'Quarterly', yearly:'Yearly' };
+  const wsMilestones = XLSX.utils.aoa_to_sheet([['Milestone', 'Day'], ...lastMilestones.map(m => [m.label, m.day])]);
+  wsMilestones['!cols'] = [{wch:48},{wch:12}];
+  XLSX.utils.book_append_sheet(wb, wsMilestones, 'Milestones');
   Object.entries(views).forEach(([view, buckets]) => {
-    const header = ['Period','Package','Starting Balance ($)','Profit ($)','Ending Balance ($)'];
-    const rows   = buckets.map(b => [
-      b.label, b.pkgLabel,
-      +b.start.toFixed(2), +b.profit.toFixed(2), +b.end.toFixed(2)
-    ]);
-    const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
-    ws['!cols'] = [{wch:14},{wch:12},{wch:22},{wch:16},{wch:22}];
-    XLSX.utils.book_append_sheet(wb, ws, VIEW_LABELS_MAP[view]);
+    const rows = [['Period','Package','Starting Balance ($)','Daily Rate (%)','Profit ($)','Ending Balance ($)'], ...buckets.map(b => [b.label, b.pkgLabel, +b.start.toFixed(2), +(b.rate * 100).toFixed(4), +b.profit.toFixed(2), +b.end.toFixed(2)])];
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{wch:14},{wch:12},{wch:22},{wch:16},{wch:16},{wch:22}];
+    XLSX.utils.book_append_sheet(wb, ws, view.charAt(0).toUpperCase() + view.slice(1));
   });
-
-  const filename = `aurum-roi-${meta.yLabel.replace(' ','-')}-${Date.now()}.xlsx`;
-  XLSX.writeFile(wb, filename);
+  XLSX.writeFile(wb, `aurum-roi-enhanced-${meta.yLabel.replace(' ','-')}-${Date.now()}.xlsx`);
 }
 
 /* ── PDF export ── */
 function exportPDF() {
-  if (!allRows.length) return alert('Run a calculation first.');
+  if (!allRows.length || !lastCalcSummary) return alert('Run a calculation first.');
   const { jsPDF } = window.jspdf;
   const doc  = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const meta = getExportMeta();
-  const blue = [37, 99, 235];
-  const W    = 210;
-
-  // Header band
-  doc.setFillColor(...blue);
-  doc.rect(0, 0, W, 28, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(18);
-  doc.setFont('helvetica', 'bold');
-  doc.text('AURUM', 14, 12);
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Daily ROI Projection Report', 14, 20);
-  doc.setFontSize(9);
-  doc.setTextColor(200, 220, 255);
-  doc.text('Generated ' + new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' }), W - 14, 20, { align: 'right' });
-
-  // Summary box
-  doc.setTextColor(15, 23, 42);
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Projection Summary', 14, 38);
-
-  const summaryRows = [
-    ['Starting amount',    fmt(meta.initial)],
-    ['Period',             meta.yLabel + ' · ' + meta.numDays + ' days'],
-    ['Interest mode',      meta.compound ? 'Compounding' : 'Simple (no compounding)'],
-    ['Daily variance',     meta.variance + '%'],
-    ['Total profit',       document.getElementById('m-profit').textContent],
-    ['Final balance',      document.getElementById('m-final').textContent],
-    ['Overall ROI',        document.getElementById('m-roi').textContent],
-  ];
-
-  doc.autoTable({
-    startY: 41,
-    body: summaryRows,
-    theme: 'plain',
-    styles: { fontSize: 9, cellPadding: 2.5 },
-    columnStyles: {
-      0: { fontStyle: 'bold', textColor: [100,116,139], cellWidth: 50 },
-      1: { textColor: [15,23,42] }
-    },
-    margin: { left: 14, right: 14 }
-  });
-
-  // Package rates table
+  const blue = [37, 99, 235], green = [22, 163, 74], W = 210;
+  doc.setFillColor(...blue); doc.rect(0, 0, W, 30, 'F');
+  doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(18); doc.text('AURUM ROI CALCULATOR', 14, 12);
+  doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.text('Premium projection report', 14, 20);
+  doc.setFontSize(9); doc.setTextColor(214,228,255); doc.text('Generated ' + new Date().toLocaleString(), W - 14, 20, { align: 'right' });
+  doc.setTextColor(15,23,42); doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.text('Projection Summary', 14, 39);
+  doc.autoTable({ startY: 42, body: [
+    ['Starting amount', fmt(meta.initial)], ['Projection period', meta.yLabel + ' · ' + meta.numDays + ' days'], ['Interest mode', meta.compound ? 'Compounding' : 'Simple (no compounding)'],
+    ['Daily variance', meta.variance + '%'], ['Total profit', document.getElementById('m-profit').textContent], ['Final balance', document.getElementById('m-final').textContent], ['Overall ROI', document.getElementById('m-roi').textContent]
+  ], theme: 'plain', styles: { fontSize: 9, cellPadding: 2.5 }, columnStyles: { 0: { fontStyle: 'bold', textColor: [100,116,139], cellWidth: 50 }, 1: { textColor: [15,23,42] } }, margin: { left: 14, right: 14 } });
   let y = doc.lastAutoTable.finalY + 8;
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
-  doc.setTextColor(15, 23, 42);
-  doc.text('Package Rates', 14, y);
-
-  doc.autoTable({
-    startY: y + 3,
-    head: [['Package', 'Min ($)', 'Max ($)', 'Daily (%)', 'Monthly (%)']],
-    body: PKGS.map(p => [
-      p.label,
-      p.min.toLocaleString('en-US'),
-      p.max >= 99999 ? '99,999+' : p.max.toLocaleString('en-US'),
-      (p.daily*100).toFixed(4) + '%',
-      (p.monthly*100).toFixed(2) + '%'
-    ]),
-    theme: 'striped',
-    headStyles: { fillColor: blue, textColor: 255, fontSize: 8, fontStyle: 'bold' },
-    bodyStyles: { fontSize: 8 },
-    columnStyles: {
-      0: { fontStyle: 'bold' },
-      3: { halign: 'right' },
-      4: { halign: 'right' }
-    },
-    margin: { left: 14, right: 14 }
-  });
-
-  // Breakdown table — use current view
+  doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.text('Insights & Comparison', 14, y);
+  doc.autoTable({ startY: y + 3, head: [['Item', 'Value', 'Note']], body: [
+    ['Best package reached', document.getElementById('insight-best-package').textContent, document.getElementById('insight-best-package-note').textContent],
+    ['Highest daily profit', document.getElementById('insight-high-profit').textContent, document.getElementById('insight-high-profit-note').textContent],
+    ['Time to double', document.getElementById('insight-double').textContent, document.getElementById('insight-double-note').textContent],
+    ['Average daily profit', document.getElementById('insight-avg-profit').textContent, document.getElementById('insight-avg-profit-note').textContent],
+    ['Compound final value', document.getElementById('compare-compound-final').textContent, document.getElementById('compare-compound-note').textContent],
+    ['Simple total value', document.getElementById('compare-simple-final').textContent, document.getElementById('compare-simple-note').textContent],
+    ['Compounding edge', document.getElementById('compare-difference').textContent, document.getElementById('compare-difference-pct').textContent],
+  ], theme: 'striped', headStyles: { fillColor: blue, textColor: 255, fontSize: 8, fontStyle: 'bold' }, bodyStyles: { fontSize: 8 }, margin: { left: 14, right: 14 }, columnStyles: { 0: { fontStyle: 'bold', cellWidth: 38 }, 1: { cellWidth: 30 }, 2: { cellWidth: 100 } } });
   y = doc.lastAutoTable.finalY + 8;
+  try { const img = document.getElementById('growthChart').toDataURL('image/png', 1.0); doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.text('Growth Chart', 14, y); doc.addImage(img, 'PNG', 14, y + 3, 182, 62); y += 70; } catch (e) { y += 3; }
+  if (y > 215) { doc.addPage(); y = 18; }
+  doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.text('Milestones', 14, y);
+  doc.autoTable({ startY: y + 3, head: [['Milestone', 'Day']], body: (lastMilestones.length ? lastMilestones : [{ label: 'No milestone crossed', day: '—' }]).slice(0, 12).map(m => [m.label, 'Day ' + m.day]), theme: 'striped', headStyles: { fillColor: green, textColor: 255, fontSize: 8, fontStyle: 'bold' }, bodyStyles: { fontSize: 8 }, margin: { left: 14, right: 14 }, columnStyles: { 0: { cellWidth: 150 }, 1: { cellWidth: 30, halign: 'right' } } });
+  y = doc.lastAutoTable.finalY + 8;
+  if (y > 225) { doc.addPage(); y = 18; }
   const viewBuckets = aggregate(allRows, curView);
-  const viewLabel   = { daily:'Daily', weekly:'Weekly', monthly:'Monthly', quarterly:'Quarterly', yearly:'Yearly' }[curView];
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
-  doc.text(`Breakdown — ${viewLabel} view`, 14, y);
-
-  doc.autoTable({
-    startY: y + 3,
-    head: [['Period', 'Package', 'Starting Balance', 'Profit', 'Ending Balance']],
-    body: viewBuckets.map(b => [
-      b.label, b.pkgLabel,
-      fmt(b.start), '+' + fmt(b.profit), fmt(b.end)
-    ]),
-    theme: 'striped',
-    headStyles: { fillColor: blue, textColor: 255, fontSize: 8, fontStyle: 'bold' },
-    bodyStyles: { fontSize: 7.5 },
-    columnStyles: {
-      0: { cellWidth: 22 },
-      1: { cellWidth: 22 },
-      2: { halign: 'right' },
-      3: { halign: 'right', textColor: [22, 163, 74] },
-      4: { halign: 'right', fontStyle: 'bold', textColor: blue }
-    },
-    margin: { left: 14, right: 14 }
-  });
-
-  // Footer
+  const viewLabel = { daily:'Daily', weekly:'Weekly', monthly:'Monthly', quarterly:'Quarterly', yearly:'Yearly' }[curView];
+  doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.text(`Breakdown — ${viewLabel} view`, 14, y);
+  doc.autoTable({ startY: y + 3, head: [['Period', 'Package', 'Start', 'Rate', 'Profit', 'End']], body: viewBuckets.slice(0, 100).map(b => [b.label, b.pkgLabel, fmt(b.start), (b.rate * 100).toFixed(4) + '%', '+' + fmt(b.profit), fmt(b.end)]), theme: 'striped', headStyles: { fillColor: blue, textColor: 255, fontSize: 8, fontStyle: 'bold' }, bodyStyles: { fontSize: 7.5 }, margin: { left: 14, right: 14 }, columnStyles: { 0: { cellWidth: 22 }, 1: { cellWidth: 22 }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right', textColor: green }, 5: { halign: 'right', textColor: blue, fontStyle: 'bold' } } });
   const pageCount = doc.internal.getNumberOfPages();
-  for (let i = 1; i <= pageCount; i++) {
-    doc.setPage(i);
-    doc.setFontSize(7.5);
-    doc.setTextColor(148, 163, 184);
-    doc.text('Aurum ROI Calculator · For illustrative purposes only · Not financial advice', 14, 292);
-    doc.text(`Page ${i} of ${pageCount}`, W - 14, 292, { align: 'right' });
-  }
-
-  doc.save(`aurum-roi-${meta.yLabel.replace(' ','-')}-${Date.now()}.pdf`);
+  for (let i = 1; i <= pageCount; i++) { doc.setPage(i); doc.setFontSize(7.5); doc.setTextColor(148,163,184); doc.text('Aurum ROI Calculator · Enhanced export · For illustrative purposes only · Not financial advice', 14, 292); doc.text(`Page ${i} of ${pageCount}`, W - 14, 292, { align: 'right' }); }
+  doc.save(`aurum-roi-enhanced-${meta.yLabel.replace(' ','-')}-${Date.now()}.pdf`);
 }
 </script>
+
 
   <!-- ── Footer copyright ── -->
   <footer class="site-footer">
