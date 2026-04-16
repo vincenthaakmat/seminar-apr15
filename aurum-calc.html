@@ -106,7 +106,15 @@ body {
   text-transform: uppercase;
   color: rgba(255,255,255,0.92);
   margin-bottom: 1rem;
+  text-decoration: none;
+  transition: background 0.15s, transform 0.15s, border-color 0.15s;
 }
+.wordmark:hover {
+  background: rgba(255,255,255,0.22);
+  border-color: rgba(255,255,255,0.34);
+  transform: translateY(-1px);
+}
+.wordmark:visited { color: rgba(255,255,255,0.92); }
 .wordmark::before {
   content: 'auto_graph';
   font-family: 'Material Symbols Rounded';
@@ -209,6 +217,30 @@ input[type="number"]::-webkit-outer-spin-button,
 input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
 
 input[type="number"]:focus {
+  border-color: rgba(39,82,231,0.45);
+  box-shadow: 0 0 0 4px rgba(39,82,231,0.12), var(--shadow-1);
+  background: #fff;
+  transform: translateY(-1px);
+}
+
+
+input[type="date"],
+input[type="text"] {
+  background: rgba(255,255,255,0.85);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 13px 15px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s, transform 0.15s;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
+}
+
+input[type="date"]:focus,
+input[type="text"]:focus {
   border-color: rgba(39,82,231,0.45);
   box-shadow: 0 0 0 4px rgba(39,82,231,0.12), var(--shadow-1);
   background: #fff;
@@ -469,6 +501,51 @@ input[type="number"]:focus {
 }
 
 .chart-canvas-wrap { position: relative; width: 100%; height: 270px; }
+
+.chart-head {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+  margin-bottom: 1rem;
+}
+.chart-switch {
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding: 6px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.72);
+  border: 1px solid var(--border);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
+}
+.chart-switch-btn {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 8px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.chart-switch-btn.active {
+  background: linear-gradient(135deg, var(--primary) 0%, #4c79ff 100%);
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(39,82,231,0.18);
+}
+body.dark-mode .chart-switch {
+  background: rgba(17,24,39,0.78);
+  border-color: rgba(96,165,250,0.24);
+}
+body.dark-mode .chart-switch-btn { color: #cfe0ff; }
+body.dark-mode .chart-switch-btn.active {
+  background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
+  color: #ffffff;
+}
 
 /* ── Table ── */
 .table-wrap {
@@ -981,19 +1058,21 @@ tr.subtotal-row-compound td:first-child { color: #15803D; text-align: left; }
 .switch-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 7px 10px;
+  gap: 10px;
+  padding: 9px 10px;
   background: var(--surface2);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 12px;
   font-size: 12px;
+  flex-wrap: wrap;
 }
 
 .switch-row-top {
   display: flex;
   align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex: 1 1 360px;
 }
 
 .switch-row-label {
@@ -1006,10 +1085,34 @@ tr.subtotal-row-compound td:first-child { color: #15803D; text-align: left; }
 
 .switch-row input[type="number"] {
   font-size: 13px;
-  padding: 4px 8px;
+  padding: 8px 10px;
   height: auto;
-  width: 72px;
+  width: 86px;
   flex-shrink: 0;
+  border-radius: 12px;
+}
+
+.switch-row input[type="date"] {
+  font-size: 13px;
+  padding: 8px 10px;
+  height: auto;
+  width: 170px;
+  flex-shrink: 0;
+  border-radius: 12px;
+}
+
+.switch-date-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(39,82,231,0.08);
+  border: 1px solid rgba(39,82,231,0.14);
+  color: var(--primary-strong);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .switch-row-bottom {
@@ -1268,7 +1371,7 @@ body.dark-mode {
 body.dark-mode {
   background: radial-gradient(circle at top left, rgba(67, 97, 238, 0.16), transparent 26%), radial-gradient(circle at top right, rgba(6, 182, 212, 0.10), transparent 22%), linear-gradient(180deg, #0b1020 0%, #11192d 54%, #0d1529 100%);
 }
-body.dark-mode input[type="number"], body.dark-mode input[type="text"], body.dark-mode .sp-input-wrap input, body.dark-mode .preset-btn,
+body.dark-mode input[type="number"], body.dark-mode input[type="text"], body.dark-mode input[type="date"], body.dark-mode .sp-input-wrap input, body.dark-mode .preset-btn,
 body.dark-mode .filter-tab, body.dark-mode .secondary-btn, body.dark-mode .mode-btn, body.dark-mode .switch-remove,
 body.dark-mode .saved-schedule-row, body.dark-mode .pkg-info, body.dark-mode .table-header, body.dark-mode thead th,
 body.dark-mode tbody tr:hover, body.dark-mode .sp-header, body.dark-mode .sp-footer, body.dark-mode .compare-card,
@@ -1277,6 +1380,34 @@ body.dark-mode .site-footer, body.dark-mode .section-box, body.dark-mode .table-
 body.dark-mode .disclaimer {
   background: rgba(17,24,39,0.74); color: var(--text-mid);
 }
+body.dark-mode input[type="date"] {
+  background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
+  border-color: #3b82f6;
+  color: #ffffff;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.10), 0 8px 18px rgba(29,78,216,0.18);
+}
+body.dark-mode input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: brightness(0) invert(1);
+  opacity: 0.95;
+  cursor: pointer;
+}
+body.dark-mode input[type="date"]:focus {
+  background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%);
+  border-color: #60a5fa;
+  color: #ffffff;
+}
+
+body.dark-mode .dark-toggle,
+body.dark-mode .settings-btn {
+  background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
+  border-color: #3b82f6;
+  color: #ffffff;
+}
+body.dark-mode .dark-toggle:hover,
+body.dark-mode .settings-btn:hover {
+  background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%);
+  border-color: #60a5fa;
+}
 
 </style>
 </head>
@@ -1284,14 +1415,9 @@ body.dark-mode .disclaimer {
 
   <div class="hero">
     <div class="hero-inner">
-      <p class="wordmark">Aurum</p>
+      <a class="wordmark" href="https://aurum.foundation/en" target="_blank" rel="noopener noreferrer">Aurum</a>
       <h1>Daily ROI Calculator</h1>
       <p class="subtitle">A modern Material 3 styled ROI experience with clearer hierarchy, premium surfaces, and instant visual rate comparisons between package tiers.</p>
-      <div class="hero-chips">
-        <span class="hero-chip"><span class="material-symbols-rounded">palette</span> Material 3 look</span>
-        <span class="hero-chip"><span class="material-symbols-rounded">trending_up</span> Premium fintech feel</span>
-        <span class="hero-chip"><span class="material-symbols-rounded">compare_arrows</span> Up/down rate cues</span>
-      </div>
       <button class="settings-btn" onclick="openSettings()">
         <span class="material-symbols-rounded">tune</span>
         Package settings
@@ -1365,7 +1491,7 @@ body.dark-mode .disclaimer {
             <button class="add-switch-btn" onclick="addSwitch()">+ Add switch</button>
           </div>
           <div id="switchList" style="display:flex; flex-direction:column; gap:6px;"></div>
-          <p class="hint" id="switchHint">Add a switch to flip compounding on or off from a specific day onward.</p>
+          <p class="hint" id="switchHint">Add a switch to flip compounding on or off from a specific day onward. You can also pick the actual calendar date.</p>
 
           <!-- Save / recall -->
           <div id="switchSaveWrap" style="margin-top:10px; display:none;">
@@ -1384,6 +1510,12 @@ body.dark-mode .disclaimer {
 
       <div class="card">
         <p class="card-label">Projection Settings</p>
+
+        <div class="field">
+          <label for="startDate" class="helper-inline">Starting date <span class="helper-tip" title="Defaults to today. Switch dates are calculated from this date so users can plan changes on actual calendar dates.">?</span></label>
+          <input type="date" id="startDate" onchange="onStartDateChange()">
+          <p class="hint">Used as day 1 for the projection and for all compounding switch dates.</p>
+        </div>
 
         <div class="field">
           <label for="years" class="helper-inline">Projection period (years) <span class="helper-tip" title="You can use decimals. Example: 0.5 means 6 months and 2 means 730 days.">?</span></label>
@@ -1540,7 +1672,13 @@ body.dark-mode .disclaimer {
       </div>
 
       <div class="section-box">
-        <p class="section-title" id="chart-label">Portfolio growth</p>
+        <div class="chart-head">
+          <p class="section-title" id="chart-label" style="margin:0;">Portfolio growth</p>
+          <div class="chart-switch" aria-label="Chart label mode">
+            <button class="chart-switch-btn active" id="chartModeDayBtn" onclick="setChartLabelMode('day')">Day labels</button>
+            <button class="chart-switch-btn" id="chartModeDateBtn" onclick="setChartLabelMode('date')">Date labels</button>
+          </div>
+        </div>
         <div id="chartLegend" style="display:none; gap:16px; margin-bottom:12px; font-size:11px; font-weight:500; color:var(--text-muted);">
           <span style="display:flex;align-items:center;gap:5px;"><span style="width:24px;height:3px;background:#2563EB;border-radius:2px;display:inline-block;"></span>Compounding</span>
           <span style="display:flex;align-items:center;gap:5px;"><span style="width:24px;height:3px;background:#D97706;border-radius:2px;display:inline-block;"></span>Simple</span>
@@ -1636,6 +1774,109 @@ function fmtRange(min, max) {
   };
 }
 
+function getTodayLocalISO() {
+  const now = new Date();
+  const tzOffset = now.getTimezoneOffset() * 60000;
+  return new Date(now.getTime() - tzOffset).toISOString().slice(0, 10);
+}
+
+function getStartDateValue() {
+  return document.getElementById('startDate')?.value || getTodayLocalISO();
+}
+
+function getStartDateObj() {
+  const value = getStartDateValue();
+  const date = new Date(value + 'T00:00:00');
+  return isNaN(date.getTime()) ? new Date(getTodayLocalISO() + 'T00:00:00') : date;
+}
+
+function formatDateDisplay(value) {
+  const date = new Date(value + 'T00:00:00');
+  if (isNaN(date.getTime())) return value;
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function formatDateShort(value) {
+  const date = new Date(value + 'T00:00:00');
+  if (isNaN(date.getTime())) return value;
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function getDateForDay(day) {
+  const date = getStartDateObj();
+  const offset = Math.max(0, (parseInt(day, 10) || 1) - 1);
+  date.setDate(date.getDate() + offset);
+  const tzOffset = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() - tzOffset).toISOString().slice(0, 10);
+}
+
+function getDayFromDate(value) {
+  const start = getStartDateObj();
+  const target = new Date(value + 'T00:00:00');
+  if (isNaN(target.getTime())) return 1;
+  const diff = Math.round((target - start) / 86400000);
+  return Math.max(1, diff + 1);
+}
+
+function onStartDateChange() {
+  renderSwitchList();
+  if (allRows.length) {
+    updateChartLabels();
+    setView(curView);
+  }
+}
+
+let chartLabelMode = 'day';
+
+function getChartPointLabel(row) {
+  if (!row) return '';
+  if (chartLabelMode === 'date') return formatDateShort(getDateForDay(row.day));
+  return 'Day ' + row.day;
+}
+
+function updateChartModeButtons() {
+  const dayBtn = document.getElementById('chartModeDayBtn');
+  const dateBtn = document.getElementById('chartModeDateBtn');
+  if (dayBtn) dayBtn.classList.toggle('active', chartLabelMode === 'day');
+  if (dateBtn) dateBtn.classList.toggle('active', chartLabelMode === 'date');
+}
+
+function updateChartLabels() {
+  updateChartModeButtons();
+  if (!allRows.length) return;
+  if (!chartInst || typeof Chart === 'undefined') {
+    buildChart(Object.keys(buildSwitchMap()).length > 0);
+    return;
+  }
+
+  const maxPts = 120;
+  const step = Math.max(1, Math.floor(allRows.length / maxPts));
+  const pts = allRows.filter((_, i) => i % step === 0 || i === allRows.length - 1);
+  const labels = pts.map(r => getChartPointLabel(r));
+  chartInst.data.labels = labels;
+
+  if (chartInst.data?.datasets?.[1]) {
+    const packageUpgradePts = pts.filter((r, i) => i > 0 && r.pkgKey !== pts[i - 1].pkgKey);
+    chartInst.data.datasets[1].data = packageUpgradePts.map(p => ({ x: getChartPointLabel(p), y: +p.end.toFixed(2), pkg: p.pkgLabel, day: p.day }));
+  }
+  if (chartInst.data?.datasets?.[2]) {
+    const milestonePts = [];
+    [10000, 25000, 50000, 100000].forEach(target => {
+      const hit = pts.find(p => p.projectedValue >= target);
+      if (hit) milestonePts.push(hit);
+    });
+    chartInst.data.datasets[2].data = milestonePts.map(p => ({ x: getChartPointLabel(p), y: +p.end.toFixed(2), day: p.day }));
+  }
+
+  chartInst.update();
+}
+
+function setChartLabelMode(mode) {
+  chartLabelMode = mode === 'date' ? 'date' : 'day';
+  updateChartLabels();
+  if (allRows.length) setView(curView);
+}
+
 function getRateTrend(index) {
   if (index <= 0) return { cls: 'flat', arrow: '→', label: 'Base rate' };
 
@@ -1711,11 +1952,11 @@ let switches = []; // [{day, mode: 'on'|'off'}]
 
 function addSwitch() {
   const startOn  = document.getElementById('compoundToggle').checked;
-  // Suggest next logical mode (alternating from last)
   const lastMode = switches.length ? switches[switches.length - 1].mode : (startOn ? 'on' : 'off');
   const nextMode = lastMode === 'on' ? 'off' : 'on';
   const lastDay  = switches.length ? switches[switches.length - 1].day : 1;
-  switches.push({ day: lastDay + 30, mode: nextMode });
+  const nextDay  = lastDay + 30;
+  switches.push({ day: nextDay, mode: nextMode });
   renderSwitchList();
 }
 
@@ -1732,6 +1973,11 @@ function setSwitchMode(i, mode) {
 function setSwitchDay(i, val) {
   const d = parseInt(val);
   if (!isNaN(d) && d >= 1) switches[i].day = d;
+}
+
+function setSwitchDate(i, value) {
+  if (!value) return;
+  switches[i].day = getDayFromDate(value);
 }
 
 function renderSwitchList() {
@@ -1751,12 +1997,9 @@ function renderSwitchList() {
     const row = document.createElement('div');
     row.className = 'switch-row';
 
-    const prevMode = i === 0
-      ? (startOn ? 'on' : 'off')
-      : switches[i - 1].mode;
-
     const toOnCls  = sw.mode === 'on'  ? 'mode-btn active-on'  : 'mode-btn';
     const toOffCls = sw.mode === 'off' ? 'mode-btn active-off' : 'mode-btn';
+    const switchDate = getDateForDay(sw.day);
 
     row.innerHTML = `
       <div class="switch-row-top">
@@ -1764,6 +2007,10 @@ function renderSwitchList() {
         <input type="number" min="1" value="${sw.day}"
           onchange="setSwitchDay(${i}, this.value); renderSwitchList()"
           oninput="setSwitchDay(${i}, this.value)">
+        <span class="switch-row-label">Date</span>
+        <input type="date" value="${switchDate}" min="${getStartDateValue()}"
+          onchange="setSwitchDate(${i}, this.value); renderSwitchList()">
+        <span class="switch-date-pill">${formatDateShort(switchDate)}</span>
       </div>
       <div class="switch-row-bottom">
         <div class="switch-row-mode">
@@ -1777,6 +2024,7 @@ function renderSwitchList() {
   });
 
   renderSavedSchedules();
+updateChartModeButtons();
 try { applyTheme(localStorage.getItem('aurum_theme') || 'light'); } catch (e) { applyTheme('light'); }
 }
 
@@ -1838,7 +2086,8 @@ function renderSavedSchedules() {
   schedules.forEach(sched => {
     const row = document.createElement('div');
     row.className = 'saved-schedule-row';
-    const meta = `${sched.switches.length} switch${sched.switches.length !== 1 ? 'es' : ''} · starts ${sched.startOn ? '↑ compound' : '→ simple'}`;
+    const firstSwitchDay = sched.switches?.[0]?.day || 1;
+    const meta = `${sched.switches.length} switch${sched.switches.length !== 1 ? 'es' : ''} · starts ${sched.startOn ? '↑ compound' : '→ simple'} · first ${formatDateShort(getDateForDay(firstSwitchDay))}`;
     row.innerHTML = `
       <span class="saved-schedule-name" title="${sched.name}">${sched.name}</span>
       <span class="saved-schedule-meta">${meta}</span>
@@ -1867,6 +2116,7 @@ function applyYearPreset(years) {
 
 function resetCalculator() {
   document.getElementById('amount').value = 7700;
+  document.getElementById('startDate').value = getTodayLocalISO();
   document.getElementById('years').value = 1;
   document.getElementById('variance').value = 30;
   document.getElementById('compoundToggle').checked = true;
@@ -2001,6 +2251,17 @@ function setInsights(initial, numDays, totalProfit, finalBalance, startOn, switc
 }
 
 
+
+function buildSwitchMap() {
+  const map = {};
+  (switches || []).forEach(sw => {
+    const day = parseInt(sw?.day, 10);
+    const mode = sw?.mode === 'off' ? 'off' : 'on';
+    if (!isNaN(day) && day >= 1) map[day] = mode;
+  });
+  return map;
+}
+
 function calculate() {
   const initial  = parseFloat(document.getElementById('amount').value);
   const years    = Math.min(10, Math.max(0.0833, parseFloat(document.getElementById('years').value) || 1));
@@ -2009,8 +2270,8 @@ function calculate() {
   const startOn  = document.getElementById('compoundToggle').checked;
   if (!initial || initial < 100) return;
 
-  const switchMap = {};
-  switches.forEach(sw => { if (sw.day >= 1 && sw.day <= numDays) switchMap[sw.day] = sw.mode; });
+  const switchMap = buildSwitchMap();
+  Object.keys(switchMap).forEach(day => { if (+day > numDays) delete switchMap[day]; });
   const hasSwitches = Object.keys(switchMap).length > 0;
 
   allRows = [];
@@ -2115,18 +2376,37 @@ function calculate() {
 
   lastCalcSummary = { initial, years, numDays, variance, startOn, switchCount, compoundDays, simpleDays, finalBalance, totalProfit, roi, yLabel, offsets };
 
-  buildChart(hasSwitches);
-  setView(curView);
   document.getElementById('results').className = 'results visible';
+  try { buildChart(hasSwitches); } catch (e) { console.error('Chart build failed', e); }
+  setView(curView);
   setTimeout(() => document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
 }
 
 function buildChart(randomMode) {
-  if (chartInst) { chartInst.destroy(); chartInst = null; }
+  const canvas = document.getElementById('growthChart');
+  const legend = document.getElementById('chartLegend');
+  if (!canvas) return;
+  if (chartInst) { try { chartInst.destroy(); } catch(e) {} chartInst = null; }
+  if (typeof Chart === 'undefined') {
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.clearRect(0, 0, canvas.width || 0, canvas.height || 0);
+      ctx.save();
+      ctx.fillStyle = '#64748B';
+      ctx.font = '14px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Chart unavailable, but calculations are ready below.', (canvas.width || 600) / 2, 40);
+      ctx.fillText('Core calculator works fully inside this HTML file.', (canvas.width || 600) / 2, 64);
+      ctx.restore();
+    }
+    if (legend) legend.style.display = 'none';
+    return;
+  }
   const maxPts = 120;
   const step   = Math.max(1, Math.floor(allRows.length / maxPts));
   const pts    = allRows.filter((_, i) => i % step === 0 || i === allRows.length - 1);
-  const ctx = document.getElementById('growthChart').getContext('2d');
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
   const grad = ctx.createLinearGradient(0, 0, 0, 270);
   grad.addColorStop(0, 'rgba(37,99,235,0.22)');
   grad.addColorStop(1, 'rgba(37,99,235,0.02)');
@@ -2141,7 +2421,7 @@ function buildChart(randomMode) {
   chartInst = new Chart(ctx, {
     type: 'line',
     data: {
-      labels: pts.map(r => 'Day ' + r.day),
+      labels: pts.map(r => getChartPointLabel(r)),
       datasets: [{
         data: pts.map(r => +r.end.toFixed(2)),
         borderColor: randomMode ? pts.map(r => r.isCompound ? '#2563EB' : '#D97706') : '#2563EB',
@@ -2156,11 +2436,11 @@ function buildChart(randomMode) {
         segment: randomMode ? { borderColor: c => pts[c.p0DataIndex] && pts[c.p0DataIndex].isCompound ? '#2563EB' : '#D97706' } : undefined
       }, {
         type: 'scatter', label: 'Package upgrade',
-        data: packageUpgradePts.map(p => ({ x: 'Day ' + p.day, y: +p.end.toFixed(2), pkg: p.pkgLabel, day: p.day })),
+        data: packageUpgradePts.map(p => ({ x: getChartPointLabel(p), y: +p.end.toFixed(2), pkg: p.pkgLabel, day: p.day })),
         pointRadius: 5, pointHoverRadius: 6, pointBackgroundColor: '#8B5CF6', pointBorderColor: '#fff', pointBorderWidth: 2
       }, {
         type: 'scatter', label: 'Milestone',
-        data: milestonePts.map(p => ({ x: 'Day ' + p.day, y: +p.end.toFixed(2), day: p.day })),
+        data: milestonePts.map(p => ({ x: getChartPointLabel(p), y: +p.end.toFixed(2), day: p.day })),
         pointRadius: 4, pointHoverRadius: 5, pointBackgroundColor: '#06B6D4', pointBorderColor: '#fff', pointBorderWidth: 2
       }]
     },
@@ -2170,15 +2450,16 @@ function buildChart(randomMode) {
         legend: { display: false },
         tooltip: {
           callbacks: {
+            title: items => items?.[0]?.label || '',
             label: c => fmt(c.parsed.y),
             afterLabel: c => {
               if (c.dataset.label === 'Package upgrade') return `Package upgrade · ${c.raw.pkg}`;
-              if (c.dataset.label === 'Milestone') return `Milestone hit around day ${c.raw.day}`;
+              if (c.dataset.label === 'Milestone') return `Milestone hit around ${chartLabelMode === 'date' ? formatDateShort(getDateForDay(c.raw.day)) : 'day ' + c.raw.day}`;
               const ri = Math.min(Math.round(c.dataIndex * step), allRows.length - 1);
               const r = allRows[ri];
               const lines = ['Package: ' + r.pkgLabel, 'Projected value: ' + fmt(r.projectedValue)];
               if (randomMode) lines.push('Mode: ' + (r.isCompound ? '⬆ Compounding' : '➡ Simple'));
-              if (r.switched) lines.push('⚡ Switch day');
+              if (r.switched) lines.push('⚡ Switch ' + (chartLabelMode === 'date' ? formatDateShort(getDateForDay(r.day)) : 'day ' + r.day));
               return lines;
             }
           },
@@ -2197,14 +2478,33 @@ function buildChart(randomMode) {
 const VIEW_SIZE   = { daily:1, weekly:7, monthly:30, quarterly:91, yearly:365 };
 const VIEW_LABELS = { daily:'Day', weekly:'Week', monthly:'Month', quarterly:'Quarter', yearly:'Year' };
 
+function getDetailPeriodHeader(view) {
+  if (chartLabelMode !== 'date') return VIEW_LABELS[view];
+  return view === 'daily' ? 'Date' : 'Date range';
+}
+
+function getDetailBucketLabel(view, startDay, endDay, num) {
+  if (chartLabelMode !== 'date') {
+    const prefix = view === 'quarterly' ? 'Q' : VIEW_LABELS[view] + ' ';
+    return prefix + num;
+  }
+
+  const startLabel = formatDateShort(getDateForDay(startDay));
+  const endLabel = formatDateShort(getDateForDay(endDay));
+  if (view === 'daily' || startDay === endDay) return startLabel;
+  return `${startLabel} – ${endLabel}`;
+}
+
 function aggregate(rows, view) {
   if (view === 'daily') {
     return rows.map(r => ({
-      label: 'Day ' + r.day,
+      label: getDetailBucketLabel('daily', r.day, r.day, r.day),
       pkgKey: r.pkgKey, pkgLabel: r.pkgLabel,
       start: r.start, profit: r.profit, end: r.end,
       rate: r.rate,
-      isCompound: r.isCompound, switched: r.switched
+      isCompound: r.isCompound, switched: r.switched,
+      startDay: r.day,
+      endDay: r.day
     }));
   }
 
@@ -2219,6 +2519,8 @@ function aggregate(rows, view) {
     const profit = chunk.reduce((s, r) => s + r.profit, 0);
     const hasSwitches = chunk.some(r => r.switched);
     const compoundDays = chunk.filter(r => r.isCompound).length;
+    const startDay = chunk[0].day;
+    const endDay = chunk[chunk.length - 1].day;
 
     const counts = {};
     chunk.forEach(r => { counts[r.pkgKey] = (counts[r.pkgKey] || 0) + 1; });
@@ -2227,14 +2529,15 @@ function aggregate(rows, view) {
 
     const avgRate = chunk.reduce((s, r) => s + r.rate, 0) / chunk.length;
 
-    const prefix = view === 'quarterly' ? 'Q' : VIEW_LABELS[view] + ' ';
     buckets.push({
-      label: prefix + num,
+      label: getDetailBucketLabel(view, startDay, endDay, num),
       pkgKey: pkg.key, pkgLabel: pkg.label,
       start, profit, end,
       rate: avgRate,
       switched: hasSwitches,
-      isCompound: compoundDays > chunk.length / 2
+      isCompound: compoundDays > chunk.length / 2,
+      startDay,
+      endDay
     });
     num++;
   }
@@ -2247,7 +2550,7 @@ function setView(view) {
   document.querySelectorAll('.filter-tab').forEach(t =>
     t.classList.toggle('active', t.dataset.v === view)
   );
-  document.getElementById('th-period').textContent = VIEW_LABELS[view];
+  document.getElementById('th-period').textContent = getDetailPeriodHeader(view);
 
   const buckets     = aggregate(allRows, view);
   const tbody       = document.getElementById('tableBody');
@@ -2362,6 +2665,7 @@ const PKG_DEFAULTS = PKGS.map(p => ({ ...p }));
   } catch(e) {}
 })();
 
+document.getElementById('startDate').value = getTodayLocalISO();
 onAmountInput();
 onCompoundToggle();
 renderSwitchList();
@@ -2469,9 +2773,10 @@ function getExportMeta() {
   const years    = parseFloat(document.getElementById('years').value) || 1;
   const variance = parseFloat(document.getElementById('variance').value) || 0;
   const compound = document.getElementById('compoundToggle').checked;
+  const startDate = getStartDateValue();
   const numDays  = Math.round(years * 365);
   const yLabel   = years === 1 ? '1 year' : years + ' years';
-  return { initial, years, numDays, variance, compound, yLabel };
+  return { initial, years, numDays, variance, compound, startDate, yLabel };
 }
 
 function buildAllViewsData() {
@@ -2490,6 +2795,7 @@ function exportExcel() {
   const summaryData = [
     ['Aurum ROI Projection Summary'], [],
     ['Starting amount', fmt(meta.initial)],
+    ['Starting date', formatDateDisplay(meta.startDate)],
     ['Projection period', meta.yLabel + ' (' + meta.numDays + ' days)'],
     ['Interest mode', meta.compound ? 'Compounding' : 'Simple (no compounding)'],
     ['Daily variance', meta.variance + '%'],
@@ -2533,7 +2839,7 @@ function exportPDF() {
   doc.setFontSize(9); doc.setTextColor(214,228,255); doc.text('Generated ' + new Date().toLocaleString(), W - 14, 20, { align: 'right' });
   doc.setTextColor(15,23,42); doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.text('Projection Summary', 14, 39);
   doc.autoTable({ startY: 42, body: [
-    ['Starting amount', fmt(meta.initial)], ['Projection period', meta.yLabel + ' · ' + meta.numDays + ' days'], ['Interest mode', meta.compound ? 'Compounding' : 'Simple (no compounding)'],
+    ['Starting amount', fmt(meta.initial)], ['Starting date', formatDateDisplay(meta.startDate)], ['Projection period', meta.yLabel + ' · ' + meta.numDays + ' days'], ['Interest mode', meta.compound ? 'Compounding' : 'Simple (no compounding)'],
     ['Daily variance', meta.variance + '%'], ['Total profit', document.getElementById('m-profit').textContent], ['Final balance', document.getElementById('m-final').textContent], ['Overall ROI', document.getElementById('m-roi').textContent]
   ], theme: 'plain', styles: { fontSize: 9, cellPadding: 2.5 }, columnStyles: { 0: { fontStyle: 'bold', textColor: [100,116,139], cellWidth: 50 }, 1: { textColor: [15,23,42] } }, margin: { left: 14, right: 14 } });
   let y = doc.lastAutoTable.finalY + 8;
