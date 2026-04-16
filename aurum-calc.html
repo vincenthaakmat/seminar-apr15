@@ -760,6 +760,20 @@ tr.subtotal-row-compound td:first-child { color: #15803D; text-align: left; }
   margin-bottom: 0.35rem;
 }
 
+.metric-value, .insight-value, .compare-stat-value, .compare-pill-value {
+  font-variant-numeric: tabular-nums;
+}
+
+.rolling-number {
+  animation: slotPulse 180ms linear infinite;
+}
+
+@keyframes slotPulse {
+  0% { filter: blur(0px); transform: translateY(0); }
+  50% { filter: blur(0.6px); transform: translateY(-0.5px); }
+  100% { filter: blur(0px); transform: translateY(0); }
+}
+
 .insight-value.emphasis { color: var(--blue); }
 .insight-value.good { color: #15803D; }
 
@@ -2131,16 +2145,42 @@ function resetCalculator() {
   onAmountInput();
 }
 
-function animateValue(el, endValue, formatter, duration = 800) {
+function animateValue(el, endValue, formatter, duration = 1800, startValue = 0) {
+  if (!el) return;
   const start = performance.now();
+  const safeEnd = Number(endValue) || 0;
+  const safeStart = Number(startValue) || 0;
+  el.classList.add('rolling-number');
+
   function frame(now) {
     const p = Math.min(1, (now - start) / duration);
-    const eased = 1 - Math.pow(1 - p, 3);
-    const value = endValue * eased;
+    const eased = 1 - Math.pow(1 - p, 4);
+    const slotBoost = p < 0.82 ? Math.sin(p * 24) * (safeEnd - safeStart) * 0.01 : 0;
+    const value = safeStart + ((safeEnd - safeStart) * eased) + slotBoost;
     el.textContent = formatter(value);
-    if (p < 1) requestAnimationFrame(frame);
+    if (p < 1) {
+      requestAnimationFrame(frame);
+    } else {
+      el.textContent = formatter(safeEnd);
+      el.classList.remove('rolling-number');
+    }
   }
+
   requestAnimationFrame(frame);
+}
+
+function animateTextNumber(el, valueText, duration = 1800) {
+  if (!el) return;
+  const match = String(valueText).match(/(\d+(?:\.\d+)?)/);
+  if (!match) {
+    el.textContent = valueText;
+    return;
+  }
+  const end = parseFloat(match[1]);
+  const decimals = (match[1].split('.')[1] || '').length;
+  const prefix = valueText.slice(0, match.index);
+  const suffix = valueText.slice(match.index + match[1].length);
+  animateValue(el, end, v => `${prefix}${v.toFixed(decimals)}${suffix}`, duration);
 }
 
 function simulateMode(initial, numDays, forceCompound, offsets) {
@@ -2171,15 +2211,23 @@ function simulateMode(initial, numDays, forceCompound, offsets) {
 
 function setCompare(summary) {
   lastCompareSummary = summary;
-  document.getElementById('compare-compound-final').textContent = fmt(summary.compound.finalValue);
+  animateValue(document.getElementById('compare-compound-final'), summary.compound.finalValue, fmt, 2200);
   document.getElementById('compare-compound-note').textContent = `Profit ${fmt(summary.compound.totalProfit)} · ${summary.compound.crossoverDay ? 'Doubles on day ' + summary.compound.crossoverDay : 'No double within period'}`;
-  document.getElementById('compare-simple-final').textContent = fmt(summary.simple.finalValue);
+  animateValue(document.getElementById('compare-simple-final'), summary.simple.finalValue, fmt, 2300);
   document.getElementById('compare-simple-note').textContent = `Profit ${fmt(summary.simple.totalProfit)} · ${summary.simple.crossoverDay ? 'Doubles on day ' + summary.simple.crossoverDay : 'No double within period'}`;
   const diff = summary.compound.finalValue - summary.simple.finalValue;
-  document.getElementById('compare-difference').textContent = fmt(diff);
-  document.getElementById('compare-difference-pct').textContent = summary.simple.finalValue > 0 ? ((diff / summary.simple.finalValue) * 100).toFixed(1) + '%' : '—';
+  animateValue(document.getElementById('compare-difference'), diff, fmt, 2400);
+  if (summary.simple.finalValue > 0) {
+    animateValue(document.getElementById('compare-difference-pct'), (diff / summary.simple.finalValue) * 100, v => v.toFixed(1) + '%', 2500);
+  } else {
+    document.getElementById('compare-difference-pct').textContent = '—';
+  }
   document.getElementById('compare-best-mode').textContent = diff >= 0 ? 'Compound' : 'Simple';
-  document.getElementById('compare-crossover-day').textContent = summary.compound.crossoverDay ? 'Day ' + summary.compound.crossoverDay : '—';
+  if (summary.compound.crossoverDay) {
+    animateTextNumber(document.getElementById('compare-crossover-day'), 'Day ' + summary.compound.crossoverDay, 2100);
+  } else {
+    document.getElementById('compare-crossover-day').textContent = '—';
+  }
 }
 
 function setMilestones(milestones) {
@@ -2224,7 +2272,6 @@ function setInsights(initial, numDays, totalProfit, finalBalance, startOn, switc
     return totalValue >= initial * 2;
   });
   if (!doubledRow) {
-    const running = [];
     let sum = 0;
     for (const row of allRows) {
       sum += row.profit;
@@ -2236,15 +2283,18 @@ function setInsights(initial, numDays, totalProfit, finalBalance, startOn, switc
   document.getElementById('insight-best-package').textContent = bestPkg.pkgLabel;
   document.getElementById('insight-best-package-note').textContent = `Reached on day ${firstBestDay} · Final balance ${fmt(finalBalance)}`;
 
-  document.getElementById('insight-high-profit').textContent = fmt(highestProfitRow.profit);
+  animateValue(document.getElementById('insight-high-profit'), highestProfitRow.profit, fmt, 2000);
   document.getElementById('insight-high-profit-note').textContent = `Day ${highestProfitRow.day} · ${highestProfitRow.pkgLabel} · ${(highestProfitRow.rate * 100).toFixed(4)}% daily`; 
 
-  document.getElementById('insight-double').textContent = doubledRow ? `Day ${doubledRow.day}` : 'Not reached';
-  document.getElementById('insight-double-note').textContent = doubledRow
-    ? `Your projected value crosses ${fmt(initial * 2)} on day ${doubledRow.day}`
-    : `Projection ends at ${fmt(initial + totalProfit)} total projected value`;
+  if (doubledRow) {
+    animateTextNumber(document.getElementById('insight-double'), `Day ${doubledRow.day}`, 2100);
+    document.getElementById('insight-double-note').textContent = `Your projected value crosses ${fmt(initial * 2)} on day ${doubledRow.day}`;
+  } else {
+    document.getElementById('insight-double').textContent = 'Not reached';
+    document.getElementById('insight-double-note').textContent = `Projection ends at ${fmt(initial + totalProfit)} total projected value`;
+  }
 
-  document.getElementById('insight-avg-profit').textContent = fmt(avgDailyProfit);
+  animateValue(document.getElementById('insight-avg-profit'), avgDailyProfit, fmt, 2200);
   document.getElementById('insight-avg-profit-note').textContent = switchCount
     ? `${compoundDays} days compound · ${simpleDays} days simple`
     : `${startOn ? 'Compounding' : 'Simple'} mode for all ${numDays} days`;
@@ -2321,10 +2371,10 @@ function calculate() {
   const roi          = (totalProfit / initial) * 100;
   const yLabel       = years === 1 ? '1 year' : years + ' years';
 
-  animateValue(document.getElementById('m-start'), initial, fmt, 700);
-  animateValue(document.getElementById('m-profit'), totalProfit, fmt, 850);
-  animateValue(document.getElementById('m-final'), finalBalance, fmt, 900);
-  animateValue(document.getElementById('m-roi'), roi, v => v.toFixed(1) + '%', 1000);
+  animateValue(document.getElementById('m-start'), initial, fmt, 1700);
+  animateValue(document.getElementById('m-profit'), totalProfit, fmt, 2100);
+  animateValue(document.getElementById('m-final'), finalBalance, fmt, 2350);
+  animateValue(document.getElementById('m-roi'), roi, v => v.toFixed(1) + '%', 2550);
   document.getElementById('m-sub').textContent = `${yLabel} · ${numDays} days`;
   document.getElementById('chart-label').textContent = `Portfolio growth · ${yLabel} · start ${fmt(initial)}` + (hasSwitches ? ` · ${switchCount} switch${switchCount !== 1 ? 'es' : ''}` : '');
 
@@ -2344,7 +2394,7 @@ function calculate() {
   if (hasSwitches) {
     switchCard.style.display = '';
     banner.classList.add('has-switches');
-    animateValue(document.getElementById('m-switches'), switchCount, v => Math.round(v).toString(), 650);
+    animateValue(document.getElementById('m-switches'), switchCount, v => Math.round(v).toString(), 1600);
     document.getElementById('m-switches-sub').textContent = `${compoundDays}d compound · ${simpleDays}d simple`;
   } else {
     switchCard.style.display = 'none';
