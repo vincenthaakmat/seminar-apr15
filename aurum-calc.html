@@ -94,32 +94,89 @@ body {
 .wordmark {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  padding: 0.5rem 0.95rem;
-  border-radius: 999px;
-  background: rgba(255,255,255,0.14);
-  border: 1px solid rgba(255,255,255,0.22);
-  backdrop-filter: blur(12px);
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: rgba(255,255,255,0.92);
-  margin-bottom: 1rem;
+  justify-content: center;
+  margin-bottom: 1.1rem;
   text-decoration: none;
-  transition: background 0.15s, transform 0.15s, border-color 0.15s;
+  transition: transform 0.15s, filter 0.15s;
 }
 .wordmark:hover {
-  background: rgba(255,255,255,0.22);
-  border-color: rgba(255,255,255,0.34);
-  transform: translateY(-1px);
+  transform: translateY(-2px) scale(1.01);
+  filter: drop-shadow(0 14px 28px rgba(15, 23, 42, 0.18));
 }
 .wordmark:visited { color: rgba(255,255,255,0.92); }
-.wordmark::before {
-  content: 'auto_graph';
-  font-family: 'Material Symbols Rounded';
-  font-size: 18px;
-  letter-spacing: normal;
+.wordmark img {
+  display: block;
+  height: clamp(88px, 16vw, 180px);
+  width: auto;
+  max-width: min(88vw, 640px);
+}
+.hero-tools {
+  position: absolute;
+  top: 1.1rem;
+  right: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  z-index: 2;
+}
+.hero-cog {
+  width: 54px;
+  height: 54px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.28);
+  background: rgba(255,255,255,0.14);
+  color: #fff;
+  cursor: pointer;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 14px 28px rgba(15,23,42,0.18);
+  transition: transform 0.15s, background 0.15s, border-color 0.15s;
+}
+.hero-cog:hover {
+  transform: translateY(-1px);
+  background: rgba(255,255,255,0.22);
+  border-color: rgba(255,255,255,0.4);
+}
+.hero-cog .material-symbols-rounded { font-size: 28px; }
+.hero-tools-panel {
+  min-width: 220px;
+  padding: 12px;
+  border-radius: 20px;
+  background: rgba(17, 37, 96, 0.28);
+  border: 1px solid rgba(255,255,255,0.2);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 18px 36px rgba(15,23,42,0.18);
+  display: none;
+}
+.hero-tools-panel.open { display: block; }
+.hero-tool-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+}
+.hero-tool-row + .hero-tool-row { margin-top: 10px; }
+.hero-tool-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+}
+.hero-tool-label .material-symbols-rounded { font-size: 20px; }
+@media (max-width: 680px) {
+  .hero { padding-top: 5.7rem; }
+  .hero-tools { top: 0.85rem; right: 0.85rem; }
+  .hero-tools-panel { min-width: 200px; }
+  .wordmark img { height: clamp(76px, 18vw, 132px); max-width: min(86vw, 520px); }
 }
 h1 {
   font-size: clamp(34px, 5.4vw, 58px);
@@ -1423,25 +1480,215 @@ body.dark-mode .settings-btn:hover {
   border-color: #60a5fa;
 }
 
+
+
+/* ── Crypto & metals converter modal ── */
+.crypto-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  padding: 1.25rem;
+  background: rgba(15, 23, 42, 0.56);
+  backdrop-filter: blur(5px);
+  align-items: center;
+  justify-content: center;
+}
+.crypto-modal.open { display: flex; }
+.crypto-card {
+  width: min(560px, 100%);
+  max-height: min(86vh, 760px);
+  overflow-y: auto;
+  border-radius: 28px;
+  background: rgba(248, 250, 255, 0.96);
+  border: 1px solid rgba(255,255,255,0.46);
+  box-shadow: 0 28px 80px rgba(15, 23, 42, 0.34);
+  color: var(--text);
+}
+.crypto-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 1.35rem 1.45rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(135deg, rgba(39,82,231,0.10), rgba(6,182,212,0.10));
+}
+.crypto-title {
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text);
+}
+.crypto-title .material-symbols-rounded { color: var(--primary); font-size: 24px; }
+.crypto-subtitle {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+.crypto-close {
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.78);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.crypto-close:hover { color: var(--text); background: #fff; }
+.crypto-body { padding: 1.35rem 1.45rem 1.45rem; }
+.crypto-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+@media (max-width: 560px) { .crypto-grid { grid-template-columns: 1fr; } }
+.crypto-field { margin-bottom: 14px; }
+.crypto-field label {
+  display: block;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.crypto-field input,
+.crypto-field select {
+  width: 100%;
+  background: rgba(255,255,255,0.88);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 12px 13px;
+  outline: none;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.70);
+}
+.crypto-field select { cursor: pointer; }
+.crypto-field input:focus,
+.crypto-field select:focus {
+  border-color: rgba(39,82,231,0.45);
+  box-shadow: 0 0 0 4px rgba(39,82,231,0.12);
+  background: #fff;
+}
+.crypto-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin: 4px 0 16px;
+}
+.crypto-action-btn {
+  flex: 1;
+  border: none;
+  border-radius: 18px;
+  padding: 13px 16px;
+  background: linear-gradient(135deg, var(--primary) 0%, #376bff 100%);
+  color: #fff;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: var(--shadow-1);
+}
+.crypto-action-btn.secondary {
+  flex: 0 0 auto;
+  width: 48px;
+  padding: 13px;
+  background: rgba(255,255,255,0.88);
+  color: var(--primary);
+  border: 1px solid var(--border);
+}
+.crypto-result {
+  border-radius: 22px;
+  padding: 1rem;
+  background: linear-gradient(135deg, rgba(24,45,141,0.95), rgba(39,82,231,0.95), rgba(56,136,255,0.95));
+  color: #fff;
+  box-shadow: var(--shadow-1);
+}
+.crypto-result-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.62);
+  margin-bottom: 7px;
+}
+.crypto-result-value {
+  font-size: clamp(22px, 5vw, 32px);
+  font-weight: 850;
+  letter-spacing: -0.04em;
+  word-break: break-word;
+}
+.crypto-rate {
+  margin-top: 7px;
+  font-size: 12px;
+  color: rgba(255,255,255,0.72);
+  line-height: 1.55;
+}
+.crypto-status {
+  margin-top: 12px;
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+.crypto-status.warn { color: #b45309; }
+.crypto-status.error { color: var(--red); }
+body.dark-mode .crypto-card {
+  background: rgba(17,24,39,0.96);
+  border-color: rgba(148,163,184,0.18);
+}
+body.dark-mode .crypto-header {
+  background: linear-gradient(135deg, rgba(29,78,216,0.20), rgba(6,182,212,0.10));
+}
+body.dark-mode .crypto-field input,
+body.dark-mode .crypto-field select,
+body.dark-mode .crypto-close,
+body.dark-mode .crypto-action-btn.secondary {
+  background: rgba(15,23,42,0.82);
+  color: var(--text);
+  border-color: rgba(148,163,184,0.22);
+}
+
 </style>
 </head>
 <body>
 
   <div class="hero">
     <div class="hero-inner">
-      <a class="wordmark" href="https://aurum.foundation/en" target="_blank" rel="noopener noreferrer">Aurum</a>
+      <div class="hero-tools">
+        <button class="hero-cog" type="button" onclick="toggleHeroTools()" aria-label="Open appearance and settings">
+          <span class="material-symbols-rounded">settings</span>
+        </button>
+        <div class="hero-tools-panel" id="heroToolsPanel">
+          <button class="hero-tool-row" type="button" onclick="openSettings(); closeHeroTools();" style="width:100%; border:none; cursor:pointer; font-family:'Inter',sans-serif;">
+            <span class="hero-tool-label"><span class="material-symbols-rounded">tune</span>Package settings</span>
+            <span class="material-symbols-rounded" style="font-size:18px;">chevron_right</span>
+          </button>
+          <button class="hero-tool-row" type="button" onclick="openCryptoConverter(); closeHeroTools();" style="width:100%; border:none; cursor:pointer; font-family:'Inter',sans-serif;">
+            <span class="hero-tool-label"><span class="material-symbols-rounded">currency_exchange</span>Crypto / metals converter</span>
+            <span class="material-symbols-rounded" style="font-size:18px;">chevron_right</span>
+          </button>
+          <div class="hero-tool-row">
+            <span class="hero-tool-label"><span class="material-symbols-rounded" id="themeToggleIcon">dark_mode</span><span id="themeToggleLabel">Dark mode</span></span>
+            <label class="toggle-switch" aria-label="Toggle dark mode">
+              <input type="checkbox" id="themeToggleCheckbox" onchange="toggleTheme()">
+              <span class="toggle-track"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <a class="wordmark" href="https://aurum.foundation/en" target="_blank" rel="noopener noreferrer" aria-label="Visit the Aurum website"><img src="Logo_circle.png" alt="Aurum"></a>
       <h1>Daily ROI Calculator</h1>
       <p class="subtitle">A modern Material 3 styled ROI experience with clearer hierarchy, premium surfaces, and instant visual rate comparisons between package tiers.</p>
-      <button class="settings-btn" onclick="openSettings()">
-        <span class="material-symbols-rounded">tune</span>
-        Package settings
-      </button>
-      <div>
-        <button class="dark-toggle" id="themeToggle" onclick="toggleTheme()">
-          <span class="material-symbols-rounded" id="themeToggleIcon">dark_mode</span>
-          <span id="themeToggleLabel">Dark mode</span>
-        </button>
-      </div>
     </div>
   </div>
 
@@ -1459,6 +1706,67 @@ body.dark-mode .settings-btn:hover {
     <div class="sp-footer">
       <button class="sp-reset" onclick="resetDefaults()">Reset to defaults</button>
       <button class="sp-save" onclick="saveSettings()">Apply changes</button>
+    </div>
+  </div>
+
+
+  <div class="crypto-modal" id="cryptoModal" role="dialog" aria-modal="true" aria-labelledby="cryptoModalTitle">
+    <div class="crypto-card">
+      <div class="crypto-header">
+        <div>
+          <div class="crypto-title" id="cryptoModalTitle">
+            <span class="material-symbols-rounded">currency_exchange</span>
+            Crypto & metals converter
+          </div>
+          <p class="crypto-subtitle">Convert between the top 10 cryptocurrencies, gold, silver, and USD or EUR. Rates refresh when the popup opens.</p>
+        </div>
+        <button class="crypto-close" type="button" onclick="closeCryptoConverter()" aria-label="Close crypto converter">
+          <span class="material-symbols-rounded">close</span>
+        </button>
+      </div>
+      <div class="crypto-body">
+        <div class="crypto-grid">
+          <div class="crypto-field">
+            <label for="cryptoAmount">Amount</label>
+            <input type="number" id="cryptoAmount" min="0" step="any" value="1" oninput="convertCryptoCurrency()">
+          </div>
+          <div class="crypto-field">
+            <label for="cryptoDirection">Direction</label>
+            <select id="cryptoDirection" onchange="onCryptoDirectionChange()">
+              <option value="cryptoToFiat">Asset → USD/EUR</option>
+              <option value="fiatToCrypto">USD/EUR → Asset</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="crypto-grid">
+          <div class="crypto-field">
+            <label for="cryptoCoin">Crypto / metal</label>
+            <select id="cryptoCoin" onchange="convertCryptoCurrency()"></select>
+          </div>
+          <div class="crypto-field">
+            <label for="cryptoFiat">Fiat currency</label>
+            <select id="cryptoFiat" onchange="convertCryptoCurrency()">
+              <option value="usd">USD - US Dollar</option>
+              <option value="eur">EUR - Euro</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="crypto-actions">
+          <button class="crypto-action-btn" type="button" onclick="convertCryptoCurrency()">Calculate conversion</button>
+          <button class="crypto-action-btn secondary" type="button" onclick="swapCryptoDirection()" title="Switch direction" aria-label="Switch conversion direction">
+            <span class="material-symbols-rounded">swap_vert</span>
+          </button>
+        </div>
+
+        <div class="crypto-result">
+          <div class="crypto-result-label">Converted value</div>
+          <div class="crypto-result-value" id="cryptoResultValue">—</div>
+          <div class="crypto-rate" id="cryptoRateText">Open the converter to load rates.</div>
+        </div>
+        <div class="crypto-status" id="cryptoStatusText">Rates are indicative and may change quickly.</div>
+      </div>
     </div>
   </div>
 
@@ -2930,5 +3238,242 @@ function exportPDF() {
     </div>
   </footer>
 
+
+<script>
+function toggleHeroTools() {
+  const panel = document.getElementById('heroToolsPanel');
+  if (!panel) return;
+  panel.classList.toggle('open');
+}
+function closeHeroTools() {
+  const panel = document.getElementById('heroToolsPanel');
+  if (panel) panel.classList.remove('open');
+}
+document.addEventListener('click', function (e) {
+  const panel = document.getElementById('heroToolsPanel');
+  const tools = document.querySelector('.hero-tools');
+  if (!panel || !tools) return;
+  if (!tools.contains(e.target)) panel.classList.remove('open');
+});
+const __origToggleTheme = window.toggleTheme;
+window.toggleTheme = function () {
+  if (typeof __origToggleTheme === 'function') { __origToggleTheme(); }
+  const isDark = document.body.classList.contains('dark-mode');
+  const cb = document.getElementById('themeToggleCheckbox');
+  const icon = document.getElementById('themeToggleIcon');
+  const label = document.getElementById('themeToggleLabel');
+  if (cb) cb.checked = isDark;
+  if (icon) icon.textContent = isDark ? 'light_mode' : 'dark_mode';
+  if (label) label.textContent = isDark ? 'Light mode' : 'Dark mode';
+};
+document.addEventListener('DOMContentLoaded', function () {
+  const isDark = document.body.classList.contains('dark-mode');
+  const cb = document.getElementById('themeToggleCheckbox');
+  const icon = document.getElementById('themeToggleIcon');
+  const label = document.getElementById('themeToggleLabel');
+  if (cb) cb.checked = isDark;
+  if (icon) icon.textContent = isDark ? 'light_mode' : 'dark_mode';
+  if (label) label.textContent = isDark ? 'Light mode' : 'Dark mode';
+});
+
+
+/* ── Crypto / metals converter ── */
+let cryptoRates = [];
+let metalRates = [];
+let cryptoRatesLoadedAt = null;
+
+const fallbackCryptoRates = [
+  { id: 'bitcoin', symbol: 'btc', name: 'Bitcoin', current_price: 95000, eur_price: 87000, type: 'crypto' },
+  { id: 'ethereum', symbol: 'eth', name: 'Ethereum', current_price: 3200, eur_price: 2940, type: 'crypto' },
+  { id: 'tether', symbol: 'usdt', name: 'Tether', current_price: 1, eur_price: 0.92, type: 'crypto' },
+  { id: 'binancecoin', symbol: 'bnb', name: 'BNB', current_price: 600, eur_price: 552, type: 'crypto' },
+  { id: 'solana', symbol: 'sol', name: 'Solana', current_price: 150, eur_price: 138, type: 'crypto' },
+  { id: 'ripple', symbol: 'xrp', name: 'XRP', current_price: 0.55, eur_price: 0.51, type: 'crypto' },
+  { id: 'cardano', symbol: 'ada', name: 'Cardano', current_price: 0.45, eur_price: 0.41, type: 'crypto' },
+  { id: 'dogecoin', symbol: 'doge', name: 'Dogecoin', current_price: 0.16, eur_price: 0.147, type: 'crypto' },
+  { id: 'tron', symbol: 'trx', name: 'TRON', current_price: 0.12, eur_price: 0.11, type: 'crypto' },
+  { id: 'the-open-network', symbol: 'ton', name: 'Toncoin', current_price: 5.2, eur_price: 4.78, type: 'crypto' }
+];
+
+const fallbackMetalRates = [
+  { id: 'gold', symbol: 'xau', name: 'Gold', current_price: 2300, eur_price: 2116, type: 'metal', unit: 'troy oz' },
+  { id: 'silver', symbol: 'xag', name: 'Silver', current_price: 29, eur_price: 26.68, type: 'metal', unit: 'troy oz' }
+];
+
+function getConverterAssets() {
+  return [...cryptoRates, ...metalRates];
+}
+
+function cryptoMoney(value, fiat) {
+  if (!Number.isFinite(value)) return '—';
+  return new Intl.NumberFormat(undefined, {
+    style: 'currency',
+    currency: fiat.toUpperCase(),
+    maximumFractionDigits: value >= 1 ? 2 : 8
+  }).format(value);
+}
+
+function cryptoAmount(value, symbol) {
+  if (!Number.isFinite(value)) return '—';
+  const digits = value >= 1 ? 6 : 10;
+  return `${new Intl.NumberFormat(undefined, { maximumFractionDigits: digits }).format(value)} ${symbol.toUpperCase()}`;
+}
+
+function getCryptoPrice(asset, fiat) {
+  if (!asset) return 0;
+  if (fiat === 'eur') return Number(asset.eur_price || asset.current_price_eur || 0);
+  return Number(asset.current_price || asset.current_price_usd || 0);
+}
+
+function setCryptoStatus(message, type) {
+  const el = document.getElementById('cryptoStatusText');
+  if (!el) return;
+  el.textContent = message;
+  el.className = 'crypto-status' + (type ? ` ${type}` : '');
+}
+
+function populateCryptoList() {
+  const select = document.getElementById('cryptoCoin');
+  if (!select) return;
+  const current = select.value;
+  select.innerHTML = '';
+
+  const cryptoGroup = document.createElement('optgroup');
+  cryptoGroup.label = 'Top cryptocurrencies';
+  cryptoRates.forEach((asset) => {
+    const option = document.createElement('option');
+    option.value = asset.id;
+    option.textContent = `${asset.name} (${asset.symbol.toUpperCase()})`;
+    cryptoGroup.appendChild(option);
+  });
+  select.appendChild(cryptoGroup);
+
+  const metalGroup = document.createElement('optgroup');
+  metalGroup.label = 'Metals';
+  metalRates.forEach((asset) => {
+    const option = document.createElement('option');
+    option.value = asset.id;
+    option.textContent = `${asset.name} (${asset.symbol.toUpperCase()} / ${asset.unit || 'troy oz'})`;
+    metalGroup.appendChild(option);
+  });
+  select.appendChild(metalGroup);
+
+  if (current && getConverterAssets().some(c => c.id === current)) select.value = current;
+}
+
+async function loadMetalRates(eurUsdRate) {
+  const eurRate = Number(eurUsdRate || 0.92);
+  try {
+    const res = await fetch('https://api.metals.live/v1/spot', { cache: 'no-store' });
+    if (!res.ok) throw new Error('Metals rate request failed');
+    const data = await res.json();
+    const gold = data.find(x => typeof x.gold === 'number')?.gold;
+    const silver = data.find(x => typeof x.silver === 'number')?.silver;
+    if (!gold || !silver) throw new Error('Metal spot prices missing');
+    metalRates = [
+      { id: 'gold', symbol: 'xau', name: 'Gold', current_price: Number(gold), eur_price: Number(gold) * eurRate, type: 'metal', unit: 'troy oz' },
+      { id: 'silver', symbol: 'xag', name: 'Silver', current_price: Number(silver), eur_price: Number(silver) * eurRate, type: 'metal', unit: 'troy oz' }
+    ];
+  } catch (err) {
+    console.warn('Metal rates could not be loaded:', err);
+    metalRates = fallbackMetalRates;
+  }
+}
+
+async function loadCryptoRates(force) {
+  const now = Date.now();
+  if (!force && getConverterAssets().length && cryptoRatesLoadedAt && (now - cryptoRatesLoadedAt < 120000)) return;
+  setCryptoStatus('Loading latest crypto and metal rates…');
+  try {
+    const url = 'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=10&page=1&sparkline=false&price_change_percentage=24h';
+    const usdRes = await fetch(url, { cache: 'no-store' });
+    if (!usdRes.ok) throw new Error('USD crypto rate request failed');
+    const usdData = await usdRes.json();
+    const ids = usdData.map(c => c.id).join(',');
+    const eurRes = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${encodeURIComponent(ids)}&vs_currencies=eur`, { cache: 'no-store' });
+    if (!eurRes.ok) throw new Error('EUR crypto rate request failed');
+    const eurData = await eurRes.json();
+    cryptoRates = usdData.map(c => ({
+      id: c.id,
+      symbol: c.symbol,
+      name: c.name,
+      current_price: Number(c.current_price),
+      eur_price: Number(eurData?.[c.id]?.eur || 0),
+      type: 'crypto'
+    }));
+
+    const eurUsdRate = cryptoRates.find(c => c.symbol === 'usdt')?.eur_price || 0.92;
+    await loadMetalRates(eurUsdRate);
+
+    cryptoRatesLoadedAt = Date.now();
+    populateCryptoList();
+    setCryptoStatus(`Live crypto rates loaded. Metals use spot prices when available. Last refresh: ${new Date(cryptoRatesLoadedAt).toLocaleTimeString()}.`);
+  } catch (err) {
+    console.warn('Crypto/metals rates could not be loaded:', err);
+    cryptoRates = fallbackCryptoRates;
+    metalRates = fallbackMetalRates;
+    cryptoRatesLoadedAt = Date.now();
+    populateCryptoList();
+    setCryptoStatus('Live rates could not be loaded, so estimated fallback rates are being shown. Try again later.', 'warn');
+  }
+}
+
+function convertCryptoCurrency() {
+  const amount = Number(document.getElementById('cryptoAmount')?.value || 0);
+  const direction = document.getElementById('cryptoDirection')?.value || 'cryptoToFiat';
+  const fiat = document.getElementById('cryptoFiat')?.value || 'usd';
+  const assetId = document.getElementById('cryptoCoin')?.value;
+  const asset = getConverterAssets().find(c => c.id === assetId) || getConverterAssets()[0];
+  const price = getCryptoPrice(asset, fiat);
+  const resultEl = document.getElementById('cryptoResultValue');
+  const rateEl = document.getElementById('cryptoRateText');
+  if (!resultEl || !rateEl || !asset || !amount || amount < 0 || !price) {
+    if (resultEl) resultEl.textContent = '—';
+    if (rateEl) rateEl.textContent = 'Enter an amount and select a currency pair.';
+    return;
+  }
+
+  const unitText = asset.type === 'metal' ? ` per ${asset.unit || 'troy oz'}` : '';
+  if (direction === 'cryptoToFiat') {
+    const result = amount * price;
+    resultEl.textContent = cryptoMoney(result, fiat);
+    rateEl.textContent = `${cryptoAmount(1, asset.symbol)}${unitText} ≈ ${cryptoMoney(price, fiat)}`;
+  } else {
+    const result = amount / price;
+    resultEl.textContent = cryptoAmount(result, asset.symbol);
+    rateEl.textContent = `${cryptoMoney(1, fiat)} ≈ ${cryptoAmount(1 / price, asset.symbol)}`;
+  }
+}
+
+function onCryptoDirectionChange() { convertCryptoCurrency(); }
+function swapCryptoDirection() {
+  const dir = document.getElementById('cryptoDirection');
+  if (dir) dir.value = dir.value === 'cryptoToFiat' ? 'fiatToCrypto' : 'cryptoToFiat';
+  convertCryptoCurrency();
+}
+async function openCryptoConverter() {
+  const modal = document.getElementById('cryptoModal');
+  if (modal) modal.classList.add('open');
+  await loadCryptoRates(false);
+  convertCryptoCurrency();
+}
+function closeCryptoConverter() {
+  const modal = document.getElementById('cryptoModal');
+  if (modal) modal.classList.remove('open');
+}
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') closeCryptoConverter();
+});
+document.addEventListener('click', function (e) {
+  const modal = document.getElementById('cryptoModal');
+  if (modal && modal.classList.contains('open') && e.target === modal) closeCryptoConverter();
+});
+document.addEventListener('DOMContentLoaded', function () {
+  cryptoRates = fallbackCryptoRates;
+  metalRates = fallbackMetalRates;
+  populateCryptoList();
+  convertCryptoCurrency();
+});
+</script>
 </body>
 </html>
