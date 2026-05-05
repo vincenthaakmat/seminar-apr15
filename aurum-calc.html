@@ -1642,6 +1642,73 @@ body.dark-mode .settings-btn:hover {
 }
 .crypto-status.warn { color: #b45309; }
 .crypto-status.error { color: var(--red); }
+
+.crypto-history {
+  margin-top: 14px;
+  border-radius: 22px;
+  padding: 1rem;
+  background: rgba(255,255,255,0.82);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-1);
+}
+.crypto-history-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.crypto-history-title {
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.crypto-history-tabs {
+  display: inline-flex;
+  gap: 5px;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(237,242,255,0.84);
+  border: 1px solid var(--border);
+}
+.crypto-history-tab {
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 7px 10px;
+  cursor: pointer;
+}
+.crypto-history-tab.active {
+  background: linear-gradient(135deg, var(--primary) 0%, #4c79ff 100%);
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(39,82,231,0.16);
+}
+.crypto-history-canvas-wrap {
+  position: relative;
+  width: 100%;
+  height: 220px;
+}
+.crypto-history-note {
+  margin-top: 8px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+body.dark-mode .crypto-history {
+  background: rgba(15,23,42,0.72);
+  border-color: rgba(148,163,184,0.18);
+}
+body.dark-mode .crypto-history-tabs {
+  background: rgba(17,24,39,0.78);
+  border-color: rgba(148,163,184,0.18);
+}
 body.dark-mode .crypto-card {
   background: rgba(17,24,39,0.96);
   border-color: rgba(148,163,184,0.18);
@@ -1742,11 +1809,11 @@ body.dark-mode .crypto-action-btn.secondary {
         <div class="crypto-grid">
           <div class="crypto-field">
             <label for="cryptoCoin">Crypto / metal</label>
-            <select id="cryptoCoin" onchange="convertCryptoCurrency()"></select>
+            <select id="cryptoCoin" onchange="onCryptoAssetChange()"></select>
           </div>
           <div class="crypto-field">
             <label for="cryptoFiat">Fiat currency</label>
-            <select id="cryptoFiat" onchange="convertCryptoCurrency()">
+            <select id="cryptoFiat" onchange="onCryptoFiatChange()">
               <option value="usd">USD - US Dollar</option>
               <option value="eur">EUR - Euro</option>
             </select>
@@ -1764,6 +1831,22 @@ body.dark-mode .crypto-action-btn.secondary {
           <div class="crypto-result-label">Converted value</div>
           <div class="crypto-result-value" id="cryptoResultValue">—</div>
           <div class="crypto-rate" id="cryptoRateText">Open the converter to load rates.</div>
+        </div>
+
+        <div class="crypto-history" id="cryptoHistoryBox">
+          <div class="crypto-history-head">
+            <div class="crypto-history-title" id="cryptoHistoryTitle">Crypto price history</div>
+            <div class="crypto-history-tabs" aria-label="Crypto history range">
+              <button class="crypto-history-tab" type="button" data-days="7" onclick="setCryptoHistoryRange(7)">7D</button>
+              <button class="crypto-history-tab active" type="button" data-days="30" onclick="setCryptoHistoryRange(30)">30D</button>
+              <button class="crypto-history-tab" type="button" data-days="90" onclick="setCryptoHistoryRange(90)">90D</button>
+              <button class="crypto-history-tab" type="button" data-days="365" onclick="setCryptoHistoryRange(365)">1Y</button>
+            </div>
+          </div>
+          <div class="crypto-history-canvas-wrap">
+            <canvas id="cryptoHistoryChart" role="img" aria-label="Selected cryptocurrency price history chart"></canvas>
+          </div>
+          <div class="crypto-history-note" id="cryptoHistoryNote">Select a cryptocurrency to view its recent price history.</div>
         </div>
         <div class="crypto-status" id="cryptoStatusText">Rates are indicative and may change quickly.</div>
       </div>
@@ -3281,6 +3364,9 @@ document.addEventListener('DOMContentLoaded', function () {
 let cryptoRates = [];
 let metalRates = [];
 let cryptoRatesLoadedAt = null;
+let cryptoHistoryChart = null;
+let cryptoHistoryRangeDays = 30;
+const cryptoHistoryCache = {};
 
 const fallbackCryptoRates = [
   { id: 'bitcoin', symbol: 'btc', name: 'Bitcoin', current_price: 95000, eur_price: 87000, type: 'crypto' },
@@ -3445,6 +3531,147 @@ function convertCryptoCurrency() {
   }
 }
 
+
+function isCryptoHistoryAsset(asset) {
+  return asset && asset.type === 'crypto';
+}
+
+function setCryptoHistoryLoading(message) {
+  const note = document.getElementById('cryptoHistoryNote');
+  if (note) note.textContent = message;
+}
+
+function updateCryptoHistoryTabs() {
+  document.querySelectorAll('.crypto-history-tab').forEach(btn => {
+    btn.classList.toggle('active', Number(btn.dataset.days) === Number(cryptoHistoryRangeDays));
+  });
+}
+
+function buildFallbackHistory(asset, fiat, days) {
+  const price = getCryptoPrice(asset, fiat) || 1;
+  const points = [];
+  const now = Date.now();
+  for (let i = days - 1; i >= 0; i--) {
+    const t = now - i * 86400000;
+    const wave = Math.sin((days - i) / 4) * 0.035;
+    const drift = (days - i) / Math.max(days, 1) * 0.05;
+    const val = price * (0.94 + drift + wave);
+    points.push([t, val]);
+  }
+  return points;
+}
+
+async function loadCryptoHistory() {
+  const fiat = document.getElementById('cryptoFiat')?.value || 'usd';
+  const assetId = document.getElementById('cryptoCoin')?.value;
+  const asset = getConverterAssets().find(c => c.id === assetId);
+  const box = document.getElementById('cryptoHistoryBox');
+  const title = document.getElementById('cryptoHistoryTitle');
+
+  updateCryptoHistoryTabs();
+
+  if (!box || !title) return;
+  if (!isCryptoHistoryAsset(asset)) {
+    title.textContent = 'Crypto price history';
+    setCryptoHistoryLoading('Price-history chart is available for cryptocurrencies only. Gold and silver are shown in the converter, but not in this crypto-history graph.');
+    renderCryptoHistoryChart([], asset, fiat);
+    return;
+  }
+
+  title.textContent = `${asset.name} price history`;
+  setCryptoHistoryLoading(`Loading ${asset.name} ${cryptoHistoryRangeDays} day history…`);
+
+  const cacheKey = `${asset.id}_${fiat}_${cryptoHistoryRangeDays}`;
+  try {
+    let prices = cryptoHistoryCache[cacheKey];
+    if (!prices) {
+      const url = `https://api.coingecko.com/api/v3/coins/${encodeURIComponent(asset.id)}/market_chart?vs_currency=${encodeURIComponent(fiat)}&days=${encodeURIComponent(cryptoHistoryRangeDays)}`;
+      const res = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) throw new Error('History request failed');
+      const data = await res.json();
+      prices = Array.isArray(data.prices) ? data.prices : [];
+      if (!prices.length) throw new Error('No history data returned');
+      cryptoHistoryCache[cacheKey] = prices;
+    }
+    renderCryptoHistoryChart(prices, asset, fiat);
+    setCryptoHistoryLoading(`Showing ${cryptoHistoryRangeDays} day history in ${fiat.toUpperCase()}. Live data from CoinGecko when available.`);
+  } catch (err) {
+    console.warn('Crypto history could not be loaded:', err);
+    const fallback = buildFallbackHistory(asset, fiat, cryptoHistoryRangeDays);
+    renderCryptoHistoryChart(fallback, asset, fiat);
+    setCryptoHistoryLoading('Live history could not be loaded, so an estimated fallback trend is shown. Try again later.');
+  }
+}
+
+function renderCryptoHistoryChart(prices, asset, fiat) {
+  const canvas = document.getElementById('cryptoHistoryChart');
+  if (!canvas || typeof Chart === 'undefined') return;
+  const ctx = canvas.getContext('2d');
+  const labels = prices.map(p => {
+    const d = new Date(p[0]);
+    return cryptoHistoryRangeDays <= 30
+      ? d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+      : d.toLocaleDateString(undefined, { month: 'short', year: '2-digit' });
+  });
+  const values = prices.map(p => Number(p[1]));
+
+  if (cryptoHistoryChart) {
+    cryptoHistoryChart.destroy();
+    cryptoHistoryChart = null;
+  }
+
+  cryptoHistoryChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: asset ? `${asset.symbol.toUpperCase()} / ${fiat.toUpperCase()}` : 'History',
+        data: values,
+        borderWidth: 3,
+        tension: 0.35,
+        pointRadius: values.length > 45 ? 0 : 2,
+        fill: false
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { intersect: false, mode: 'index' },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => `${asset?.symbol?.toUpperCase() || ''}: ${cryptoMoney(Number(ctx.parsed.y), fiat)}`
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { maxTicksLimit: 6 } },
+        y: {
+          ticks: {
+            callback: (value) => cryptoMoney(Number(value), fiat)
+          }
+        }
+      }
+    }
+  });
+}
+
+function setCryptoHistoryRange(days) {
+  cryptoHistoryRangeDays = Number(days) || 30;
+  loadCryptoHistory();
+}
+
+function onCryptoAssetChange() {
+  convertCryptoCurrency();
+  loadCryptoHistory();
+}
+
+function onCryptoFiatChange() {
+  convertCryptoCurrency();
+  loadCryptoHistory();
+}
+
 function onCryptoDirectionChange() { convertCryptoCurrency(); }
 function swapCryptoDirection() {
   const dir = document.getElementById('cryptoDirection');
@@ -3456,6 +3683,7 @@ async function openCryptoConverter() {
   if (modal) modal.classList.add('open');
   await loadCryptoRates(false);
   convertCryptoCurrency();
+  loadCryptoHistory();
 }
 function closeCryptoConverter() {
   const modal = document.getElementById('cryptoModal');
