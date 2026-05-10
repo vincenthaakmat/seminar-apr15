@@ -1172,6 +1172,32 @@ tr.subtotal-row-compound td:first-child { color: #15803D; text-align: left; }
   border-radius: 12px;
 }
 
+.switch-row select.switch-months {
+  font-size: 13px;
+  padding: 8px 10px;
+  height: auto;
+  min-width: 150px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.85);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  outline: none;
+}
+
+.switch-row select.switch-months:focus {
+  border-color: rgba(39,82,231,0.45);
+  box-shadow: 0 0 0 3px rgba(39,82,231,0.12);
+}
+
+body.dark-mode .switch-row select.switch-months {
+  background: rgba(17,24,39,0.74);
+  border-color: rgba(148,163,184,0.16);
+  color: var(--text-mid);
+}
+
 .switch-date-pill {
   display: inline-flex;
   align-items: center;
@@ -2052,7 +2078,7 @@ body.dark-mode .planner-card, body.dark-mode .planner-action, body.dark-mode .to
             <button class="add-switch-btn" onclick="addSwitch()">+ Add switch</button>
           </div>
           <div id="switchList" style="display:flex; flex-direction:column; gap:6px;"></div>
-          <p class="hint" id="switchHint">Add a switch to flip compounding on or off from a specific day onward. You can also pick the actual calendar date.</p>
+          <p class="hint" id="switchHint">Add a switch to flip compounding on or off from a specific day onward. You can enter a day, pick a date, or choose a number of months.</p>
 
           <!-- Save / recall -->
           <div id="switchSaveWrap" style="margin-top:10px; display:none;">
@@ -2575,6 +2601,39 @@ function setSwitchDate(i, value) {
   switches[i].day = getDayFromDate(value);
 }
 
+function setSwitchMonths(i, val) {
+  const months = parseInt(val, 10);
+  if (isNaN(months) || months < 1) return;
+
+  const startDateStr = getStartDateValue();
+  if (!startDateStr) return;
+
+  const startDate = new Date(startDateStr + 'T00:00:00');
+  const targetDate = new Date(startDate);
+  targetDate.setMonth(targetDate.getMonth() + months);
+
+  const diffMs = targetDate.getTime() - startDate.getTime();
+  const diffDays = Math.max(1, Math.round(diffMs / (1000 * 60 * 60 * 24)) + 1);
+
+  switches[i].day = diffDays;
+}
+
+function getSelectedMonthValue(day) {
+  const monthOptions = [1,2,3,4,5,6,9,12,18,24,36];
+  const switchDate = getDateForDay(day);
+  const startDateStr = getStartDateValue();
+  if (!switchDate || !startDateStr) return '';
+
+  const target = new Date(switchDate + 'T00:00:00');
+  for (const m of monthOptions) {
+    const d = new Date(startDateStr + 'T00:00:00');
+    d.setMonth(d.getMonth() + m);
+    const expected = d.toISOString().slice(0, 10);
+    if (expected === switchDate) return String(m);
+  }
+  return '';
+}
+
 function renderSwitchList() {
   const list    = document.getElementById('switchList');
   const hint    = document.getElementById('switchHint');
@@ -2605,6 +2664,21 @@ function renderSwitchList() {
         <span class="switch-row-label">Date</span>
         <input type="date" value="${switchDate}" min="${getStartDateValue()}"
           onchange="setSwitchDate(${i}, this.value); renderSwitchList()">
+        <span class="switch-row-label">or after</span>
+        <select class="switch-months" onchange="setSwitchMonths(${i}, this.value); renderSwitchList()">
+          <option value="">Choose months</option>
+          <option value="1" ${getSelectedMonthValue(sw.day) === '1' ? 'selected' : ''}>1 month</option>
+          <option value="2" ${getSelectedMonthValue(sw.day) === '2' ? 'selected' : ''}>2 months</option>
+          <option value="3" ${getSelectedMonthValue(sw.day) === '3' ? 'selected' : ''}>3 months</option>
+          <option value="4" ${getSelectedMonthValue(sw.day) === '4' ? 'selected' : ''}>4 months</option>
+          <option value="5" ${getSelectedMonthValue(sw.day) === '5' ? 'selected' : ''}>5 months</option>
+          <option value="6" ${getSelectedMonthValue(sw.day) === '6' ? 'selected' : ''}>6 months</option>
+          <option value="9" ${getSelectedMonthValue(sw.day) === '9' ? 'selected' : ''}>9 months</option>
+          <option value="12" ${getSelectedMonthValue(sw.day) === '12' ? 'selected' : ''}>12 months</option>
+          <option value="18" ${getSelectedMonthValue(sw.day) === '18' ? 'selected' : ''}>18 months</option>
+          <option value="24" ${getSelectedMonthValue(sw.day) === '24' ? 'selected' : ''}>24 months</option>
+          <option value="36" ${getSelectedMonthValue(sw.day) === '36' ? 'selected' : ''}>36 months</option>
+        </select>
         <span class="switch-date-pill">${formatDateShort(switchDate)}</span>
       </div>
       <div class="switch-row-bottom">
