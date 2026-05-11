@@ -74,11 +74,14 @@ let hiveZoom = 0.85;
 let hiveFullscreen = true;
 let hiveFocusMode = false;
 let highlightedInviteId = '';
+let hiveHeatmapMode = 'none';
+let lastHiveLayout = null;
 const collapsedInviteIds = new Set();
 const HIVE_LOCAL_KEY = 'aurum_hive_database_v1';
 const HIVE_LAST_INVITE_KEY = 'aurum_hive_last_invite_id_v1';
 const HIVE_ZOOM_KEY = 'aurum_hive_zoom_v1';
 const HIVE_CLOUD_TABLE = 'aurum_hive_accounts';
+const AURUM_REFERRAL_BASE_URL = 'https://backoffice.aurum.foundation/u/';
 const HIVE_RANKS = ['NOVA', 'VOYAGER', 'VANGUARD', 'VANGUARD PRO', 'NEXUS', 'ORACLE', 'PRIME', 'ELITE', 'MAGNAT', 'MYTHOS', 'LEGEND'];
 const DEFAULT_HIVE_RANK = 'NOVA';
 const DEFAULT_HIVE_COUNTRY = 'Not specified';
@@ -97,6 +100,7 @@ let supabaseClientPromise = null;
 let activeLookupInviteId = '';
 let hiveRealtimeChannel = null;
 let realtimeReloadTimer = null;
+const copyFeedbackTimers = new WeakMap();
 
 export function configureHiveSupabase(config) {
   Object.assign(supabaseConfig, config || {});
@@ -125,6 +129,11 @@ function ensureHiveUi() {
     .hive-summary-label { font-size:10px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; color:var(--text-muted); margin-bottom:3px; }
     .hive-summary-value { font-size:16px; font-weight:900; color:var(--text); line-height:1.2; overflow-wrap:anywhere; }
     .hive-summary-note { margin-top:3px; font-size:11px; color:var(--text-muted); overflow-wrap:anywhere; }
+    .hive-copy-row { display:grid; grid-template-columns:1fr auto; gap:8px; align-items:center; }
+    .hive-copy-link { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px; color:var(--blue-mid); }
+    .hive-copy-btn { border:1px solid var(--border); border-radius:8px; background:var(--blue-light); color:var(--blue-mid); padding:7px 9px; font:800 11px 'Inter',sans-serif; cursor:pointer; }
+    .hive-copy-btn:hover { border-color:var(--blue); background:#fff; }
+    .hive-copy-btn.copied { border-color:rgba(22,163,74,.34); background:#dcfce7; color:#15803d; }
     .hive-health-card { border-color:rgba(37,82,231,.28); background:linear-gradient(135deg,#edf3ff 0%,#ffffff 100%); }
     .hive-health-score { color:#173fcf; font-size:20px; }
     .hive-actions { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:8px; margin-top:12px; }
@@ -157,16 +166,32 @@ function ensureHiveUi() {
     .hive-icon-btn { display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; border:1px solid rgba(255,255,255,.24); border-radius:8px; background:rgba(255,255,255,.10); color:#fff; cursor:pointer; }
     .hive-icon-btn:hover { background:rgba(255,255,255,.18); }
     .hive-icon-btn.active { border-color:#bef264; background:rgba(190,242,100,.22); color:#ecfccb; }
+    .hive-mini-action { width:auto; min-width:34px; padding:0 9px; font:900 11px 'Inter',sans-serif; }
     .hive-zoom-wrap { display:flex; align-items:center; gap:8px; min-width:230px; color:rgba(255,255,255,.86); font-size:12px; font-weight:800; }
     .hive-zoom-wrap input { width:140px; accent-color:#bef264; }
-    .hive-canvas { height:560px; padding:24px; color:#fff; overflow:auto; }
+    .hive-canvas { position:relative; height:560px; padding:24px; color:#fff; overflow:auto; }
     .hive-modal-card.fullscreen .hive-canvas { height:calc(100vh - 190px); }
     .hive-tree { position:relative; min-width:700px; min-height:520px; transform-origin:top left; transition:transform .16s ease; }
     .hive-tooltip-layer { position:absolute; inset:0; z-index:30; pointer-events:none; }
     .hive-floating-tooltip { position:absolute; width:220px; transform:translate(-50%, 16px); border:1px solid var(--border); border-radius:13px; background:#fff; color:var(--text); padding:12px; text-align:left; box-shadow:var(--shadow-2); font:12px/1.45 'Inter',sans-serif; pointer-events:none; }
     .hive-tooltip-rank { color:#173fcf; font-size:14px; font-weight:900; }
+    .hive-map-overlay { position:sticky; left:12px; z-index:20; pointer-events:auto; border:1px solid rgba(255,255,255,.22); border-radius:12px; background:rgba(15,23,42,.76); color:#fff; box-shadow:0 14px 32px rgba(0,0,0,.24); backdrop-filter:blur(12px); }
+    .hive-legend { top:160px; display:grid; gap:6px; padding:10px; width:190px; font:800 11px 'Inter',sans-serif; }
+    .hive-legend-row { display:flex; align-items:center; gap:8px; color:rgba(255,255,255,.9); }
+    .hive-legend-dot { width:13px; height:13px; border-radius:50%; border:2px solid rgba(255,255,255,.8); flex:0 0 auto; }
+    .hive-legend-badge { border-radius:999px; background:rgba(255,255,255,.18); color:#fff; padding:2px 6px; font-size:10px; }
+    .hive-minimap { top:12px; width:190px; height:130px; padding:8px; margin-bottom:10px; }
+    .hive-minimap svg { display:block; width:100%; height:100%; }
+    .hive-minimap-node { opacity:.95; stroke:rgba(255,255,255,.72); stroke-width:2; }
+    .hive-minimap-link { stroke:rgba(190,242,100,.55); stroke-width:1; fill:none; }
+    .hive-minimap-viewport { fill:rgba(255,255,255,.13); stroke:#fff; stroke-width:1.5; }
     .hive-link-layer { position:absolute; inset:0; width:100%; height:100%; overflow:visible; pointer-events:none; }
     .hive-link-layer path { fill:none; stroke:rgba(190,242,100,.82); stroke-width:2; vector-effect:non-scaling-stroke; }
+    .hive-link-layer path.heat-strong { stroke:rgba(34,197,94,.86); }
+    .hive-link-layer path.heat-good { stroke:rgba(132,204,22,.86); }
+    .hive-link-layer path.heat-warn { stroke:rgba(250,204,21,.9); }
+    .hive-link-layer path.heat-risk { stroke:rgba(239,68,68,.86); }
+    .hive-link-layer path.in-selected-branch { stroke:rgba(250,204,21,.92); stroke-width:3; }
     .hive-node-wrapper { position:absolute; display:flex; flex-direction:column; align-items:center; width:120px; transform:translate(-50%, -50%); }
     .hive-node-dot-row { display:flex; align-items:center; justify-content:center; gap:7px; }
     .hive-rank-badge { max-width:92px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; border:1px solid rgba(255,255,255,.45); border-radius:999px; background:rgba(15,23,42,.58); color:#fff; padding:5px 8px; font:900 10px 'Inter',sans-serif; letter-spacing:.04em; box-shadow:0 10px 22px rgba(0,0,0,.18); }
@@ -174,6 +199,7 @@ function ensureHiveUi() {
     .hive-collapse-btn:hover { background:rgba(37,82,231,.9); }
     .hive-dot-main, .hive-dot-sub { position:relative; display:flex; align-items:center; justify-content:center; width:58px; height:58px; border-radius:50%; border:4px solid rgba(255,255,255,.86); box-shadow:0 14px 28px rgba(0,0,0,.24); cursor:pointer; }
     .hive-dot-main.selected, .hive-dot-sub.selected { outline:4px solid rgba(250,204,21,.95); outline-offset:4px; }
+    .hive-dot-main.in-selected-branch, .hive-dot-sub.in-selected-branch { box-shadow:0 14px 28px rgba(0,0,0,.24), 0 0 0 7px rgba(250,204,21,.16); }
     .hive-dot-main.search-hit, .hive-dot-sub.search-hit { animation:hiveSearchPulse 1.05s ease-in-out infinite; }
     @keyframes hiveSearchPulse {
       0%, 100% { box-shadow:0 14px 28px rgba(0,0,0,.24), 0 0 0 0 rgba(250,204,21,.95); }
@@ -184,6 +210,11 @@ function ensureHiveUi() {
     .hive-dot-main.unfunded { background:#2563eb; }
     .hive-dot-sub.unfunded { background:#facc15; }
     .hive-dot-sub.unfunded::before { color:#111827; }
+    .hive-dot-main.heat-strong, .hive-dot-sub.heat-strong { outline:4px solid rgba(34,197,94,.82); outline-offset:2px; }
+    .hive-dot-main.heat-good, .hive-dot-sub.heat-good { outline:4px solid rgba(132,204,22,.78); outline-offset:2px; }
+    .hive-dot-main.heat-warn, .hive-dot-sub.heat-warn { outline:4px solid rgba(250,204,21,.82); outline-offset:2px; }
+    .hive-dot-main.heat-risk, .hive-dot-sub.heat-risk { outline:4px solid rgba(239,68,68,.82); outline-offset:2px; }
+    .hive-dot-main.selected, .hive-dot-sub.selected { outline:4px solid rgba(250,204,21,.95); outline-offset:4px; }
     .hive-dot-main::before, .hive-dot-sub::before { color:#fff; font:900 18px 'Inter',sans-serif; }
     .hive-dot-main::before { content:'M'; }
     .hive-dot-sub::before { content:'S'; }
@@ -258,11 +289,23 @@ function ensureHiveUi() {
                 <button class="hive-icon-btn" type="button" id="hiveZoomOutBtn" title="Zoom out" aria-label="Zoom out"><span class="material-symbols-rounded">remove</span></button>
                 <button class="hive-icon-btn" type="button" id="hiveZoomInBtn" title="Zoom in" aria-label="Zoom in"><span class="material-symbols-rounded">add</span></button>
                 <button class="hive-icon-btn" type="button" id="hiveFocusBtn" title="Focus selected tree" aria-label="Focus selected tree"><span class="material-symbols-rounded">center_focus_strong</span></button>
+                <button class="hive-icon-btn hive-mini-action" type="button" id="hiveCollapseAllBtn" title="Collapse all" aria-label="Collapse all">All -</button>
+                <button class="hive-icon-btn hive-mini-action" type="button" id="hiveExpandAllBtn" title="Expand all" aria-label="Expand all">All +</button>
+                <button class="hive-icon-btn hive-mini-action" type="button" id="hiveCollapseBelowBtn" title="Collapse below selected" aria-label="Collapse below selected">Below</button>
+                <button class="hive-icon-btn" type="button" id="hiveHeatmapBtn" title="Toggle branch heatmap" aria-label="Toggle branch heatmap"><span class="material-symbols-rounded">local_fire_department</span></button>
                 <button class="hive-icon-btn" type="button" id="hiveFullscreenBtn" title="Fullscreen" aria-label="Toggle fullscreen"><span class="material-symbols-rounded">fullscreen</span></button>
               </div>
             </div>
             <div class="hive-canvas">
               <div id="hiveTooltipLayer" class="hive-tooltip-layer"></div>
+              <div id="hiveMiniMap" class="hive-map-overlay hive-minimap"></div>
+              <div class="hive-map-overlay hive-legend">
+                <div class="hive-legend-row"><span class="hive-legend-dot" style="background:#dc2626;"></span>Funded main</div>
+                <div class="hive-legend-row"><span class="hive-legend-dot" style="background:#16a34a;"></span>Funded sub</div>
+                <div class="hive-legend-row"><span class="hive-legend-dot" style="background:#2563eb;"></span>Unfunded main</div>
+                <div class="hive-legend-row"><span class="hive-legend-dot" style="background:#facc15;"></span>Unfunded sub</div>
+                <div class="hive-legend-row"><span class="hive-legend-badge">RANK</span>Rank badge</div>
+              </div>
               <div id="hiveContainer" class="hive-tree"></div>
             </div>
           </section>
@@ -285,6 +328,10 @@ function ensureHiveUi() {
   document.getElementById('hiveZoomOutBtn').addEventListener('click', () => setHiveZoom(hiveZoom - 0.1));
   document.getElementById('hiveZoomInBtn').addEventListener('click', () => setHiveZoom(hiveZoom + 0.1));
   document.getElementById('hiveFocusBtn').addEventListener('click', toggleHiveFocusMode);
+  document.getElementById('hiveCollapseAllBtn').addEventListener('click', collapseAllBranches);
+  document.getElementById('hiveExpandAllBtn').addEventListener('click', expandAllBranches);
+  document.getElementById('hiveCollapseBelowBtn').addEventListener('click', collapseBelowSelected);
+  document.getElementById('hiveHeatmapBtn').addEventListener('click', toggleHiveHeatmapMode);
   document.getElementById('hiveFullscreenBtn').addEventListener('click', toggleHiveFullscreen);
   document.getElementById('hiveLookupBtn').addEventListener('click', loadHiveFromLookup);
   document.getElementById('hiveLookupInviteId').addEventListener('keydown', (event) => {
@@ -294,6 +341,7 @@ function ensureHiveUi() {
   document.getElementById('hiveNameSearch').addEventListener('keydown', (event) => {
     if (event.key === 'Enter') searchHiveByName();
   });
+  document.querySelector('#hiveModal .hive-canvas')?.addEventListener('scroll', () => renderMiniMap(lastHiveLayout));
   document.getElementById('hiveExportPdfBtn').addEventListener('click', exportSelectedHivePdf);
   document.getElementById('hiveRefreshBtn').addEventListener('click', () => renderHive());
   document.getElementById('hiveResetBtn').addEventListener('click', () => {
@@ -805,6 +853,41 @@ function getBranchHealth(root, loadedAmount) {
   return { score, label, fundedPercent, filledPercent, rankedMainPercent, amountShare };
 }
 
+function getReferralLink(referralId) {
+  return `${AURUM_REFERRAL_BASE_URL}${encodeURIComponent(String(referralId || '').trim())}`;
+}
+
+function showCopyFeedback(button) {
+  if (!button) return;
+
+  const originalText = button.dataset.originalText || button.textContent || 'Copy';
+  button.dataset.originalText = originalText;
+  button.textContent = '\u2713 Copied';
+  button.classList.add('copied');
+
+  const existingTimer = copyFeedbackTimers.get(button);
+  if (existingTimer) clearTimeout(existingTimer);
+
+  const resetTimer = setTimeout(() => {
+    button.textContent = button.dataset.originalText || 'Copy';
+    button.classList.remove('copied');
+    copyFeedbackTimers.delete(button);
+  }, 2500);
+
+  copyFeedbackTimers.set(button, resetTimer);
+}
+
+async function copyReferralLink(referralId, button) {
+  const link = getReferralLink(referralId);
+  try {
+    await navigator.clipboard.writeText(link);
+    showCopyFeedback(button);
+    setMessage('Referral link copied.', 'ok');
+  } catch (error) {
+    setMessage(link, 'ok');
+  }
+}
+
 export function renderHive(containerId = 'hiveContainer') {
   const container = document.getElementById(containerId);
   if (!container) return;
@@ -828,9 +911,11 @@ export function renderHive(containerId = 'hiveContainer') {
 
 function renderTreeMap(container, roots) {
   const layout = layoutHiveTree(roots);
+  lastHiveLayout = layout;
   container.style.width = `${layout.width}px`;
   container.style.height = `${layout.height}px`;
   container.innerHTML = '';
+  const selectedBranchIds = getDescendantIds(findNode(hiveData[0], selectedInviteId));
 
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.classList.add('hive-link-layer');
@@ -840,19 +925,25 @@ function renderTreeMap(container, roots) {
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     const midY = link.parent.y + ((link.child.y - link.parent.y) / 2);
     path.setAttribute('d', `M ${link.parent.x} ${link.parent.y} V ${midY} H ${link.child.x} V ${link.child.y}`);
+    const heatClass = getHeatmapClass(link.parent.node).trim();
+    if (heatClass) path.classList.add(heatClass);
+    if (selectedBranchIds.has(link.parent.node.inviteId) && selectedBranchIds.has(link.child.node.inviteId)) {
+      path.classList.add('in-selected-branch');
+    }
     svg.appendChild(path);
   });
   container.appendChild(svg);
 
   layout.nodes.forEach((item) => {
-    container.appendChild(createHiveNode(item.node, item.x, item.y));
+    container.appendChild(createHiveNode(item.node, item.x, item.y, selectedBranchIds));
   });
+  renderMiniMap(layout);
 }
 
 function layoutHiveTree(roots) {
   const nodeGapX = 138;
   const levelGapY = 128;
-  const paddingX = 56;
+  const paddingX = 260;
   const paddingY = 52;
   let leafIndex = 0;
   const nodes = [];
@@ -882,7 +973,7 @@ function layoutHiveTree(roots) {
   return { nodes, links, width, height };
 }
 
-function createHiveNode(node, x, y) {
+function createHiveNode(node, x, y, selectedBranchIds) {
   const wrapper = document.createElement('div');
   wrapper.className = 'hive-node-wrapper';
   wrapper.style.left = `${x}px`;
@@ -891,8 +982,9 @@ function createHiveNode(node, x, y) {
   const dot = document.createElement('div');
   const isSelected = node.inviteId === selectedInviteId;
   const isSearchHit = node.inviteId === highlightedInviteId;
+  const isInSelectedBranch = selectedBranchIds.has(node.inviteId);
   const isUnfunded = Number(node.amount || 0) <= 0;
-  dot.className = `${node.type === 'main' ? 'hive-dot-main' : 'hive-dot-sub'}${isSelected ? ' selected' : ''}${isSearchHit ? ' search-hit' : ''}${isUnfunded ? ' unfunded' : ''}`;
+  dot.className = `${node.type === 'main' ? 'hive-dot-main' : 'hive-dot-sub'}${isSelected ? ' selected' : ''}${isInSelectedBranch ? ' in-selected-branch' : ''}${isSearchHit ? ' search-hit' : ''}${isUnfunded ? ' unfunded' : ''}${getHeatmapClass(node)}`;
   dot.setAttribute('role', 'button');
   dot.setAttribute('tabindex', '0');
   dot.setAttribute('aria-label', `Select ${node.name}`);
@@ -987,6 +1079,35 @@ function toggleCollapsedBranch(inviteId) {
   renderHive();
 }
 
+function collapseAllBranches() {
+  collapsedInviteIds.clear();
+  flattenNodes(hiveData)
+    .filter((node) => (node.children || []).length > 0)
+    .forEach((node) => collapsedInviteIds.add(node.inviteId));
+  renderHive();
+}
+
+function expandAllBranches() {
+  collapsedInviteIds.clear();
+  renderHive();
+}
+
+function collapseBelowSelected() {
+  const selected = findNode(hiveData[0], selectedInviteId);
+  if (!selected) return;
+  (selected.children || []).forEach((child) => {
+    getDescendantIds(child).forEach((id) => collapsedInviteIds.add(id));
+  });
+  renderHive();
+}
+
+function toggleHiveHeatmapMode() {
+  hiveHeatmapMode = hiveHeatmapMode === 'none' ? 'health' : 'none';
+  const btn = document.getElementById('hiveHeatmapBtn');
+  btn?.classList.toggle('active', hiveHeatmapMode !== 'none');
+  renderHive();
+}
+
 function scrollSelectedNodeIntoView() {
   requestAnimationFrame(() => {
     const selectedDot = document.querySelector(`[data-invite-id="${cssEscape(selectedInviteId)}"]`);
@@ -1001,6 +1122,55 @@ function resetHiveCanvasScroll() {
     canvas.scrollLeft = 0;
     canvas.scrollTop = 0;
   });
+}
+
+function getDescendantIds(root) {
+  const ids = new Set();
+  function walk(node) {
+    if (!node) return;
+    ids.add(node.inviteId);
+    (node.children || []).forEach(walk);
+  }
+  walk(root);
+  return ids;
+}
+
+function getHeatmapClass(node) {
+  if (hiveHeatmapMode === 'none') return '';
+  const health = getBranchHealth(node, getLoadedHiveAmount());
+  if (health.score >= 85) return ' heat-strong';
+  if (health.score >= 70) return ' heat-good';
+  if (health.score >= 50) return ' heat-warn';
+  return ' heat-risk';
+}
+
+function getLoadedHiveAmount() {
+  return flattenNodes(hiveData).reduce((sum, node) => sum + Number(node.amount || 0), 0);
+}
+
+function renderMiniMap(layout) {
+  const mini = document.getElementById('hiveMiniMap');
+  const canvas = document.querySelector('#hiveModal .hive-canvas');
+  if (!mini || !canvas || !layout) return;
+
+  const viewLeft = canvas.scrollLeft / Math.max(1, hiveZoom);
+  const viewTop = canvas.scrollTop / Math.max(1, hiveZoom);
+  const viewWidth = canvas.clientWidth / Math.max(1, hiveZoom);
+  const viewHeight = canvas.clientHeight / Math.max(1, hiveZoom);
+  const selectedBranchIds = getDescendantIds(findNode(hiveData[0], selectedInviteId));
+
+  mini.innerHTML = `
+    <svg viewBox="0 0 ${layout.width} ${layout.height}" preserveAspectRatio="xMidYMid meet">
+      ${layout.links.map((link) => `<path class="hive-minimap-link" d="M ${link.parent.x} ${link.parent.y} L ${link.child.x} ${link.child.y}" />`).join('')}
+      ${layout.nodes.map((item) => `<circle class="hive-minimap-node" cx="${item.x}" cy="${item.y}" r="${selectedBranchIds.has(item.node.inviteId) ? 8 : 6}" fill="${getMiniMapColor(item.node)}" />`).join('')}
+      <rect class="hive-minimap-viewport" x="${viewLeft}" y="${viewTop}" width="${viewWidth}" height="${viewHeight}" rx="16" />
+    </svg>
+  `;
+}
+
+function getMiniMapColor(node) {
+  if (Number(node.amount || 0) <= 0) return node.type === 'main' ? '#2563eb' : '#facc15';
+  return node.type === 'main' ? '#dc2626' : '#16a34a';
 }
 
 export function addHiveItem(parentInviteId, newItem) {
@@ -1322,6 +1492,15 @@ function renderHiveSummary() {
         <div class="hive-summary-value">${escapeHtml(selected?.name || 'None')}</div>
         <div class="hive-summary-note">${escapeHtml(selected?.inviteId || '')}</div>
       </div>
+      ${selected ? `
+        <div class="hive-summary-card wide">
+          <div class="hive-summary-label">Referral link</div>
+          <div class="hive-copy-row">
+            <div class="hive-copy-link" title="${escapeHtml(getReferralLink(selected.inviteId))}">${escapeHtml(getReferralLink(selected.inviteId))}</div>
+            <button class="hive-copy-btn" type="button" data-copy-referral="${escapeHtml(selected.inviteId)}">Copy</button>
+          </div>
+        </div>
+      ` : ''}
       ${health ? `
         <div class="hive-summary-card hive-health-card">
           <div class="hive-summary-label">Branch health</div>
@@ -1368,6 +1547,9 @@ function renderHiveSummary() {
       </div>
     </div>
   `;
+  summary.querySelectorAll('[data-copy-referral]').forEach((button) => {
+    button.addEventListener('click', () => copyReferralLink(button.dataset.copyReferral, button));
+  });
 }
 
 function flattenNodes(nodes) {
