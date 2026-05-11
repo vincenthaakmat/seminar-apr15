@@ -1,0 +1,10 @@
+// Integration example for your main React app:
+
+import AurumHiveManager from "./AurumHiveManager_v2_visual.jsx";
+
+// Then render it from your route/tab/menu:
+// <AurumHiveManager />
+
+// If your project is still using CDN React + Babel in one HTML file,
+// keep this as a separate JSX file and load it after React/Babel,
+// or copy the component into your build source and import it normally.

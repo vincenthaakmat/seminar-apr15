@@ -1,0 +1,32 @@
+Add this button/tab wherever you want to open the new Hive screen:
+
+<button class="settings-btn" onclick="showHiveManager()">
+  <span class="material-symbols-rounded">hub</span>
+  Hive setup
+</button>
+
+Add this container in your HTML where the screen should appear:
+
+<div id="hiveManagerRoot" style="display:none;"></div>
+
+Load the JSX file after React/Babel are already loaded:
+
+<script type="text/babel" src="AurumHiveManager.jsx"></script>
+
+Add this small script after the component is loaded:
+
+<script type="text/babel">
+  let hiveMounted = false;
+
+  function showHiveManager() {
+    const rootEl = document.getElementById('hiveManagerRoot');
+    rootEl.style.display = 'block';
+
+    if (!hiveMounted) {
+      ReactDOM.createRoot(rootEl).render(<AurumHiveManager />);
+      hiveMounted = true;
+    }
+
+    rootEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+</script>
