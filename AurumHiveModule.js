@@ -161,7 +161,7 @@ function ensureHiveUi() {
     .hive-zoom-wrap input { width:140px; accent-color:#bef264; }
     .hive-canvas { height:560px; padding:24px; color:#fff; overflow:auto; }
     .hive-modal-card.fullscreen .hive-canvas { height:calc(100vh - 190px); }
-    .hive-tree { position:relative; min-width:700px; min-height:520px; transform-origin:top center; transition:transform .16s ease; }
+    .hive-tree { position:relative; min-width:700px; min-height:520px; transform-origin:top left; transition:transform .16s ease; }
     .hive-tooltip-layer { position:absolute; inset:0; z-index:30; pointer-events:none; }
     .hive-floating-tooltip { position:absolute; width:220px; transform:translate(-50%, 16px); border:1px solid var(--border); border-radius:13px; background:#fff; color:var(--text); padding:12px; text-align:left; box-shadow:var(--shadow-2); font:12px/1.45 'Inter',sans-serif; pointer-events:none; }
     .hive-tooltip-rank { color:#173fcf; font-size:14px; font-weight:900; }
@@ -275,9 +275,7 @@ function ensureHiveUi() {
   populateCountryOptions();
 
   modal.addEventListener('click', (event) => {
-    if (event.target === modal && typeof window.closeToolModal === 'function') {
-      window.closeToolModal('hiveModal');
-    }
+    if (event.target === modal) event.stopPropagation();
   });
 
   document.getElementById('hiveEditTab').addEventListener('click', () => setHiveMode('edit'));
@@ -822,6 +820,7 @@ export function renderHive(containerId = 'hiveContainer') {
     : hiveData;
 
   renderTreeMap(container, renderRoots);
+  resetHiveCanvasScroll();
   renderHiveSummary();
   populateHiveForm();
   updateHiveFocusButton();
@@ -853,7 +852,7 @@ function renderTreeMap(container, roots) {
 function layoutHiveTree(roots) {
   const nodeGapX = 138;
   const levelGapY = 128;
-  const paddingX = 90;
+  const paddingX = 56;
   const paddingY = 52;
   let leafIndex = 0;
   const nodes = [];
@@ -992,6 +991,15 @@ function scrollSelectedNodeIntoView() {
   requestAnimationFrame(() => {
     const selectedDot = document.querySelector(`[data-invite-id="${cssEscape(selectedInviteId)}"]`);
     selectedDot?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+  });
+}
+
+function resetHiveCanvasScroll() {
+  requestAnimationFrame(() => {
+    const canvas = document.querySelector('#hiveModal .hive-canvas');
+    if (!canvas) return;
+    canvas.scrollLeft = 0;
+    canvas.scrollTop = 0;
   });
 }
 
