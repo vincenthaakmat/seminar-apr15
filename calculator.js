@@ -855,6 +855,11 @@ function getDetailPeriodHeader(view) {
   return view === 'daily' ? 'Date' : 'Date range';
 }
 
+function getDetailRateHeader(view) {
+  const label = view === 'quarterly' ? 'Quarterly' : `${VIEW_LABELS[view]}ly`;
+  return `${label} percentage`;
+}
+
 function getDetailBucketLabel(view, startDay, endDay, num) {
   if (chartLabelMode !== 'date') {
     const prefix = view === 'quarterly' ? 'Q' : VIEW_LABELS[view] + ' ';
@@ -873,7 +878,7 @@ function aggregate(rows, view) {
       label: getDetailBucketLabel('daily', r.day, r.day, r.day),
       pkgKey: r.pkgKey, pkgLabel: r.pkgLabel,
       start: r.start, profit: r.profit, end: r.end,
-      rate: r.rate,
+      rate: r.start ? r.profit / r.start : r.rate,
       isCompound: r.isCompound, switched: r.switched,
       startDay: r.day,
       endDay: r.day
@@ -899,13 +904,13 @@ function aggregate(rows, view) {
     const topKey = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
     const pkg    = PKGS.find(p => p.key === topKey);
 
-    const avgRate = chunk.reduce((s, r) => s + r.rate, 0) / chunk.length;
+    const intervalRate = start ? profit / start : 0;
 
     buckets.push({
       label: getDetailBucketLabel(view, startDay, endDay, num),
       pkgKey: pkg.key, pkgLabel: pkg.label,
       start, profit, end,
-      rate: avgRate,
+      rate: intervalRate,
       switched: hasSwitches,
       isCompound: compoundDays > chunk.length / 2,
       startDay,
@@ -923,6 +928,8 @@ function setView(view) {
     t.classList.toggle('active', t.dataset.v === view)
   );
   document.getElementById('th-period').textContent = getDetailPeriodHeader(view);
+  const rateHeader = document.getElementById('th-rate');
+  if (rateHeader) rateHeader.textContent = getDetailRateHeader(view);
 
   const buckets     = aggregate(allRows, view);
   const tbody       = document.getElementById('tableBody');
@@ -1190,7 +1197,7 @@ function exportExcel() {
   wsMilestones['!cols'] = [{wch:48},{wch:12}];
   XLSX.utils.book_append_sheet(wb, wsMilestones, 'Milestones');
   Object.entries(views).forEach(([view, buckets]) => {
-    const rows = [['Period','Package','Starting Balance ($)','Daily Rate (%)','Profit ($)','Ending Balance ($)'], ...buckets.map(b => [b.label, b.pkgLabel, +b.start.toFixed(2), +(b.rate * 100).toFixed(4), +b.profit.toFixed(2), +b.end.toFixed(2)])];
+    const rows = [['Period','Package','Starting Balance ($)',`${getDetailRateHeader(curView)} (%)`,'Profit ($)','Ending Balance ($)'], ...buckets.map(b => [b.label, b.pkgLabel, +b.start.toFixed(2), +(b.rate * 100).toFixed(4), +b.profit.toFixed(2), +b.end.toFixed(2)])];
     const ws = XLSX.utils.aoa_to_sheet(rows);
     ws['!cols'] = [{wch:14},{wch:12},{wch:22},{wch:16},{wch:16},{wch:22}];
     XLSX.utils.book_append_sheet(wb, ws, view.charAt(0).toUpperCase() + view.slice(1));
@@ -1235,7 +1242,7 @@ function exportPDF() {
   const viewBuckets = aggregate(allRows, curView);
   const viewLabel = { daily:'Daily', weekly:'Weekly', monthly:'Monthly', quarterly:'Quarterly', yearly:'Yearly' }[curView];
   doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.text(`Breakdown — ${viewLabel} view`, 14, y);
-  doc.autoTable({ startY: y + 3, head: [['Period', 'Package', 'Start', 'Rate', 'Profit', 'End']], body: viewBuckets.slice(0, 100).map(b => [b.label, b.pkgLabel, fmt(b.start), (b.rate * 100).toFixed(4) + '%', '+' + fmt(b.profit), fmt(b.end)]), theme: 'striped', headStyles: { fillColor: blue, textColor: 255, fontSize: 8, fontStyle: 'bold' }, bodyStyles: { fontSize: 7.5 }, margin: { left: 14, right: 14 }, columnStyles: { 0: { cellWidth: 22 }, 1: { cellWidth: 22 }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right', textColor: green }, 5: { halign: 'right', textColor: blue, fontStyle: 'bold' } } });
+  doc.autoTable({ startY: y + 3, head: [['Period', 'Package', 'Start', getDetailRateHeader(curView), 'Profit', 'End']], body: viewBuckets.slice(0, 100).map(b => [b.label, b.pkgLabel, fmt(b.start), (b.rate * 100).toFixed(4) + '%', '+' + fmt(b.profit), fmt(b.end)]), theme: 'striped', headStyles: { fillColor: blue, textColor: 255, fontSize: 8, fontStyle: 'bold' }, bodyStyles: { fontSize: 7.5 }, margin: { left: 14, right: 14 }, columnStyles: { 0: { cellWidth: 22 }, 1: { cellWidth: 22 }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right', textColor: green }, 5: { halign: 'right', textColor: blue, fontStyle: 'bold' } } });
   const pageCount = doc.internal.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) { doc.setPage(i); doc.setFontSize(7.5); doc.setTextColor(148,163,184); doc.text('Aurum ROI Calculator · Enhanced export · For illustrative purposes only · Not financial advice', 14, 292); doc.text(`Page ${i} of ${pageCount}`, W - 14, 292, { align: 'right' }); }
   doc.save(`aurum-roi-enhanced-${meta.yLabel.replace(' ','-')}-${Date.now()}.pdf`);
@@ -1929,10 +1936,19 @@ function addDaysISO(baseDateValue, days) {
   return new Date(base.getTime() - tzOffset).toISOString().slice(0, 10);
 }
 
+function getDayBetweenDates(startDateValue, targetDateValue) {
+  const start = new Date((startDateValue || getTodayLocalISO()) + 'T00:00:00');
+  const target = new Date((targetDateValue || '') + 'T00:00:00');
+  if (isNaN(start.getTime()) || isNaN(target.getTime())) return 0;
+  const diff = Math.round((target - start) / 86400000);
+  return diff + 1;
+}
+
 function openIncomeCalculator() {
-  const startDate = getStartDateValue();
+  const startDate = document.getElementById('incomeStartDate');
   const targetDate = document.getElementById('incomeTargetDate');
-  if (targetDate && !targetDate.value) targetDate.value = addDaysISO(startDate, 365);
+  if (startDate && !startDate.value) startDate.value = getTodayLocalISO();
+  if (targetDate && !targetDate.value) targetDate.value = addDaysISO(startDate?.value || getTodayLocalISO(), 365);
   document.getElementById('incomeModal')?.classList.add('open');
 }
 
@@ -1957,11 +1973,12 @@ function getPeriodLabel(period) {
 function runIncomeCalculator() {
   const target = Number(document.getElementById('incomeTarget')?.value || 0);
   const period = document.getElementById('incomePeriod')?.value || 'daily';
+  const startDate = document.getElementById('incomeStartDate')?.value || getTodayLocalISO();
   const targetDate = document.getElementById('incomeTargetDate')?.value || '';
   const mode = document.getElementById('incomeMode')?.value || 'profit';
   const result = document.getElementById('incomeResultValue');
   const note = document.getElementById('incomeResultNote');
-  const targetDay = getDayFromDate(targetDate);
+  const targetDay = getDayBetweenDates(startDate, targetDate);
 
   if (!target || target <= 0) {
     if (result) result.textContent = '—';
@@ -1970,13 +1987,13 @@ function runIncomeCalculator() {
   }
   if (!targetDate || targetDay < 1) {
     if (result) result.textContent = '—';
-    if (note) note.textContent = 'Choose a target date on or after the calculator start date.';
+    if (note) note.textContent = 'Choose a target date on or after the My income start date.';
     return;
   }
 
   const dailyGoal = getIncomeTargetDailyAmount(target, period);
   const base = getCurrentScenarioConfig();
-  const cfg = { ...base, years: Math.max(targetDay / 365, 0.01) };
+  const cfg = { ...base, startDate, years: Math.max(targetDay / 365, 0.01) };
   const offsets = deterministicOffsets(targetDay, cfg.variance);
   let lo = 100;
   let hi = Math.max(1000, dailyGoal / Math.max(PKGS[0].daily, 0.0001));
@@ -2001,20 +2018,23 @@ function runIncomeCalculator() {
   const achievedDaily = getProjectedIncomeMetric(sim, mode);
   const achievedPeriod = achievedDaily * (period === 'weekly' ? 7 : period === 'monthly' ? 30 : 1);
   const targetDateText = formatDateDisplay(targetDate);
+  const startDateText = formatDateDisplay(startDate);
   const modeText = mode === 'average' ? 'average income through that date' : 'income on that date';
 
   if (result) result.textContent = fmt(hi);
   if (note) {
-    note.textContent = `To earn about ${fmt(target)} per ${getPeriodLabel(period)} by ${targetDateText}, start with about ${fmt(hi)}. This uses ${modeText}, current package rates, compounding switches, and the average effect of ${cfg.variance || 0}% downward variance. Projected ${getPeriodLabel(period)} income: ${fmt(achievedPeriod)}.`;
+    note.textContent = `Starting ${startDateText}, to earn about ${fmt(target)} per ${getPeriodLabel(period)} by ${targetDateText}, start with about ${fmt(hi)}. This uses ${modeText}, current package rates, compounding switches, and the average effect of ${cfg.variance || 0}% downward variance. Projected ${getPeriodLabel(period)} income: ${fmt(achievedPeriod)}.`;
   }
 }
 
 function applyIncomeAmount() {
   if (!incomeLastAmount) return;
+  const startDate = document.getElementById('incomeStartDate')?.value || getTodayLocalISO();
   const targetDate = document.getElementById('incomeTargetDate')?.value || '';
-  const targetDay = getDayFromDate(targetDate);
+  const targetDay = getDayBetweenDates(startDate, targetDate);
 
   document.getElementById('amount').value = Math.ceil(incomeLastAmount);
+  document.getElementById('startDate').value = startDate;
   const compoundToggle = document.getElementById('compoundToggle');
   if (compoundToggle) compoundToggle.checked = true;
   switches = targetDate && targetDay >= 1 ? [{ day: targetDay, mode: 'off' }] : [];

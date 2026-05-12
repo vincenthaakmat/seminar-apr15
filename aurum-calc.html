@@ -2054,6 +2054,7 @@ body.dark-mode .planner-card, body.dark-mode .planner-action, body.dark-mode .to
         <div class="tool-grid">
           <div class="tool-field"><label for="incomeTarget">Income target</label><input type="number" id="incomeTarget" value="100" min="1" step="10"></div>
           <div class="tool-field"><label for="incomePeriod">Income period</label><select id="incomePeriod"><option value="daily">Per day</option><option value="weekly">Per week</option><option value="monthly">Per month</option></select></div>
+          <div class="tool-field"><label for="incomeStartDate">Start date</label><input type="date" id="incomeStartDate"></div>
           <div class="tool-field"><label for="incomeTargetDate">Target date</label><input type="date" id="incomeTargetDate"></div>
           <div class="tool-field"><label for="incomeMode">Based on</label><select id="incomeMode"><option value="profit">Profit on that date</option><option value="average">Average income up to that date</option></select></div>
         </div>
@@ -2395,7 +2396,7 @@ body.dark-mode .planner-card, body.dark-mode .planner-action, body.dark-mode .to
                 <th id="th-period" style="text-align:left">Period</th>
                 <th style="text-align:left">Package</th>
                 <th>Starting balance</th>
-                <th>Daily rate</th>
+                <th id="th-rate">Daily percentage</th>
                 <th>Profit</th>
                 <th>Ending balance</th>
               </tr>
