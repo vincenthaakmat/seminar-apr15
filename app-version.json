@@ -1,10 +1,12 @@
 {
-  "version": "2026.05.12.1",
+  "version": "2026.05.12.2",
   "name": "Aurum app",
-  "message": "A newer Aurum app version is ready. Refresh to load the latest changes.",
+  "message": "Aurum has a fresh update ready. Refresh to load the newest calculator and Hive improvements.",
   "updates": [
-    "Added the My income calculator workflow.",
-    "Improved Hive map navigation, panning, focus, and version display.",
-    "Refined Planning tools card styling."
+    "My income now includes its own start-date calendar and can automatically set up compounding, switch to simple mode on the target date, and run the main projection.",
+    "Breakdown percentage labels now match the selected interval, with weekly, monthly, quarterly, and yearly percentages calculated for that full interval.",
+    "Hive opening is more reliable with a direct module fallback, plus improved tree dragging in focused and isolated views.",
+    "Planning tools received darker card styling so the tools stand out more clearly.",
+    "Version checking now shows a polished update popup with release notes while the browser remains open."
   ]
 }

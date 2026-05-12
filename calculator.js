@@ -1641,7 +1641,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 /* ── Planning tools: scenarios, comparisons, reverse calculator, price alerts ── */
-const AURUM_APP_VERSION = '2026.05.12.1';
+const AURUM_APP_VERSION = '2026.05.12.2';
 const AURUM_VERSION_URL = 'app-version.json';
 const AURUM_VERSION_CHECK_MS = 60000;
 const AURUM_SCENARIO_KEY = 'aurum_saved_scenarios_v2';
