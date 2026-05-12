@@ -1914,7 +1914,7 @@ function safeFilePart(value) {
     .slice(0, 64) || 'selected';
 }
 
-window.openHiveManager = function openHiveManager() {
+export function openHiveManager() {
   loadLocalHive();
   hiveZoom = readSavedZoom();
   hivePanelCollapsed = readPanelCollapsed();
@@ -1940,12 +1940,15 @@ window.openHiveManager = function openHiveManager() {
       setMessage('Saved Referral ID could not be loaded. You can enter it again.', 'error');
     });
   }
-};
+}
+
+window.openHiveManager = openHiveManager;
 
 window.AurumHiveModule = {
   hiveData,
   configureHiveSupabase,
   configureHiveCloud,
+  openHiveManager,
   renderHive,
   addHiveItem,
   editHiveItem,

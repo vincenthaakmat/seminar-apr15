@@ -1830,11 +1830,34 @@ body.dark-mode .crypto-action-btn.secondary {
 .alert-row { display:flex; align-items:center; gap:8px; justify-content:space-between; border:1px solid var(--border); border-radius:16px; padding:.75rem; background:rgba(255,255,255,.76); margin-top:8px; font-size:12px; }
 .alert-row strong { color:var(--text); }
 .alert-row button { border:1px solid #fecaca; color:#dc2626; background:#fff; border-radius:10px; padding:6px 9px; cursor:pointer; font-weight:800; }
+.app-update-list { margin:12px 0 0; padding-left:18px; color:var(--text-mid); font-size:13px; line-height:1.55; }
+.app-update-list li + li { margin-top:5px; }
+.app-update-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:14px; }
 body.dark-mode .planner-card, body.dark-mode .planner-action, body.dark-mode .tool-card, body.dark-mode .tool-header, body.dark-mode .tool-field input, body.dark-mode .tool-field select, body.dark-mode .tool-close, body.dark-mode .compare-summary-card, body.dark-mode .alert-row, body.dark-mode .planner-inline input, body.dark-mode .planner-inline select, body.dark-mode .planner-small-btn.secondary { background:rgba(17,24,39,.78); color:var(--text-mid); border-color:rgba(148,163,184,.18); }
 
 </style>
 </head>
 <body>
+
+  <div class="tool-modal" id="appUpdateModal" role="dialog" aria-modal="true" aria-labelledby="appUpdateTitle">
+    <div class="tool-card">
+      <div class="tool-header">
+        <div>
+          <div class="tool-title" id="appUpdateTitle"><span class="material-symbols-rounded">new_releases</span>New version available</div>
+          <p class="tool-subtitle" id="appUpdateSubtitle">A newer Aurum app version is ready.</p>
+        </div>
+        <button class="tool-close" type="button" onclick="closeToolModal('appUpdateModal')" aria-label="Close update message"><span class="material-symbols-rounded">close</span></button>
+      </div>
+      <div class="tool-body">
+        <div class="tool-result-note" style="color:var(--text-muted);" id="appUpdateIntro">Refresh to load the newest features and fixes.</div>
+        <ul class="app-update-list" id="appUpdateNotes"></ul>
+        <div class="app-update-actions">
+          <button class="crypto-action-btn" type="button" onclick="reloadForAppUpdate()">Update now</button>
+          <button class="planner-small-btn secondary" type="button" onclick="closeToolModal('appUpdateModal')">Later</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <div class="hero">
     <div class="hero-inner">
@@ -2405,6 +2428,7 @@ body.dark-mode .planner-card, body.dark-mode .planner-action, body.dark-mode .to
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
 <script src="calculator.js"></script>
+<script type="module" src="AurumHiveModule.js"></script>
 
 
   <!-- ── Footer copyright ── -->
@@ -2416,9 +2440,6 @@ body.dark-mode .planner-card, body.dark-mode .planner-action, body.dark-mode .to
     </div>
   </footer>
 
-
-
-<script type="module" src="AurumHiveModule.js"></script>
 </body>
 </html>
 

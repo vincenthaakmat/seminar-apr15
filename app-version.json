@@ -1,0 +1,10 @@
+{
+  "version": "2026.05.12.1",
+  "name": "Aurum app",
+  "message": "A newer Aurum app version is ready. Refresh to load the latest changes.",
+  "updates": [
+    "Added the My income calculator workflow.",
+    "Improved Hive map navigation, panning, focus, and version display.",
+    "Refined Planning tools card styling."
+  ]
+}

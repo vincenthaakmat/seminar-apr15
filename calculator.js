@@ -1634,15 +1634,97 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 /* ── Planning tools: scenarios, comparisons, reverse calculator, price alerts ── */
+const AURUM_APP_VERSION = '2026.05.12.1';
+const AURUM_VERSION_URL = 'app-version.json';
+const AURUM_VERSION_CHECK_MS = 60000;
 const AURUM_SCENARIO_KEY = 'aurum_saved_scenarios_v2';
 const AURUM_ALERTS_KEY = 'aurum_price_alerts_v1';
 let strategyCompareChart = null;
 let reverseLastAmount = null;
 let incomeLastAmount = null;
+let appUpdatePromptedVersion = '';
 
 function closeToolModal(id) {
   const el = document.getElementById(id);
   if (el) el.classList.remove('open');
+}
+
+window.openHiveManager = window.openHiveManager || async function openHiveManagerFallback() {
+  try {
+    const hiveModule = await import(`./AurumHiveModule.js?v=${Date.now()}`);
+    if (typeof hiveModule.openHiveManager === 'function') {
+      hiveModule.openHiveManager();
+      return;
+    }
+    if (window.openHiveManager && window.openHiveManager !== openHiveManagerFallback) {
+      window.openHiveManager();
+      return;
+    }
+  } catch (error) {
+    console.warn('Aurum Hive could not be loaded.', error);
+  }
+  alert('The Hive is still loading. Please try again in a moment.');
+};
+
+function compareAppVersions(current, latest) {
+  const currentParts = String(current || '').match(/\d+/g)?.map(Number) || [];
+  const latestParts = String(latest || '').match(/\d+/g)?.map(Number) || [];
+  const length = Math.max(currentParts.length, latestParts.length);
+  for (let i = 0; i < length; i++) {
+    const currentPart = currentParts[i] || 0;
+    const latestPart = latestParts[i] || 0;
+    if (latestPart > currentPart) return 1;
+    if (latestPart < currentPart) return -1;
+  }
+  return 0;
+}
+
+function escapeUpdateHtml(value) {
+  return String(value || '').replace(/[&<>"']/g, char => (
+    { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char]
+  ));
+}
+
+function showAppUpdatePrompt(info) {
+  const latestVersion = String(info?.version || '').trim();
+  if (!latestVersion || appUpdatePromptedVersion === latestVersion) return;
+  appUpdatePromptedVersion = latestVersion;
+
+  const subtitle = document.getElementById('appUpdateSubtitle');
+  const intro = document.getElementById('appUpdateIntro');
+  const notes = document.getElementById('appUpdateNotes');
+  if (subtitle) subtitle.textContent = `You are using ${AURUM_APP_VERSION}. Version ${latestVersion} is available.`;
+  if (intro) intro.textContent = info?.message || 'Refresh to load the newest features and fixes.';
+  if (notes) {
+    const releaseNotes = Array.isArray(info?.updates) ? info.updates : [];
+    notes.innerHTML = releaseNotes.length
+      ? releaseNotes.map(item => `<li>${escapeUpdateHtml(item)}</li>`).join('')
+      : '<li>General improvements and fixes.</li>';
+  }
+  document.getElementById('appUpdateModal')?.classList.add('open');
+}
+
+async function checkAppVersion() {
+  try {
+    const response = await fetch(`${AURUM_VERSION_URL}?t=${Date.now()}`, { cache: 'no-store' });
+    if (!response.ok) return;
+    const info = await response.json();
+    const latestVersion = String(info?.version || '').trim();
+    if (latestVersion && compareAppVersions(AURUM_APP_VERSION, latestVersion) > 0) {
+      showAppUpdatePrompt(info);
+    }
+  } catch (error) {
+    console.warn('Aurum app version check failed.', error);
+  }
+}
+
+function startAppVersionWatcher() {
+  checkAppVersion();
+  setInterval(checkAppVersion, AURUM_VERSION_CHECK_MS);
+}
+
+function reloadForAppUpdate() {
+  window.location.reload();
 }
 
 function getCurrentScenarioConfig() {
@@ -2009,5 +2091,9 @@ async function checkPriceAlerts(showQuietStatus) {
 }
 
 setInterval(() => { checkPriceAlerts(false); }, 60000);
-document.addEventListener('DOMContentLoaded', () => { renderScenarioSelect(); renderAlertsList(); });
+document.addEventListener('DOMContentLoaded', () => {
+  renderScenarioSelect();
+  renderAlertsList();
+  startAppVersionWatcher();
+});
 
