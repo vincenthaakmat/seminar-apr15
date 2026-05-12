@@ -77,6 +77,8 @@ let highlightedInviteId = '';
 let hiveBranchHighlightMode = false;
 let isolatedRootInviteId = '';
 let hivePanelCollapsed = false;
+let hivePanX = 0;
+let hivePanY = 0;
 let lastHiveLayout = null;
 const collapsedInviteIds = new Set();
 const HIVE_LOCAL_KEY = 'aurum_hive_database_v1';
@@ -86,6 +88,8 @@ const HIVE_OVERLAY_POSITIONS_KEY = 'aurum_hive_overlay_positions_v1';
 const HIVE_PANEL_COLLAPSED_KEY = 'aurum_hive_panel_collapsed_v1';
 const HIVE_MIN_ZOOM = 0.1;
 const HIVE_MAX_ZOOM = 1.2;
+const HIVE_APP_VERSION = '2026.05.12.1';
+const HIVE_VERSION_URL = 'hive-version.json';
 const HIVE_CLOUD_TABLE = 'aurum_hive_accounts';
 const AURUM_REFERRAL_BASE_URL = 'https://backoffice.aurum.foundation/u/';
 const HIVE_RANKS = ['NOVA', 'VOYAGER', 'VANGUARD', 'VANGUARD PRO', 'NEXUS', 'ORACLE', 'PRIME', 'ELITE', 'MAGNAT', 'MYTHOS', 'LEGEND'];
@@ -125,6 +129,14 @@ function ensureHiveUi() {
     .hive-modal-card.fullscreen { width:100vw; height:100vh; max-height:100vh; border-radius:0; }
     .hive-modal-card.fullscreen .tool-body { min-height:calc(100vh - 96px); }
     .hive-modal-card.fullscreen .hive-layout { min-height:calc(100vh - 132px); }
+    .hive-header-actions { display:flex; align-items:center; gap:10px; }
+    .hive-version-badge { border:1px solid rgba(37,82,231,.18); border-radius:999px; background:var(--blue-light); color:var(--blue-mid); padding:6px 9px; font:900 11px 'Inter',sans-serif; white-space:nowrap; }
+    .hive-update-banner { display:none; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; padding:10px 12px; border:1px solid rgba(37,82,231,.22); border-radius:12px; background:#eff6ff; color:var(--text); box-shadow:0 8px 18px rgba(25,45,110,.08); }
+    .hive-update-banner.visible { display:flex; }
+    .hive-update-text { display:grid; gap:2px; font-size:12px; color:var(--text-mid); }
+    .hive-update-text strong { color:var(--text); font-size:13px; }
+    .hive-update-btn { border:1px solid rgba(37,82,231,.24); border-radius:9px; background:var(--blue); color:#fff; padding:8px 11px; font:900 11px 'Inter',sans-serif; cursor:pointer; white-space:nowrap; }
+    .hive-update-btn:hover { filter:brightness(1.05); }
     .hive-layout { display:grid; grid-template-columns:360px minmax(0,1fr); gap:18px; }
     .hive-layout.panel-collapsed { grid-template-columns:minmax(0,1fr); }
     .hive-panel { border:1px solid var(--border); border-radius:16px; background:#fff; padding:14px; }
@@ -190,11 +202,13 @@ function ensureHiveUi() {
     .hive-show-panel-btn .material-symbols-rounded { font-size:18px; }
     .hive-zoom-wrap { display:flex; align-items:center; gap:8px; min-width:230px; color:rgba(255,255,255,.86); font-size:12px; font-weight:800; }
     .hive-zoom-wrap input { width:140px; accent-color:#bef264; }
-    .hive-canvas { position:relative; height:560px; padding:24px; color:#fff; overflow:auto; }
+    .hive-canvas { position:relative; height:560px; padding:24px; color:#fff; overflow:auto; cursor:grab; }
+    .hive-canvas.panning { cursor:grabbing; user-select:none; }
     .hive-modal-card.fullscreen .hive-canvas { height:calc(100vh - 190px); }
     .hive-tree { position:relative; min-width:700px; min-height:520px; transform-origin:top left; transition:transform .16s ease; }
     .hive-tooltip-layer { position:absolute; inset:0; z-index:30; pointer-events:none; }
-    .hive-floating-tooltip { position:absolute; width:220px; transform:translate(-50%, 16px); border:1px solid var(--border); border-radius:13px; background:#fff; color:var(--text); padding:12px; text-align:left; box-shadow:var(--shadow-2); font:12px/1.45 'Inter',sans-serif; pointer-events:none; }
+    .hive-floating-tooltip { position:absolute; width:220px; transform:translate(-50%, 16px); border:1px solid #d8e0f2; border-radius:13px; background:#fff; color:#172033; padding:12px; text-align:left; box-shadow:0 18px 36px rgba(15,23,42,.18); font:12px/1.45 'Inter',sans-serif; pointer-events:none; }
+    .hive-floating-tooltip strong { color:#111827; font-weight:900; }
     .hive-tooltip-rank { color:#173fcf; font-size:14px; font-weight:900; }
     .hive-map-overlay { position:absolute; z-index:20; pointer-events:auto; border:1px solid rgba(255,255,255,.22); border-radius:12px; background:rgba(15,23,42,.76); color:#fff; box-shadow:0 14px 32px rgba(0,0,0,.24); backdrop-filter:blur(12px); cursor:grab; touch-action:none; user-select:none; }
     .hive-map-overlay.dragging { cursor:grabbing; opacity:.94; }
@@ -249,9 +263,19 @@ function ensureHiveUi() {
           <div class="tool-title" id="hiveModalTitle"><span class="material-symbols-rounded">hub</span>The Hive</div>
           <p class="tool-subtitle">Visual Referral ID structure loaded from AurumHiveModule.js.</p>
         </div>
-        <button class="tool-close" type="button" onclick="closeToolModal('hiveModal')" aria-label="Close Hive"><span class="material-symbols-rounded">close</span></button>
+        <div class="hive-header-actions">
+          <span class="hive-version-badge">Hive v${HIVE_APP_VERSION}</span>
+          <button class="tool-close" type="button" onclick="closeToolModal('hiveModal')" aria-label="Close Hive"><span class="material-symbols-rounded">close</span></button>
+        </div>
       </div>
       <div class="tool-body">
+        <div class="hive-update-banner" id="hiveUpdateBanner">
+          <div class="hive-update-text">
+            <strong>Updated Hive version available</strong>
+            <span id="hiveUpdateText">Refresh to load the newest Hive map.</span>
+          </div>
+          <button class="hive-update-btn" type="button" id="hiveUpdateReloadBtn">Reload</button>
+        </div>
         <div class="hive-layout" id="hiveLayout">
           <section class="hive-panel">
             <div class="hive-panel-title">
@@ -348,6 +372,7 @@ function ensureHiveUi() {
   document.getElementById('hiveSaveBtn').addEventListener('click', submitHiveForm);
   document.getElementById('hiveCollapsePanelBtn').addEventListener('click', () => setHivePanelCollapsed(true));
   document.getElementById('hiveShowPanelBtn').addEventListener('click', () => setHivePanelCollapsed(false));
+  document.getElementById('hiveUpdateReloadBtn').addEventListener('click', reloadHiveApp);
   document.getElementById('hiveZoomRange').addEventListener('input', (event) => setHiveZoom(Number(event.target.value) / 100));
   document.getElementById('hiveZoomOutBtn').addEventListener('click', () => setHiveZoom(hiveZoom - 0.1));
   document.getElementById('hiveZoomInBtn').addEventListener('click', () => setHiveZoom(hiveZoom + 0.1));
@@ -370,6 +395,7 @@ function ensureHiveUi() {
     syncFloatingHiveOverlays();
     renderMiniMap(lastHiveLayout);
   });
+  initHiveCanvasPan(hiveCanvas);
   initFloatingHiveOverlays();
   document.getElementById('hiveExportPdfBtn').addEventListener('click', exportSelectedHivePdf);
   document.getElementById('hiveRefreshBtn').addEventListener('click', () => renderHive());
@@ -429,6 +455,45 @@ function applyHiveOverlayPosition(overlay, position) {
 function syncFloatingHiveOverlays() {
   document.querySelectorAll('#hiveModal .hive-map-overlay').forEach((overlay) => {
     applyHiveOverlayPosition(overlay);
+  });
+}
+
+function initHiveCanvasPan(canvas) {
+  if (!canvas) return;
+
+  canvas.addEventListener('pointerdown', (event) => {
+    if (event.button !== 0) return;
+    if (event.target.closest('.hive-map-overlay, .hive-node-wrapper, button, input, select, label')) return;
+
+    event.preventDefault();
+    hideHiveTooltip();
+    canvas.classList.add('panning');
+    canvas.setPointerCapture(event.pointerId);
+
+    const start = {
+      x: event.clientX,
+      y: event.clientY,
+      panX: hivePanX,
+      panY: hivePanY
+    };
+
+    function moveCanvas(moveEvent) {
+      hivePanX = start.panX + (moveEvent.clientX - start.x);
+      hivePanY = start.panY + (moveEvent.clientY - start.y);
+      applyHiveTransform();
+    }
+
+    function stopPan() {
+      canvas.classList.remove('panning');
+      canvas.releasePointerCapture(event.pointerId);
+      canvas.removeEventListener('pointermove', moveCanvas);
+      canvas.removeEventListener('pointerup', stopPan);
+      canvas.removeEventListener('pointercancel', stopPan);
+    }
+
+    canvas.addEventListener('pointermove', moveCanvas);
+    canvas.addEventListener('pointerup', stopPan);
+    canvas.addEventListener('pointercancel', stopPan);
   });
 }
 
@@ -578,6 +643,47 @@ function persistHive() {
     console.warn('Aurum Hive cloud sync failed.', error);
     updateSyncStatus('Local saved. Supabase sync failed.', 'local');
   });
+}
+
+function compareVersionParts(current, latest) {
+  const currentParts = String(current || '').match(/\d+/g)?.map(Number) || [];
+  const latestParts = String(latest || '').match(/\d+/g)?.map(Number) || [];
+  const length = Math.max(currentParts.length, latestParts.length);
+  for (let index = 0; index < length; index += 1) {
+    const currentPart = currentParts[index] || 0;
+    const latestPart = latestParts[index] || 0;
+    if (latestPart > currentPart) return 1;
+    if (latestPart < currentPart) return -1;
+  }
+  return 0;
+}
+
+function showHiveUpdateBanner(latestVersion) {
+  const banner = document.getElementById('hiveUpdateBanner');
+  const text = document.getElementById('hiveUpdateText');
+  if (!banner) return;
+  if (text) {
+    text.textContent = `You are using ${HIVE_APP_VERSION}. Version ${latestVersion} is available.`;
+  }
+  banner.classList.add('visible');
+}
+
+async function checkHiveAppVersion() {
+  try {
+    const response = await fetch(`${HIVE_VERSION_URL}?t=${Date.now()}`, { cache: 'no-store' });
+    if (!response.ok) return;
+    const data = await response.json();
+    const latestVersion = String(data?.version || '').trim();
+    if (latestVersion && compareVersionParts(HIVE_APP_VERSION, latestVersion) > 0) {
+      showHiveUpdateBanner(latestVersion);
+    }
+  } catch (error) {
+    console.warn('Aurum Hive version check failed.', error);
+  }
+}
+
+function reloadHiveApp() {
+  window.location.reload();
 }
 
 function isCloudConfigured() {
@@ -1138,6 +1244,7 @@ function renderTreeMap(container, roots) {
   layout.nodes.forEach((item) => {
     container.appendChild(createHiveNode(item.node, item.x, item.y, selectedBranchIds));
   });
+  applyHiveTransform();
   renderMiniMap(layout);
 }
 
@@ -1537,15 +1644,18 @@ function populateHiveForm() {
   }
 }
 
+function applyHiveTransform() {
+  const tree = document.getElementById('hiveContainer');
+  if (!tree) return;
+  tree.style.transform = `translate(${hivePanX}px, ${hivePanY}px) scale(${hiveZoom})`;
+  tree.style.marginBottom = `${Math.max(0, 560 * (hiveZoom - 1))}px`;
+}
+
 function setHiveZoom(value) {
   hiveZoom = Math.min(HIVE_MAX_ZOOM, Math.max(HIVE_MIN_ZOOM, Number(value || 0.85)));
-  const tree = document.getElementById('hiveContainer');
   const range = document.getElementById('hiveZoomRange');
   const valueLabel = document.getElementById('hiveZoomValue');
-  if (tree) {
-    tree.style.transform = `scale(${hiveZoom})`;
-    tree.style.marginBottom = `${Math.max(0, 560 * (hiveZoom - 1))}px`;
-  }
+  applyHiveTransform();
   if (range) range.value = String(Math.round(hiveZoom * 100));
   if (valueLabel) valueLabel.textContent = `${Math.round(hiveZoom * 100)}%`;
   rememberZoom();
@@ -1819,6 +1929,7 @@ window.openHiveManager = function openHiveManager() {
   if (lookupInput && rememberedInviteId) lookupInput.value = rememberedInviteId;
   renderHive();
   setHiveZoom(hiveZoom);
+  checkHiveAppVersion();
   subscribeToHiveRealtime().catch((error) => {
     console.warn('Aurum Hive realtime could not be started.', error);
     updateSyncStatus('Supabase configured. Realtime could not connect.', 'local');

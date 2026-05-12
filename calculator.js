@@ -1638,6 +1638,7 @@ const AURUM_SCENARIO_KEY = 'aurum_saved_scenarios_v2';
 const AURUM_ALERTS_KEY = 'aurum_price_alerts_v1';
 let strategyCompareChart = null;
 let reverseLastAmount = null;
+let incomeLastAmount = null;
 
 function closeToolModal(id) {
   const el = document.getElementById(id);
@@ -1836,6 +1837,109 @@ function applyReverseAmount() {
   document.getElementById('amount').value = Math.ceil(reverseLastAmount);
   onAmountInput();
   closeToolModal('reverseModal');
+}
+
+function addDaysISO(baseDateValue, days) {
+  const base = new Date((baseDateValue || getTodayLocalISO()) + 'T00:00:00');
+  if (isNaN(base.getTime())) return getTodayLocalISO();
+  base.setDate(base.getDate() + days);
+  const tzOffset = base.getTimezoneOffset() * 60000;
+  return new Date(base.getTime() - tzOffset).toISOString().slice(0, 10);
+}
+
+function openIncomeCalculator() {
+  const startDate = getStartDateValue();
+  const targetDate = document.getElementById('incomeTargetDate');
+  if (targetDate && !targetDate.value) targetDate.value = addDaysISO(startDate, 365);
+  document.getElementById('incomeModal')?.classList.add('open');
+}
+
+function getIncomeTargetDailyAmount(amount, period) {
+  if (period === 'weekly') return amount / 7;
+  if (period === 'monthly') return amount / 30;
+  return amount;
+}
+
+function getProjectedIncomeMetric(sim, mode) {
+  if (!sim?.rows?.length) return 0;
+  if (mode === 'average') return sim.totalProfit / sim.rows.length;
+  return sim.rows[sim.rows.length - 1].profit || 0;
+}
+
+function getPeriodLabel(period) {
+  if (period === 'weekly') return 'week';
+  if (period === 'monthly') return 'month';
+  return 'day';
+}
+
+function runIncomeCalculator() {
+  const target = Number(document.getElementById('incomeTarget')?.value || 0);
+  const period = document.getElementById('incomePeriod')?.value || 'daily';
+  const targetDate = document.getElementById('incomeTargetDate')?.value || '';
+  const mode = document.getElementById('incomeMode')?.value || 'profit';
+  const result = document.getElementById('incomeResultValue');
+  const note = document.getElementById('incomeResultNote');
+  const targetDay = getDayFromDate(targetDate);
+
+  if (!target || target <= 0) {
+    if (result) result.textContent = '—';
+    if (note) note.textContent = 'Enter a valid income target.';
+    return;
+  }
+  if (!targetDate || targetDay < 1) {
+    if (result) result.textContent = '—';
+    if (note) note.textContent = 'Choose a target date on or after the calculator start date.';
+    return;
+  }
+
+  const dailyGoal = getIncomeTargetDailyAmount(target, period);
+  const base = getCurrentScenarioConfig();
+  const cfg = { ...base, years: Math.max(targetDay / 365, 0.01) };
+  const offsets = deterministicOffsets(targetDay, cfg.variance);
+  let lo = 100;
+  let hi = Math.max(1000, dailyGoal / Math.max(PKGS[0].daily, 0.0001));
+
+  for (let i = 0; i < 45; i++) {
+    cfg.amount = hi;
+    const metric = getProjectedIncomeMetric(simulateScenarioConfig(cfg, null, offsets), mode);
+    if (metric >= dailyGoal) break;
+    hi *= 2;
+  }
+
+  for (let i = 0; i < 65; i++) {
+    const mid = (lo + hi) / 2;
+    cfg.amount = mid;
+    const metric = getProjectedIncomeMetric(simulateScenarioConfig(cfg, null, offsets), mode);
+    if (metric >= dailyGoal) hi = mid; else lo = mid;
+  }
+
+  incomeLastAmount = hi;
+  cfg.amount = hi;
+  const sim = simulateScenarioConfig(cfg, null, offsets);
+  const achievedDaily = getProjectedIncomeMetric(sim, mode);
+  const achievedPeriod = achievedDaily * (period === 'weekly' ? 7 : period === 'monthly' ? 30 : 1);
+  const targetDateText = formatDateDisplay(targetDate);
+  const modeText = mode === 'average' ? 'average income through that date' : 'income on that date';
+
+  if (result) result.textContent = fmt(hi);
+  if (note) {
+    note.textContent = `To earn about ${fmt(target)} per ${getPeriodLabel(period)} by ${targetDateText}, start with about ${fmt(hi)}. This uses ${modeText}, current package rates, compounding switches, and the average effect of ${cfg.variance || 0}% downward variance. Projected ${getPeriodLabel(period)} income: ${fmt(achievedPeriod)}.`;
+  }
+}
+
+function applyIncomeAmount() {
+  if (!incomeLastAmount) return;
+  const targetDate = document.getElementById('incomeTargetDate')?.value || '';
+  const targetDay = getDayFromDate(targetDate);
+
+  document.getElementById('amount').value = Math.ceil(incomeLastAmount);
+  const compoundToggle = document.getElementById('compoundToggle');
+  if (compoundToggle) compoundToggle.checked = true;
+  switches = targetDate && targetDay >= 1 ? [{ day: targetDay, mode: 'off' }] : [];
+  onCompoundToggle();
+  onAmountInput();
+  closeToolModal('incomeModal');
+  calculate();
 }
 
 function readPriceAlerts() { try { return JSON.parse(localStorage.getItem(AURUM_ALERTS_KEY)) || []; } catch(e) { return []; } }

@@ -1756,8 +1756,8 @@ body.dark-mode .crypto-action-btn.secondary {
 
 /* ── Planning tools: scenarios, alerts, comparisons, reverse calculator ── */
 .planner-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: linear-gradient(180deg, #d7e1f5 0%, #c7d5ee 100%);
+  border: 1px solid rgba(39,82,231,0.24);
   border-radius: var(--radius-lg);
   padding: 1.35rem;
   margin-bottom: 1.5rem;
@@ -1778,8 +1778,8 @@ body.dark-mode .crypto-action-btn.secondary {
 @media (max-width: 560px) { .planner-grid { grid-template-columns: 1fr; } }
 .planner-action {
   display:flex; align-items:center; justify-content:space-between; gap: 10px;
-  border:1px solid var(--border); border-radius: 18px; padding: 0.9rem;
-  background: rgba(255,255,255,0.76); color: var(--text); cursor:pointer; text-align:left;
+  border:1px solid rgba(39,82,231,0.18); border-radius: 18px; padding: 0.9rem;
+  background: rgba(236,242,253,0.96); color: var(--text); cursor:pointer; text-align:left;
   font-family:'Inter',sans-serif; transition: transform .15s, box-shadow .15s, border-color .15s;
 }
 .planner-action:hover { transform: translateY(-1px); box-shadow: var(--shadow-1); border-color: rgba(39,82,231,0.34); }
@@ -2018,6 +2018,35 @@ body.dark-mode .planner-card, body.dark-mode .planner-action, body.dark-mode .to
     </div>
   </div>
 
+  <div class="tool-modal" id="incomeModal" role="dialog" aria-modal="true" aria-labelledby="incomeModalTitle">
+    <div class="tool-card">
+      <div class="tool-header">
+        <div>
+          <div class="tool-title" id="incomeModalTitle"><span class="material-symbols-rounded">payments</span>My income</div>
+          <p class="tool-subtitle">Find the starting investment needed to reach a target daily, weekly, or monthly income by a specific date.</p>
+        </div>
+        <button class="tool-close" type="button" onclick="closeToolModal('incomeModal')"><span class="material-symbols-rounded">close</span></button>
+      </div>
+      <div class="tool-body">
+        <div class="tool-grid">
+          <div class="tool-field"><label for="incomeTarget">Income target</label><input type="number" id="incomeTarget" value="100" min="1" step="10"></div>
+          <div class="tool-field"><label for="incomePeriod">Income period</label><select id="incomePeriod"><option value="daily">Per day</option><option value="weekly">Per week</option><option value="monthly">Per month</option></select></div>
+          <div class="tool-field"><label for="incomeTargetDate">Target date</label><input type="date" id="incomeTargetDate"></div>
+          <div class="tool-field"><label for="incomeMode">Based on</label><select id="incomeMode"><option value="profit">Profit on that date</option><option value="average">Average income up to that date</option></select></div>
+        </div>
+        <button class="crypto-action-btn" type="button" onclick="runIncomeCalculator()">Calculate required investment</button>
+        <div class="tool-result">
+          <div class="crypto-result-label">Required starting amount</div>
+          <div class="tool-result-big" id="incomeResultValue">—</div>
+          <div class="tool-result-note" id="incomeResultNote">Enter an income goal and calculate.</div>
+        </div>
+        <div class="planner-inline">
+          <button class="planner-small-btn" type="button" onclick="applyIncomeAmount()">Use this amount in main calculator</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="tool-modal" id="alertsModal" role="dialog" aria-modal="true" aria-labelledby="alertsModalTitle">
     <div class="tool-card">
       <div class="tool-header">
@@ -2156,6 +2185,10 @@ body.dark-mode .planner-card, body.dark-mode .planner-action, body.dark-mode .to
         <button class="planner-action" type="button" onclick="openReverseCalculator()">
           <span><strong>Reverse calculator</strong><span class="note">Find the starting amount needed to reach your goal.</span></span>
           <span class="material-symbols-rounded">published_with_changes</span>
+        </button>
+        <button class="planner-action" type="button" onclick="openIncomeCalculator()">
+          <span><strong>My income</strong><span class="note">Find the investment needed for a daily, weekly, or monthly income goal.</span></span>
+          <span class="material-symbols-rounded">payments</span>
         </button>
         <button class="planner-action" type="button" onclick="openPriceAlerts()">
           <span><strong>Price alerts</strong><span class="note">Track BTC, PEPE, gold, silver, and more.</span></span>
