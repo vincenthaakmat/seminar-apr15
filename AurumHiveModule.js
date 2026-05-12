@@ -76,12 +76,14 @@ let hiveFocusMode = false;
 let highlightedInviteId = '';
 let hiveBranchHighlightMode = false;
 let isolatedRootInviteId = '';
+let hivePanelCollapsed = false;
 let lastHiveLayout = null;
 const collapsedInviteIds = new Set();
 const HIVE_LOCAL_KEY = 'aurum_hive_database_v1';
 const HIVE_LAST_INVITE_KEY = 'aurum_hive_last_invite_id_v1';
 const HIVE_ZOOM_KEY = 'aurum_hive_zoom_v1';
 const HIVE_OVERLAY_POSITIONS_KEY = 'aurum_hive_overlay_positions_v1';
+const HIVE_PANEL_COLLAPSED_KEY = 'aurum_hive_panel_collapsed_v1';
 const HIVE_MIN_ZOOM = 0.1;
 const HIVE_MAX_ZOOM = 1.2;
 const HIVE_CLOUD_TABLE = 'aurum_hive_accounts';
@@ -124,8 +126,13 @@ function ensureHiveUi() {
     .hive-modal-card.fullscreen .tool-body { min-height:calc(100vh - 96px); }
     .hive-modal-card.fullscreen .hive-layout { min-height:calc(100vh - 132px); }
     .hive-layout { display:grid; grid-template-columns:360px minmax(0,1fr); gap:18px; }
+    .hive-layout.panel-collapsed { grid-template-columns:minmax(0,1fr); }
     .hive-panel { border:1px solid var(--border); border-radius:16px; background:#fff; padding:14px; }
+    .hive-layout.panel-collapsed .hive-panel { display:none; }
     .hive-panel-title { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; font-size:13px; font-weight:800; color:var(--text); }
+    .hive-panel-title-actions { display:flex; align-items:center; gap:8px; }
+    .hive-panel-toggle { display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border:1px solid var(--border); border-radius:8px; background:var(--surface-2); color:var(--text-mid); cursor:pointer; }
+    .hive-panel-toggle:hover { border-color:var(--blue); color:var(--blue-mid); background:var(--blue-light); }
     .hive-summary { display:grid; gap:8px; font-size:13px; color:var(--text-mid); line-height:1.45; }
     .hive-summary-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; }
     .hive-summary-card { border:1px solid var(--border); border-radius:12px; background:linear-gradient(180deg,#fff 0%,#f3f6ff 100%); padding:10px; box-shadow:0 6px 16px rgba(25,45,110,.07); min-width:0; }
@@ -169,14 +176,18 @@ function ensureHiveUi() {
     .hive-message { min-height:18px; margin-top:10px; font-size:12px; color:var(--text-muted); }
     .hive-message.error { color:var(--red); }
     .hive-message.ok { color:var(--green); }
-    .hive-view-shell { min-width:760px; border-radius:18px; background:linear-gradient(135deg,#13203d,#173fcf 58%,#06b6d4); color:#fff; overflow:hidden; }
+    .hive-view-shell { min-width:0; border-radius:18px; background:linear-gradient(135deg,#13203d,#173fcf 58%,#06b6d4); color:#fff; overflow:hidden; }
     .hive-view-toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 14px; border-bottom:1px solid rgba(255,255,255,.16); background:rgba(15,23,42,.26); }
+    .hive-view-heading { display:flex; align-items:center; gap:10px; min-width:max-content; }
     .hive-view-title { font-size:12px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:rgba(255,255,255,.78); }
     .hive-view-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
     .hive-icon-btn { display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; border:1px solid rgba(255,255,255,.24); border-radius:8px; background:rgba(255,255,255,.10); color:#fff; cursor:pointer; }
     .hive-icon-btn:hover { background:rgba(255,255,255,.18); }
     .hive-icon-btn.active { border-color:#bef264; background:rgba(190,242,100,.22); color:#ecfccb; }
     .hive-mini-action { width:auto; min-width:34px; padding:0 9px; font:900 11px 'Inter',sans-serif; }
+    .hive-show-panel-btn { display:none; width:auto; min-width:86px; gap:6px; padding:0 10px; font:900 11px 'Inter',sans-serif; background:rgba(190,242,100,.22); border-color:rgba(190,242,100,.7); color:#ecfccb; }
+    .hive-show-panel-btn.visible { display:inline-flex; }
+    .hive-show-panel-btn .material-symbols-rounded { font-size:18px; }
     .hive-zoom-wrap { display:flex; align-items:center; gap:8px; min-width:230px; color:rgba(255,255,255,.86); font-size:12px; font-weight:800; }
     .hive-zoom-wrap input { width:140px; accent-color:#bef264; }
     .hive-canvas { position:relative; height:560px; padding:24px; color:#fff; overflow:auto; }
@@ -241,9 +252,14 @@ function ensureHiveUi() {
         <button class="tool-close" type="button" onclick="closeToolModal('hiveModal')" aria-label="Close Hive"><span class="material-symbols-rounded">close</span></button>
       </div>
       <div class="tool-body">
-        <div class="hive-layout">
+        <div class="hive-layout" id="hiveLayout">
           <section class="hive-panel">
-            <div class="hive-panel-title">Account editor</div>
+            <div class="hive-panel-title">
+              <span>Account editor</span>
+              <div class="hive-panel-title-actions">
+                <button class="hive-panel-toggle" type="button" id="hiveCollapsePanelBtn" title="Collapse account panel" aria-label="Collapse account panel"><span class="material-symbols-rounded" style="font-size:18px;">left_panel_close</span></button>
+              </div>
+            </div>
             <div class="hive-lookup">
               <div class="hive-field"><label for="hiveLookupInviteId">Find by Referral ID</label></div>
               <div class="hive-lookup-row">
@@ -283,7 +299,10 @@ function ensureHiveUi() {
           </section>
           <section class="hive-view-shell">
             <div class="hive-view-toolbar">
-              <div class="hive-view-title">Hive map</div>
+              <div class="hive-view-heading">
+                <button class="hive-icon-btn hive-show-panel-btn" type="button" id="hiveShowPanelBtn" title="Show account panel" aria-label="Show account panel"><span class="material-symbols-rounded">left_panel_open</span>Panel</button>
+                <div class="hive-view-title">Hive map</div>
+              </div>
               <div class="hive-view-actions">
                 <label class="hive-zoom-wrap" for="hiveZoomRange">
                   Zoom <input id="hiveZoomRange" type="range" min="10" max="120" step="5" value="85">
@@ -327,6 +346,8 @@ function ensureHiveUi() {
   document.getElementById('hiveEditTab').addEventListener('click', () => setHiveMode('edit'));
   document.getElementById('hiveAddTab').addEventListener('click', () => setHiveMode('add'));
   document.getElementById('hiveSaveBtn').addEventListener('click', submitHiveForm);
+  document.getElementById('hiveCollapsePanelBtn').addEventListener('click', () => setHivePanelCollapsed(true));
+  document.getElementById('hiveShowPanelBtn').addEventListener('click', () => setHivePanelCollapsed(false));
   document.getElementById('hiveZoomRange').addEventListener('input', (event) => setHiveZoom(Number(event.target.value) / 100));
   document.getElementById('hiveZoomOutBtn').addEventListener('click', () => setHiveZoom(hiveZoom - 0.1));
   document.getElementById('hiveZoomInBtn').addEventListener('click', () => setHiveZoom(hiveZoom + 0.1));
@@ -532,6 +553,22 @@ function rememberZoom() {
     localStorage.setItem(HIVE_ZOOM_KEY, String(hiveZoom));
   } catch (error) {
     console.warn('Aurum Hive zoom level could not be remembered.', error);
+  }
+}
+
+function readPanelCollapsed() {
+  try {
+    return localStorage.getItem(HIVE_PANEL_COLLAPSED_KEY) === 'true';
+  } catch (error) {
+    return false;
+  }
+}
+
+function rememberPanelCollapsed() {
+  try {
+    localStorage.setItem(HIVE_PANEL_COLLAPSED_KEY, String(hivePanelCollapsed));
+  } catch (error) {
+    console.warn('Aurum Hive panel state could not be remembered.', error);
   }
 }
 
@@ -980,16 +1017,27 @@ function getLegStrengthRows(mainNode, legCount = 4) {
   });
 }
 
-function renderLegStrengthCard(selected) {
-  if (!selected || selected.type !== 'main') return '';
+function getLegStrengthOwner(node) {
+  if (!node) return null;
+  if (node.type === 'main') return node;
+  return node.parentInviteId ? findNode(hiveData[0], node.parentInviteId) : null;
+}
 
-  const rows = getLegStrengthRows(selected);
+function renderLegStrengthCard(selected) {
+  const owner = getLegStrengthOwner(selected);
+  if (!owner || owner.type !== 'main') return '';
+
+  const rows = getLegStrengthRows(owner);
   const strongest = rows.reduce((best, row) => (row.volume > best.volume ? row : best), rows[0] || { volume: 0 });
+  const ownerNote = selected?.inviteId === owner.inviteId
+    ? 'Selected main account'
+    : `Parent main: ${escapeHtml(owner.name)} (${escapeHtml(owner.inviteId)})`;
 
   return `
     <div class="hive-summary-card wide">
       <div class="hive-summary-label">Leg strength</div>
       <div class="hive-summary-value" style="font-size:14px;">${strongest?.leg ? `Strongest: Leg ${strongest.index}` : 'No legs yet'}</div>
+      <div class="hive-summary-note">${ownerNote}</div>
       <div class="hive-leg-list">
         ${rows.map((row) => `
           <div class="hive-leg-row${row.leg ? '' : ' hive-leg-empty'}">
@@ -1516,6 +1564,19 @@ function setHiveFullscreen(value) {
   }
 }
 
+function setHivePanelCollapsed(value) {
+  hivePanelCollapsed = Boolean(value);
+  const layout = document.getElementById('hiveLayout');
+  const showBtn = document.getElementById('hiveShowPanelBtn');
+  layout?.classList.toggle('panel-collapsed', hivePanelCollapsed);
+  showBtn?.classList.toggle('visible', hivePanelCollapsed);
+  rememberPanelCollapsed();
+  requestAnimationFrame(() => {
+    syncFloatingHiveOverlays();
+    renderMiniMap(lastHiveLayout);
+  });
+}
+
 function toggleHiveFullscreen() {
   setHiveFullscreen(!hiveFullscreen);
 }
@@ -1746,10 +1807,12 @@ function safeFilePart(value) {
 window.openHiveManager = function openHiveManager() {
   loadLocalHive();
   hiveZoom = readSavedZoom();
+  hivePanelCollapsed = readPanelCollapsed();
   hiveFullscreen = true;
   ensureHiveUi();
   document.getElementById('hiveModal').classList.add('open');
   setHiveFullscreen(true);
+  setHivePanelCollapsed(hivePanelCollapsed);
   updateSyncStatus(isCloudConfigured() ? 'Supabase configured. Local cache active.' : 'Local database active. Supabase not configured.', isCloudConfigured() ? 'cloud' : 'local');
   const rememberedInviteId = readLastInviteId();
   const lookupInput = document.getElementById('hiveLookupInviteId');
