@@ -80,6 +80,7 @@ const collapsedInviteIds = new Set();
 const HIVE_LOCAL_KEY = 'aurum_hive_database_v1';
 const HIVE_LAST_INVITE_KEY = 'aurum_hive_last_invite_id_v1';
 const HIVE_ZOOM_KEY = 'aurum_hive_zoom_v1';
+const HIVE_OVERLAY_POSITIONS_KEY = 'aurum_hive_overlay_positions_v1';
 const HIVE_CLOUD_TABLE = 'aurum_hive_accounts';
 const AURUM_REFERRAL_BASE_URL = 'https://backoffice.aurum.foundation/u/';
 const HIVE_RANKS = ['NOVA', 'VOYAGER', 'VANGUARD', 'VANGUARD PRO', 'NEXUS', 'ORACLE', 'PRIME', 'ELITE', 'MAGNAT', 'MYTHOS', 'LEGEND'];
@@ -175,12 +176,13 @@ function ensureHiveUi() {
     .hive-tooltip-layer { position:absolute; inset:0; z-index:30; pointer-events:none; }
     .hive-floating-tooltip { position:absolute; width:220px; transform:translate(-50%, 16px); border:1px solid var(--border); border-radius:13px; background:#fff; color:var(--text); padding:12px; text-align:left; box-shadow:var(--shadow-2); font:12px/1.45 'Inter',sans-serif; pointer-events:none; }
     .hive-tooltip-rank { color:#173fcf; font-size:14px; font-weight:900; }
-    .hive-map-overlay { position:sticky; left:12px; z-index:20; pointer-events:auto; border:1px solid rgba(255,255,255,.22); border-radius:12px; background:rgba(15,23,42,.76); color:#fff; box-shadow:0 14px 32px rgba(0,0,0,.24); backdrop-filter:blur(12px); }
-    .hive-legend { top:160px; display:grid; gap:6px; padding:10px; width:190px; font:800 11px 'Inter',sans-serif; }
+    .hive-map-overlay { position:absolute; z-index:20; pointer-events:auto; border:1px solid rgba(255,255,255,.22); border-radius:12px; background:rgba(15,23,42,.76); color:#fff; box-shadow:0 14px 32px rgba(0,0,0,.24); backdrop-filter:blur(12px); cursor:grab; touch-action:none; user-select:none; }
+    .hive-map-overlay.dragging { cursor:grabbing; opacity:.94; }
+    .hive-legend { display:grid; gap:6px; padding:10px; width:190px; font:800 11px 'Inter',sans-serif; }
     .hive-legend-row { display:flex; align-items:center; gap:8px; color:rgba(255,255,255,.9); }
     .hive-legend-dot { width:13px; height:13px; border-radius:50%; border:2px solid rgba(255,255,255,.8); flex:0 0 auto; }
     .hive-legend-badge { border-radius:999px; background:rgba(255,255,255,.18); color:#fff; padding:2px 6px; font-size:10px; }
-    .hive-minimap { top:12px; width:190px; height:130px; padding:8px; margin-bottom:10px; }
+    .hive-minimap { width:190px; height:130px; padding:8px; }
     .hive-minimap svg { display:block; width:100%; height:100%; }
     .hive-minimap-node { opacity:.95; stroke:rgba(255,255,255,.72); stroke-width:2; }
     .hive-minimap-link { stroke:rgba(190,242,100,.55); stroke-width:1; fill:none; }
@@ -298,8 +300,8 @@ function ensureHiveUi() {
             </div>
             <div class="hive-canvas">
               <div id="hiveTooltipLayer" class="hive-tooltip-layer"></div>
-              <div id="hiveMiniMap" class="hive-map-overlay hive-minimap"></div>
-              <div class="hive-map-overlay hive-legend">
+              <div id="hiveMiniMap" class="hive-map-overlay hive-minimap" data-overlay-id="minimap" data-default-x="12" data-default-y="12" title="Drag to move"></div>
+              <div id="hiveLegendMap" class="hive-map-overlay hive-legend" data-overlay-id="legend" data-default-x="12" data-default-y="160" title="Drag to move">
                 <div class="hive-legend-row"><span class="hive-legend-dot" style="background:#dc2626;"></span>Funded main</div>
                 <div class="hive-legend-row"><span class="hive-legend-dot" style="background:#16a34a;"></span>Funded sub</div>
                 <div class="hive-legend-row"><span class="hive-legend-dot" style="background:#2563eb;"></span>Unfunded main</div>
@@ -341,7 +343,12 @@ function ensureHiveUi() {
   document.getElementById('hiveNameSearch').addEventListener('keydown', (event) => {
     if (event.key === 'Enter') searchHiveByName();
   });
-  document.querySelector('#hiveModal .hive-canvas')?.addEventListener('scroll', () => renderMiniMap(lastHiveLayout));
+  const hiveCanvas = document.querySelector('#hiveModal .hive-canvas');
+  hiveCanvas?.addEventListener('scroll', () => {
+    syncFloatingHiveOverlays();
+    renderMiniMap(lastHiveLayout);
+  });
+  initFloatingHiveOverlays();
   document.getElementById('hiveExportPdfBtn').addEventListener('click', exportSelectedHivePdf);
   document.getElementById('hiveRefreshBtn').addEventListener('click', () => renderHive());
   document.getElementById('hiveResetBtn').addEventListener('click', () => {
@@ -352,6 +359,104 @@ function ensureHiveUi() {
     persistHive();
     renderHive();
   });
+}
+
+function getHiveOverlayPositions() {
+  try {
+    return JSON.parse(localStorage.getItem(HIVE_OVERLAY_POSITIONS_KEY) || '{}');
+  } catch (error) {
+    return {};
+  }
+}
+
+function saveHiveOverlayPosition(id, position) {
+  if (!id || !position) return;
+  const positions = getHiveOverlayPositions();
+  positions[id] = position;
+  localStorage.setItem(HIVE_OVERLAY_POSITIONS_KEY, JSON.stringify(positions));
+}
+
+function getHiveOverlayViewportPosition(overlay) {
+  const positions = getHiveOverlayPositions();
+  const id = overlay.dataset.overlayId;
+  const saved = positions[id];
+  return {
+    x: Number.isFinite(saved?.x) ? saved.x : Number(overlay.dataset.defaultX || 12),
+    y: Number.isFinite(saved?.y) ? saved.y : Number(overlay.dataset.defaultY || 12)
+  };
+}
+
+function clampHiveOverlayPosition(canvas, overlay, position) {
+  const maxX = Math.max(0, canvas.clientWidth - overlay.offsetWidth - 12);
+  const maxY = Math.max(0, canvas.clientHeight - overlay.offsetHeight - 12);
+  return {
+    x: Math.min(Math.max(8, position.x), maxX),
+    y: Math.min(Math.max(8, position.y), maxY)
+  };
+}
+
+function applyHiveOverlayPosition(overlay, position) {
+  const canvas = overlay.closest('.hive-canvas');
+  if (!canvas) return;
+  const clamped = clampHiveOverlayPosition(canvas, overlay, position || getHiveOverlayViewportPosition(overlay));
+  overlay.style.left = `${canvas.scrollLeft + clamped.x}px`;
+  overlay.style.top = `${canvas.scrollTop + clamped.y}px`;
+}
+
+function syncFloatingHiveOverlays() {
+  document.querySelectorAll('#hiveModal .hive-map-overlay').forEach((overlay) => {
+    applyHiveOverlayPosition(overlay);
+  });
+}
+
+function initFloatingHiveOverlays() {
+  const overlays = document.querySelectorAll('#hiveModal .hive-map-overlay');
+  overlays.forEach((overlay) => {
+    applyHiveOverlayPosition(overlay);
+    overlay.addEventListener('pointerdown', (event) => {
+      if (event.button !== 0) return;
+      const canvas = overlay.closest('.hive-canvas');
+      if (!canvas) return;
+
+      event.preventDefault();
+      overlay.classList.add('dragging');
+      overlay.setPointerCapture(event.pointerId);
+
+      const start = getHiveOverlayViewportPosition(overlay);
+      const startPointer = { x: event.clientX, y: event.clientY };
+
+      function moveOverlay(moveEvent) {
+        const nextPosition = clampHiveOverlayPosition(canvas, overlay, {
+          x: start.x + (moveEvent.clientX - startPointer.x),
+          y: start.y + (moveEvent.clientY - startPointer.y)
+        });
+        applyHiveOverlayPosition(overlay, nextPosition);
+        overlay.dataset.dragX = String(nextPosition.x);
+        overlay.dataset.dragY = String(nextPosition.y);
+      }
+
+      function stopDrag() {
+        overlay.classList.remove('dragging');
+        overlay.releasePointerCapture(event.pointerId);
+        const finalPosition = {
+          x: Number(overlay.dataset.dragX || start.x),
+          y: Number(overlay.dataset.dragY || start.y)
+        };
+        saveHiveOverlayPosition(overlay.dataset.overlayId, finalPosition);
+        delete overlay.dataset.dragX;
+        delete overlay.dataset.dragY;
+        overlay.removeEventListener('pointermove', moveOverlay);
+        overlay.removeEventListener('pointerup', stopDrag);
+        overlay.removeEventListener('pointercancel', stopDrag);
+      }
+
+      overlay.addEventListener('pointermove', moveOverlay);
+      overlay.addEventListener('pointerup', stopDrag);
+      overlay.addEventListener('pointercancel', stopDrag);
+    });
+  });
+
+  window.addEventListener('resize', syncFloatingHiveOverlays);
 }
 
 function createDefaultHive() {
@@ -904,6 +1009,7 @@ export function renderHive(containerId = 'hiveContainer') {
 
   renderTreeMap(container, renderRoots);
   resetHiveCanvasScroll();
+  requestAnimationFrame(syncFloatingHiveOverlays);
   renderHiveSummary();
   populateHiveForm();
   updateHiveFocusButton();
