@@ -71,7 +71,7 @@ body {
 /* ── Hero banner ── */
 .hero {
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   background:
     radial-gradient(circle at 15% 20%, rgba(255,255,255,0.20), transparent 18%),
     radial-gradient(circle at 85% 15%, rgba(139,92,246,0.32), transparent 20%),
@@ -118,7 +118,7 @@ body {
   flex-direction: column;
   align-items: flex-end;
   gap: 10px;
-  z-index: 2;
+  z-index: 20;
 }
 .hero-cog {
   width: 54px;
@@ -143,6 +143,8 @@ body {
 .hero-cog .material-symbols-rounded { font-size: 28px; }
 .hero-tools-panel {
   min-width: 220px;
+  max-height: min(70vh, 420px);
+  overflow-y: auto;
   padding: 12px;
   border-radius: 20px;
   background: rgba(17, 37, 96, 0.28);

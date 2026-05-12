@@ -74,13 +74,16 @@ let hiveZoom = 0.85;
 let hiveFullscreen = true;
 let hiveFocusMode = false;
 let highlightedInviteId = '';
-let hiveHeatmapMode = 'none';
+let hiveBranchHighlightMode = false;
+let isolatedRootInviteId = '';
 let lastHiveLayout = null;
 const collapsedInviteIds = new Set();
 const HIVE_LOCAL_KEY = 'aurum_hive_database_v1';
 const HIVE_LAST_INVITE_KEY = 'aurum_hive_last_invite_id_v1';
 const HIVE_ZOOM_KEY = 'aurum_hive_zoom_v1';
 const HIVE_OVERLAY_POSITIONS_KEY = 'aurum_hive_overlay_positions_v1';
+const HIVE_MIN_ZOOM = 0.1;
+const HIVE_MAX_ZOOM = 1.2;
 const HIVE_CLOUD_TABLE = 'aurum_hive_accounts';
 const AURUM_REFERRAL_BASE_URL = 'https://backoffice.aurum.foundation/u/';
 const HIVE_RANKS = ['NOVA', 'VOYAGER', 'VANGUARD', 'VANGUARD PRO', 'NEXUS', 'ORACLE', 'PRIME', 'ELITE', 'MAGNAT', 'MYTHOS', 'LEGEND'];
@@ -130,6 +133,12 @@ function ensureHiveUi() {
     .hive-summary-label { font-size:10px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; color:var(--text-muted); margin-bottom:3px; }
     .hive-summary-value { font-size:16px; font-weight:900; color:var(--text); line-height:1.2; overflow-wrap:anywhere; }
     .hive-summary-note { margin-top:3px; font-size:11px; color:var(--text-muted); overflow-wrap:anywhere; }
+    .hive-leg-list { display:grid; gap:7px; margin-top:6px; }
+    .hive-leg-row { display:grid; grid-template-columns:52px 1fr auto; gap:8px; align-items:center; padding:7px 8px; border:1px solid rgba(37,82,231,.12); border-radius:10px; background:rgba(255,255,255,.72); }
+    .hive-leg-index { font-size:10px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; color:var(--text-muted); }
+    .hive-leg-name { min-width:0; font-size:12px; font-weight:800; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .hive-leg-volume { font-size:12px; font-weight:900; color:#173fcf; white-space:nowrap; }
+    .hive-leg-empty .hive-leg-name, .hive-leg-empty .hive-leg-volume { color:var(--text-muted); }
     .hive-copy-row { display:grid; grid-template-columns:1fr auto; gap:8px; align-items:center; }
     .hive-copy-link { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px; color:var(--blue-mid); }
     .hive-copy-btn { border:1px solid var(--border); border-radius:8px; background:var(--blue-light); color:var(--blue-mid); padding:7px 9px; font:800 11px 'Inter',sans-serif; cursor:pointer; }
@@ -189,11 +198,7 @@ function ensureHiveUi() {
     .hive-minimap-viewport { fill:rgba(255,255,255,.13); stroke:#fff; stroke-width:1.5; }
     .hive-link-layer { position:absolute; inset:0; width:100%; height:100%; overflow:visible; pointer-events:none; }
     .hive-link-layer path { fill:none; stroke:rgba(190,242,100,.82); stroke-width:2; vector-effect:non-scaling-stroke; }
-    .hive-link-layer path.heat-strong { stroke:rgba(34,197,94,.86); }
-    .hive-link-layer path.heat-good { stroke:rgba(132,204,22,.86); }
-    .hive-link-layer path.heat-warn { stroke:rgba(250,204,21,.9); }
-    .hive-link-layer path.heat-risk { stroke:rgba(239,68,68,.86); }
-    .hive-link-layer path.in-selected-branch { stroke:rgba(250,204,21,.92); stroke-width:3; }
+    .hive-link-layer path.in-selected-branch { stroke:#ef4444; stroke-width:5; filter:drop-shadow(0 0 8px rgba(239,68,68,.65)); }
     .hive-node-wrapper { position:absolute; display:flex; flex-direction:column; align-items:center; width:120px; transform:translate(-50%, -50%); }
     .hive-node-dot-row { display:flex; align-items:center; justify-content:center; gap:7px; }
     .hive-rank-badge { max-width:92px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; border:1px solid rgba(255,255,255,.45); border-radius:999px; background:rgba(15,23,42,.58); color:#fff; padding:5px 8px; font:900 10px 'Inter',sans-serif; letter-spacing:.04em; box-shadow:0 10px 22px rgba(0,0,0,.18); }
@@ -201,7 +206,7 @@ function ensureHiveUi() {
     .hive-collapse-btn:hover { background:rgba(37,82,231,.9); }
     .hive-dot-main, .hive-dot-sub { position:relative; display:flex; align-items:center; justify-content:center; width:58px; height:58px; border-radius:50%; border:4px solid rgba(255,255,255,.86); box-shadow:0 14px 28px rgba(0,0,0,.24); cursor:pointer; }
     .hive-dot-main.selected, .hive-dot-sub.selected { outline:4px solid rgba(250,204,21,.95); outline-offset:4px; }
-    .hive-dot-main.in-selected-branch, .hive-dot-sub.in-selected-branch { box-shadow:0 14px 28px rgba(0,0,0,.24), 0 0 0 7px rgba(250,204,21,.16); }
+    .hive-dot-main.in-selected-branch, .hive-dot-sub.in-selected-branch { box-shadow:0 14px 28px rgba(0,0,0,.24), 0 0 0 7px rgba(239,68,68,.20), 0 0 22px rgba(239,68,68,.70); }
     .hive-dot-main.search-hit, .hive-dot-sub.search-hit { animation:hiveSearchPulse 1.05s ease-in-out infinite; }
     @keyframes hiveSearchPulse {
       0%, 100% { box-shadow:0 14px 28px rgba(0,0,0,.24), 0 0 0 0 rgba(250,204,21,.95); }
@@ -212,10 +217,6 @@ function ensureHiveUi() {
     .hive-dot-main.unfunded { background:#2563eb; }
     .hive-dot-sub.unfunded { background:#facc15; }
     .hive-dot-sub.unfunded::before { color:#111827; }
-    .hive-dot-main.heat-strong, .hive-dot-sub.heat-strong { outline:4px solid rgba(34,197,94,.82); outline-offset:2px; }
-    .hive-dot-main.heat-good, .hive-dot-sub.heat-good { outline:4px solid rgba(132,204,22,.78); outline-offset:2px; }
-    .hive-dot-main.heat-warn, .hive-dot-sub.heat-warn { outline:4px solid rgba(250,204,21,.82); outline-offset:2px; }
-    .hive-dot-main.heat-risk, .hive-dot-sub.heat-risk { outline:4px solid rgba(239,68,68,.82); outline-offset:2px; }
     .hive-dot-main.selected, .hive-dot-sub.selected { outline:4px solid rgba(250,204,21,.95); outline-offset:4px; }
     .hive-dot-main::before, .hive-dot-sub::before { color:#fff; font:900 18px 'Inter',sans-serif; }
     .hive-dot-main::before { content:'M'; }
@@ -285,7 +286,7 @@ function ensureHiveUi() {
               <div class="hive-view-title">Hive map</div>
               <div class="hive-view-actions">
                 <label class="hive-zoom-wrap" for="hiveZoomRange">
-                  Zoom <input id="hiveZoomRange" type="range" min="35" max="120" step="5" value="85">
+                  Zoom <input id="hiveZoomRange" type="range" min="10" max="120" step="5" value="85">
                   <span id="hiveZoomValue">85%</span>
                 </label>
                 <button class="hive-icon-btn" type="button" id="hiveZoomOutBtn" title="Zoom out" aria-label="Zoom out"><span class="material-symbols-rounded">remove</span></button>
@@ -294,7 +295,7 @@ function ensureHiveUi() {
                 <button class="hive-icon-btn hive-mini-action" type="button" id="hiveCollapseAllBtn" title="Collapse all" aria-label="Collapse all">All -</button>
                 <button class="hive-icon-btn hive-mini-action" type="button" id="hiveExpandAllBtn" title="Expand all" aria-label="Expand all">All +</button>
                 <button class="hive-icon-btn hive-mini-action" type="button" id="hiveCollapseBelowBtn" title="Collapse below selected" aria-label="Collapse below selected">Below</button>
-                <button class="hive-icon-btn" type="button" id="hiveHeatmapBtn" title="Toggle branch heatmap" aria-label="Toggle branch heatmap"><span class="material-symbols-rounded">local_fire_department</span></button>
+                <button class="hive-icon-btn" type="button" id="hiveBranchHighlightBtn" title="Highlight selected branch" aria-label="Highlight selected branch"><span class="material-symbols-rounded">conversion_path</span></button>
                 <button class="hive-icon-btn" type="button" id="hiveFullscreenBtn" title="Fullscreen" aria-label="Toggle fullscreen"><span class="material-symbols-rounded">fullscreen</span></button>
               </div>
             </div>
@@ -333,7 +334,7 @@ function ensureHiveUi() {
   document.getElementById('hiveCollapseAllBtn').addEventListener('click', collapseAllBranches);
   document.getElementById('hiveExpandAllBtn').addEventListener('click', expandAllBranches);
   document.getElementById('hiveCollapseBelowBtn').addEventListener('click', collapseBelowSelected);
-  document.getElementById('hiveHeatmapBtn').addEventListener('click', toggleHiveHeatmapMode);
+  document.getElementById('hiveBranchHighlightBtn').addEventListener('click', toggleHiveBranchHighlightMode);
   document.getElementById('hiveFullscreenBtn').addEventListener('click', toggleHiveFullscreen);
   document.getElementById('hiveLookupBtn').addEventListener('click', loadHiveFromLookup);
   document.getElementById('hiveLookupInviteId').addEventListener('keydown', (event) => {
@@ -354,6 +355,7 @@ function ensureHiveUi() {
   document.getElementById('hiveResetBtn').addEventListener('click', () => {
     hiveData.splice(0, hiveData.length, createDefaultHive()[0]);
     selectedInviteId = hiveData[0]?.inviteId || '';
+    isolatedRootInviteId = '';
     collapsedInviteIds.clear();
     setMessage('Sample hive restored.', 'ok');
     persistHive();
@@ -519,7 +521,7 @@ function rememberInviteId(inviteId) {
 function readSavedZoom() {
   try {
     const saved = Number(localStorage.getItem(HIVE_ZOOM_KEY));
-    return Number.isFinite(saved) ? saved : hiveZoom;
+    return Number.isFinite(saved) ? Math.min(HIVE_MAX_ZOOM, Math.max(HIVE_MIN_ZOOM, saved)) : hiveZoom;
   } catch (error) {
     return hiveZoom;
   }
@@ -605,6 +607,7 @@ async function loadHiveFromLookup() {
   if (cloudNode) {
     hiveData.splice(0, hiveData.length, cloudNode);
     selectedInviteId = inviteId;
+    isolatedRootInviteId = '';
     collapsedInviteIds.clear();
     hiveMode = 'edit';
     saveLocalHive();
@@ -619,6 +622,7 @@ async function loadHiveFromLookup() {
     const topLocalNode = findTopLocalNode(inviteId) || localNode;
     hiveData.splice(0, hiveData.length, cloneNode(topLocalNode));
     selectedInviteId = inviteId;
+    isolatedRootInviteId = '';
     collapsedInviteIds.clear();
     hiveMode = 'edit';
     renderHive();
@@ -796,6 +800,7 @@ async function reloadActiveHiveFromCloud(statusMessage) {
 
   hiveData.splice(0, hiveData.length, cloudNode);
   selectedInviteId = findNode(cloudNode, selectedInviteId) ? selectedInviteId : activeLookupInviteId;
+  if (isolatedRootInviteId && !findNode(cloudNode, isolatedRootInviteId)) isolatedRootInviteId = '';
   collapsedInviteIds.clear();
   hiveMode = 'edit';
   saveLocalHive();
@@ -958,6 +963,47 @@ function getBranchHealth(root, loadedAmount) {
   return { score, label, fundedPercent, filledPercent, rankedMainPercent, amountShare };
 }
 
+function getLegStrengthRows(mainNode, legCount = 4) {
+  if (!mainNode || mainNode.type !== 'main') return [];
+
+  const subLegs = (mainNode.children || []).filter((child) => child.type === 'sub');
+  return Array.from({ length: legCount }, (_, index) => {
+    const leg = subLegs[index];
+    const nodes = leg ? flattenNodes([leg]) : [];
+    const volume = nodes.reduce((sum, node) => sum + Number(node.amount || 0), 0);
+    return {
+      index: index + 1,
+      leg,
+      volume,
+      accounts: nodes.length
+    };
+  });
+}
+
+function renderLegStrengthCard(selected) {
+  if (!selected || selected.type !== 'main') return '';
+
+  const rows = getLegStrengthRows(selected);
+  const strongest = rows.reduce((best, row) => (row.volume > best.volume ? row : best), rows[0] || { volume: 0 });
+
+  return `
+    <div class="hive-summary-card wide">
+      <div class="hive-summary-label">Leg strength</div>
+      <div class="hive-summary-value" style="font-size:14px;">${strongest?.leg ? `Strongest: Leg ${strongest.index}` : 'No legs yet'}</div>
+      <div class="hive-leg-list">
+        ${rows.map((row) => `
+          <div class="hive-leg-row${row.leg ? '' : ' hive-leg-empty'}">
+            <div class="hive-leg-index">Leg ${row.index}</div>
+            <div class="hive-leg-name" title="${escapeHtml(row.leg?.name || 'Open leg')}">${escapeHtml(row.leg?.name || 'Open leg')}</div>
+            <div class="hive-leg-volume">$${row.volume.toLocaleString()}</div>
+          </div>
+        `).join('')}
+      </div>
+      <div class="hive-summary-note">Each direct sub account under this main account counts as one leg.</div>
+    </div>
+  `;
+}
+
 function getReferralLink(referralId) {
   return `${AURUM_REFERRAL_BASE_URL}${encodeURIComponent(String(referralId || '').trim())}`;
 }
@@ -1001,11 +1047,13 @@ export function renderHive(containerId = 'hiveContainer') {
   if (!findNode(hiveData[0], selectedInviteId)) {
     selectedInviteId = hiveData[0]?.inviteId || '';
   }
+  if (isolatedRootInviteId && !findNode(hiveData[0], isolatedRootInviteId)) {
+    isolatedRootInviteId = '';
+  }
 
   container.innerHTML = '';
-  const renderRoots = hiveFocusMode && selectedInviteId
-    ? [findNode(hiveData[0], selectedInviteId)].filter(Boolean)
-    : hiveData;
+  const rootInviteId = isolatedRootInviteId || (hiveFocusMode ? selectedInviteId : '');
+  const renderRoots = rootInviteId ? [findNode(hiveData[0], rootInviteId)].filter(Boolean) : hiveData;
 
   renderTreeMap(container, renderRoots);
   resetHiveCanvasScroll();
@@ -1013,6 +1061,7 @@ export function renderHive(containerId = 'hiveContainer') {
   renderHiveSummary();
   populateHiveForm();
   updateHiveFocusButton();
+  updateHiveBranchHighlightButton();
 }
 
 function renderTreeMap(container, roots) {
@@ -1031,9 +1080,7 @@ function renderTreeMap(container, roots) {
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     const midY = link.parent.y + ((link.child.y - link.parent.y) / 2);
     path.setAttribute('d', `M ${link.parent.x} ${link.parent.y} V ${midY} H ${link.child.x} V ${link.child.y}`);
-    const heatClass = getHeatmapClass(link.parent.node).trim();
-    if (heatClass) path.classList.add(heatClass);
-    if (selectedBranchIds.has(link.parent.node.inviteId) && selectedBranchIds.has(link.child.node.inviteId)) {
+    if (hiveBranchHighlightMode && selectedBranchIds.has(link.parent.node.inviteId) && selectedBranchIds.has(link.child.node.inviteId)) {
       path.classList.add('in-selected-branch');
     }
     svg.appendChild(path);
@@ -1088,9 +1135,9 @@ function createHiveNode(node, x, y, selectedBranchIds) {
   const dot = document.createElement('div');
   const isSelected = node.inviteId === selectedInviteId;
   const isSearchHit = node.inviteId === highlightedInviteId;
-  const isInSelectedBranch = selectedBranchIds.has(node.inviteId);
+  const isInSelectedBranch = hiveBranchHighlightMode && selectedBranchIds.has(node.inviteId);
   const isUnfunded = Number(node.amount || 0) <= 0;
-  dot.className = `${node.type === 'main' ? 'hive-dot-main' : 'hive-dot-sub'}${isSelected ? ' selected' : ''}${isInSelectedBranch ? ' in-selected-branch' : ''}${isSearchHit ? ' search-hit' : ''}${isUnfunded ? ' unfunded' : ''}${getHeatmapClass(node)}`;
+  dot.className = `${node.type === 'main' ? 'hive-dot-main' : 'hive-dot-sub'}${isSelected ? ' selected' : ''}${isInSelectedBranch ? ' in-selected-branch' : ''}${isSearchHit ? ' search-hit' : ''}${isUnfunded ? ' unfunded' : ''}`;
   dot.setAttribute('role', 'button');
   dot.setAttribute('tabindex', '0');
   dot.setAttribute('aria-label', `Select ${node.name}`);
@@ -1105,6 +1152,11 @@ function createHiveNode(node, x, y, selectedBranchIds) {
     if (highlightedInviteId !== node.inviteId) highlightedInviteId = '';
     hiveMode = 'edit';
     renderHive();
+  });
+  dot.addEventListener('dblclick', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    toggleHiveBranchIsolation(node.inviteId);
   });
   dot.addEventListener('keydown', (event) => {
     if (event.key === 'Enter' || event.key === ' ') {
@@ -1207,10 +1259,8 @@ function collapseBelowSelected() {
   renderHive();
 }
 
-function toggleHiveHeatmapMode() {
-  hiveHeatmapMode = hiveHeatmapMode === 'none' ? 'health' : 'none';
-  const btn = document.getElementById('hiveHeatmapBtn');
-  btn?.classList.toggle('active', hiveHeatmapMode !== 'none');
+function toggleHiveBranchHighlightMode() {
+  hiveBranchHighlightMode = !hiveBranchHighlightMode;
   renderHive();
 }
 
@@ -1241,15 +1291,6 @@ function getDescendantIds(root) {
   return ids;
 }
 
-function getHeatmapClass(node) {
-  if (hiveHeatmapMode === 'none') return '';
-  const health = getBranchHealth(node, getLoadedHiveAmount());
-  if (health.score >= 85) return ' heat-strong';
-  if (health.score >= 70) return ' heat-good';
-  if (health.score >= 50) return ' heat-warn';
-  return ' heat-risk';
-}
-
 function getLoadedHiveAmount() {
   return flattenNodes(hiveData).reduce((sum, node) => sum + Number(node.amount || 0), 0);
 }
@@ -1259,10 +1300,11 @@ function renderMiniMap(layout) {
   const canvas = document.querySelector('#hiveModal .hive-canvas');
   if (!mini || !canvas || !layout) return;
 
-  const viewLeft = canvas.scrollLeft / Math.max(1, hiveZoom);
-  const viewTop = canvas.scrollTop / Math.max(1, hiveZoom);
-  const viewWidth = canvas.clientWidth / Math.max(1, hiveZoom);
-  const viewHeight = canvas.clientHeight / Math.max(1, hiveZoom);
+  const zoom = Math.max(HIVE_MIN_ZOOM, hiveZoom);
+  const viewLeft = canvas.scrollLeft / zoom;
+  const viewTop = canvas.scrollTop / zoom;
+  const viewWidth = canvas.clientWidth / zoom;
+  const viewHeight = canvas.clientHeight / zoom;
   const selectedBranchIds = getDescendantIds(findNode(hiveData[0], selectedInviteId));
 
   mini.innerHTML = `
@@ -1448,7 +1490,7 @@ function populateHiveForm() {
 }
 
 function setHiveZoom(value) {
-  hiveZoom = Math.min(1.2, Math.max(0.35, Number(value || 0.85)));
+  hiveZoom = Math.min(HIVE_MAX_ZOOM, Math.max(HIVE_MIN_ZOOM, Number(value || 0.85)));
   const tree = document.getElementById('hiveContainer');
   const range = document.getElementById('hiveZoomRange');
   const valueLabel = document.getElementById('hiveZoomValue');
@@ -1479,7 +1521,18 @@ function toggleHiveFullscreen() {
 }
 
 function toggleHiveFocusMode() {
+  isolatedRootInviteId = '';
   hiveFocusMode = !hiveFocusMode;
+  renderHive();
+}
+
+function toggleHiveBranchIsolation(inviteId) {
+  const isSameIsolatedRoot = isolatedRootInviteId === inviteId;
+  selectedInviteId = inviteId;
+  highlightedInviteId = '';
+  hiveMode = 'edit';
+  hiveFocusMode = false;
+  isolatedRootInviteId = isSameIsolatedRoot ? '' : inviteId;
   renderHive();
 }
 
@@ -1488,6 +1541,14 @@ function updateHiveFocusButton() {
   if (!btn) return;
   btn.classList.toggle('active', hiveFocusMode);
   btn.title = hiveFocusMode ? 'Show full loaded Hive' : 'Focus selected tree';
+  btn.setAttribute('aria-label', btn.title);
+}
+
+function updateHiveBranchHighlightButton() {
+  const btn = document.getElementById('hiveBranchHighlightBtn');
+  if (!btn) return;
+  btn.classList.toggle('active', hiveBranchHighlightMode);
+  btn.title = hiveBranchHighlightMode ? 'Hide selected branch highlight' : 'Highlight selected branch';
   btn.setAttribute('aria-label', btn.title);
 }
 
@@ -1634,6 +1695,7 @@ function renderHiveSummary() {
         <div class="hive-summary-value">${openSlots.total}</div>
         <div class="hive-summary-note">${openSlots.subSlots} sub · ${openSlots.mainSlots} main</div>
       </div>
+      ${renderLegStrengthCard(selected)}
       ${health ? `
         <div class="hive-summary-card">
           <div class="hive-summary-label">Funded</div>
@@ -1649,7 +1711,7 @@ function renderHiveSummary() {
       <div class="hive-summary-card wide">
         <div class="hive-summary-label">Path to root</div>
         <div class="hive-summary-value" style="font-size:12px;">${escapeHtml(pathToRoot || 'None')}</div>
-        <div class="hive-summary-note">${hiveFocusMode ? 'Focused selected tree' : 'Full loaded Hive'}</div>
+        <div class="hive-summary-note">${isolatedRootInviteId ? `Isolated branch root: ${escapeHtml(isolatedRootInviteId)}` : (hiveFocusMode ? 'Focused selected tree' : 'Full loaded Hive')}</div>
       </div>
     </div>
   `;
