@@ -1644,6 +1644,7 @@ document.addEventListener('DOMContentLoaded', function () {
 const AURUM_APP_VERSION = '2026.05.12.2';
 const AURUM_VERSION_URL = 'app-version.json';
 const AURUM_VERSION_CHECK_MS = 60000;
+const AURUM_UPDATE_REQUESTED_KEY = 'aurum_update_requested_version';
 const AURUM_SCENARIO_KEY = 'aurum_saved_scenarios_v2';
 const AURUM_ALERTS_KEY = 'aurum_price_alerts_v1';
 let strategyCompareChart = null;
@@ -1717,6 +1718,7 @@ async function checkAppVersion() {
     if (!response.ok) return;
     const info = await response.json();
     const latestVersion = String(info?.version || '').trim();
+    if (latestVersion && sessionStorage.getItem(AURUM_UPDATE_REQUESTED_KEY) === latestVersion) return;
     if (latestVersion && compareAppVersions(AURUM_APP_VERSION, latestVersion) > 0) {
       showAppUpdatePrompt(info);
     }
@@ -1731,7 +1733,14 @@ function startAppVersionWatcher() {
 }
 
 function reloadForAppUpdate() {
-  window.location.reload();
+  const version = appUpdatePromptedVersion || AURUM_APP_VERSION;
+  try {
+    sessionStorage.setItem(AURUM_UPDATE_REQUESTED_KEY, version);
+  } catch (error) {}
+  const url = new URL(window.location.href);
+  url.searchParams.set('appv', version);
+  url.searchParams.set('reload', String(Date.now()));
+  window.location.replace(url.toString());
 }
 
 function getCurrentScenarioConfig() {
