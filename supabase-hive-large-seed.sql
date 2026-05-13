@@ -128,6 +128,7 @@ on conflict (invite_id) do update set
   name = excluded.name,
   country = excluded.country,
   amount = excluded.amount,
+  total_turnover = excluded.total_turnover,
   rank = excluded.rank,
   type = excluded.type,
   parent_invite_id = excluded.parent_invite_id,

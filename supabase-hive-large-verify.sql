@@ -24,13 +24,13 @@ where sub_count <> 3
 order by invite_id;
 
 with recursive large_tree as (
-  select invite_id, type, parent_invite_id, amount
+  select invite_id, type, parent_invite_id, amount, total_turnover
   from public.aurum_hive_accounts
   where invite_id = 'AUR-LARGE-ROOT'
 
   union all
 
-  select child.invite_id, child.type, child.parent_invite_id, child.amount
+  select child.invite_id, child.type, child.parent_invite_id, child.amount, child.total_turnover
   from public.aurum_hive_accounts child
   join large_tree parent on child.parent_invite_id = parent.invite_id
 )
@@ -39,5 +39,6 @@ select
   count(*) filter (where type = 'main') as main_accounts,
   count(*) filter (where type = 'sub') as sub_accounts,
   count(*) filter (where type = 'main' and amount = 0) as unfunded_mains,
-  count(*) filter (where type = 'sub' and amount = 0) as unfunded_subs
+  count(*) filter (where type = 'sub' and amount = 0) as unfunded_subs,
+  sum(total_turnover) as total_turnover
 from large_tree;

@@ -3,6 +3,7 @@ create table if not exists public.aurum_hive_accounts (
   name text not null default '',
   country text not null default 'Not specified',
   amount numeric not null default 0,
+  total_turnover numeric not null default 0,
   rank text not null default '',
   type text not null check (type in ('main', 'sub')),
   parent_invite_id text references public.aurum_hive_accounts(invite_id) on delete cascade,
@@ -14,6 +15,9 @@ create index if not exists aurum_hive_accounts_parent_invite_id_idx
 
 alter table public.aurum_hive_accounts
   add column if not exists country text not null default 'Not specified';
+
+alter table public.aurum_hive_accounts
+  add column if not exists total_turnover numeric not null default 0;
 
 create or replace function public.validate_aurum_hive_account()
 returns trigger

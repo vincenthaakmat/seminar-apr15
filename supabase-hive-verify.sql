@@ -5,6 +5,7 @@ select
   type,
   parent_invite_id,
   amount,
+  total_turnover,
   rank,
   updated_at
 from public.aurum_hive_accounts

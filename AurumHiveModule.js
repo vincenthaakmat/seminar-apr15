@@ -307,7 +307,8 @@ function ensureHiveUi() {
                 <div class="hive-field"><label for="hiveInviteId">Referral ID</label><input id="hiveInviteId" autocomplete="off"></div>
                 <div class="hive-field"><label for="hiveName">Name</label><input id="hiveName" autocomplete="off"></div>
                 <div class="hive-field"><label for="hiveCountry">Country</label><select id="hiveCountry"></select></div>
-                <div class="hive-field"><label for="hiveAmount">Amount</label><input id="hiveAmount" type="number" min="0" step="any"></div>
+                <div class="hive-field"><label for="hiveAmount">Personal investment</label><input id="hiveAmount" type="number" min="0" step="any"></div>
+                <div class="hive-field"><label for="hiveTotalTurnover">Total turnover</label><input id="hiveTotalTurnover" type="number" min="0" step="any"></div>
                 <div class="hive-field"><label for="hiveRank">Rank</label><select id="hiveRank"></select></div>
                 <div class="hive-field"><label for="hiveType">Type</label><input id="hiveType" disabled></div>
                 <div class="hive-field"><label for="hiveParent">Invited By ID</label><input id="hiveParent" disabled></div>
@@ -732,6 +733,15 @@ async function saveHiveToCloud() {
   const { error } = await supabase
     .from(HIVE_CLOUD_TABLE)
     .upsert(rows.map(toSupabaseRow), { onConflict: 'invite_id' });
+  if (error && String(error.message || '').includes('total_turnover')) {
+    const fallbackRows = rows.map(toSupabaseRow).map(({ total_turnover, ...row }) => row);
+    const { error: fallbackError } = await supabase
+      .from(HIVE_CLOUD_TABLE)
+      .upsert(fallbackRows, { onConflict: 'invite_id' });
+    if (fallbackError) throw fallbackError;
+    updateSyncStatus('Saved locally. Supabase synced without Total turnover column.', 'cloud');
+    return;
+  }
   if (error) throw error;
   updateSyncStatus('Saved locally and synced to Supabase.', 'cloud');
 }
@@ -833,7 +843,7 @@ function exportSelectedHivePdf() {
   const stats = getHiveStats(selected);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
-  doc.text(`Accounts: ${stats.total}   Main: ${stats.main}   Sub: ${stats.sub}   Total amount: $${stats.amount.toLocaleString()}`, margin, y);
+  doc.text(`Accounts: ${stats.total}   Main: ${stats.main}   Sub: ${stats.sub}   Personal investment: $${stats.amount.toLocaleString()}   Total turnover: $${stats.totalTurnover.toLocaleString()}`, margin, y);
   y += 24;
 
   doc.setDrawColor(210, 218, 235);
@@ -858,10 +868,11 @@ function exportSelectedHivePdf() {
 
   function walk(node, depth = 0) {
     const amount = `$${Number(node.amount || 0).toLocaleString()}`;
+    const totalTurnover = `$${Number(node.totalTurnover || 0).toLocaleString()}`;
     const rank = normalizeHiveRank(node.rank);
     const type = node.type === 'main' ? 'MAIN' : 'SUB';
     const marker = node.type === 'main' ? '[M]' : '[S]';
-    addLine(`${marker} ${node.name || 'Unnamed'} | ${node.inviteId} | ${type} | ${normalizeHiveCountry(node.country)} | ${amount} | ${rank}`, depth, node.type === 'main' ? 'bold' : 'normal');
+    addLine(`${marker} ${node.name || 'Unnamed'} | ${node.inviteId} | ${type} | ${normalizeHiveCountry(node.country)} | Investment: ${amount} | Turnover: ${totalTurnover} | ${rank}`, depth, node.type === 'main' ? 'bold' : 'normal');
     (node.children || []).forEach((child) => walk(child, depth + 1));
   }
 
@@ -878,7 +889,8 @@ function getHiveStats(root) {
     total: rows.length,
     main: rows.filter((node) => node.type === 'main').length,
     sub: rows.filter((node) => node.type === 'sub').length,
-    amount: rows.reduce((sum, node) => sum + Number(node.amount || 0), 0)
+    amount: rows.reduce((sum, node) => sum + Number(node.amount || 0), 0),
+    totalTurnover: rows.reduce((sum, node) => sum + Number(node.totalTurnover || 0), 0)
   };
 }
 
@@ -978,11 +990,13 @@ async function deleteCloudInvite(inviteId) {
 
 function toSupabaseRow(node) {
   const amount = Number(node.amount || 0);
+  const totalTurnover = Number(node.totalTurnover || 0);
   return {
     invite_id: String(node.inviteId || '').trim(),
     name: String(node.name || '').trim(),
     country: normalizeHiveCountry(node.country),
     amount,
+    total_turnover: totalTurnover,
     rank: amount > 0 ? normalizeHiveRank(node.rank) : DEFAULT_HIVE_RANK,
     type: node.type === 'sub' ? 'sub' : 'main',
     parent_invite_id: node.parentInviteId || null,
@@ -997,6 +1011,7 @@ function fromSupabaseRow(row) {
     name: String(row.name || '').trim(),
     country: normalizeHiveCountry(row.country),
     amount,
+    totalTurnover: Number(row.total_turnover || 0),
     rank: amount > 0 ? normalizeHiveRank(row.rank) : DEFAULT_HIVE_RANK,
     type: row.type === 'sub' ? 'sub' : 'main',
     parentInviteId: row.parent_invite_id || null,
@@ -1370,7 +1385,8 @@ function showHiveTooltip(node, anchorEl) {
       <strong>${escapeHtml(node.name)}</strong><br>
       Referral ID: ${escapeHtml(node.inviteId)}<br>
       Country: ${escapeHtml(normalizeHiveCountry(node.country))}<br>
-      Amount: $${Number(node.amount || 0).toLocaleString()}<br>
+      Personal investment: $${Number(node.amount || 0).toLocaleString()}<br>
+      Total turnover: $${Number(node.totalTurnover || 0).toLocaleString()}<br>
       Rank: ${rankHtml}<br>
       Type: ${escapeHtml(node.type)}
     </div>
@@ -1489,6 +1505,7 @@ export function addHiveItem(parentInviteId, newItem) {
   parent.children.push({
     ...newItem,
     country: normalizeHiveCountry(newItem.country),
+    totalTurnover: Number(newItem.totalTurnover || 0),
     rank: Number(newItem.amount || 0) > 0 ? normalizeHiveRank(newItem.rank) : DEFAULT_HIVE_RANK,
     type: nextType,
     parentInviteId: parent.inviteId,
@@ -1517,6 +1534,7 @@ export function editHiveItem(inviteId, updatedData) {
     name: String(updatedData.name || '').trim(),
     country: normalizeHiveCountry(updatedData.country),
     amount: Number(updatedData.amount || 0),
+    totalTurnover: Number(updatedData.totalTurnover || 0),
     rank: Number(updatedData.amount || 0) > 0 ? normalizeHiveRank(updatedData.rank) : DEFAULT_HIVE_RANK
   });
   if (previousInviteId !== nextInviteId) {
@@ -1608,10 +1626,11 @@ function populateHiveForm() {
   const nameInput = document.getElementById('hiveName');
   const countryInput = document.getElementById('hiveCountry');
   const amountInput = document.getElementById('hiveAmount');
+  const totalTurnoverInput = document.getElementById('hiveTotalTurnover');
   const rankInput = document.getElementById('hiveRank');
   const typeInput = document.getElementById('hiveType');
   const parentInput = document.getElementById('hiveParent');
-  if (!selected || !inviteInput || !nameInput || !countryInput || !amountInput || !rankInput || !typeInput || !parentInput || !saveBtn) return;
+  if (!selected || !inviteInput || !nameInput || !countryInput || !amountInput || !totalTurnoverInput || !rankInput || !typeInput || !parentInput || !saveBtn) return;
 
   const childType = getAllowedChildType(selected);
   if (hiveMode === 'add' && !childType) hiveMode = 'edit';
@@ -1628,6 +1647,7 @@ function populateHiveForm() {
     nameInput.value = selected.name || '';
     countryInput.value = normalizeHiveCountry(selected.country);
     amountInput.value = selected.amount ?? '';
+    totalTurnoverInput.value = selected.totalTurnover ?? '';
     rankInput.value = normalizeHiveRank(selected.rank);
     typeInput.value = selected.type || '';
     parentInput.value = selected.parentInviteId || 'Root';
@@ -1637,6 +1657,7 @@ function populateHiveForm() {
     nameInput.value = childType === 'main' ? 'New Main Account' : 'New Sub Account';
     countryInput.value = DEFAULT_HIVE_COUNTRY;
     amountInput.value = '';
+    totalTurnoverInput.value = '';
     rankInput.value = DEFAULT_HIVE_RANK;
     typeInput.value = childType;
     parentInput.value = selected.inviteId;
@@ -1735,6 +1756,7 @@ async function submitHiveForm() {
     name: document.getElementById('hiveName').value.trim(),
     country: document.getElementById('hiveCountry').value,
     amount: Number(document.getElementById('hiveAmount').value || 0),
+    totalTurnover: Number(document.getElementById('hiveTotalTurnover').value || 0),
     rank: document.getElementById('hiveRank').value.trim()
   };
 
@@ -1816,6 +1838,7 @@ function renderHiveSummary() {
   const mainCount = selectedNodes.filter((node) => node.type === 'main').length;
   const subCount = selectedNodes.filter((node) => node.type === 'sub').length;
   const totalAmount = selectedNodes.reduce((sum, node) => sum + Number(node.amount || 0), 0);
+  const totalTurnover = selectedNodes.reduce((sum, node) => sum + Number(node.totalTurnover || 0), 0);
   const loadedAmount = loadedNodes.reduce((sum, node) => sum + Number(node.amount || 0), 0);
   const accountShare = loadedNodes.length ? (selectedNodes.length / loadedNodes.length) * 100 : 0;
   const amountShare = loadedAmount ? (totalAmount / loadedAmount) * 100 : 0;
@@ -1852,9 +1875,14 @@ function renderHiveSummary() {
         <div class="hive-summary-note">${mainCount} main · ${subCount} sub</div>
       </div>
       <div class="hive-summary-card">
-        <div class="hive-summary-label">Tree amount</div>
+        <div class="hive-summary-label">Personal investment</div>
         <div class="hive-summary-value">$${totalAmount.toLocaleString()}</div>
         <div class="hive-summary-note">${amountShare.toFixed(1)}% of loaded amount</div>
+      </div>
+      <div class="hive-summary-card">
+        <div class="hive-summary-label">Total turnover</div>
+        <div class="hive-summary-value">$${totalTurnover.toLocaleString()}</div>
+        <div class="hive-summary-note">selected branch</div>
       </div>
       <div class="hive-summary-card">
         <div class="hive-summary-label">Hive share</div>
