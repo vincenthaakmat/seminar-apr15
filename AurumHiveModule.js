@@ -70,6 +70,7 @@ export const hiveData = [
 
 let selectedInviteId = 'AUR-ROOT-001';
 let hiveMode = 'edit';
+let hiveEditLocked = false;
 let hiveZoom = 0.85;
 let hiveFullscreen = true;
 let hiveFocusMode = false;
@@ -91,7 +92,7 @@ const HIVE_SYNC_LOG_LIMIT = 40;
 const HIVE_AUTO_REFRESH_MS = 180000;
 const HIVE_MIN_ZOOM = 0.1;
 const HIVE_MAX_ZOOM = 1.2;
-const HIVE_APP_VERSION = '2026.05.14.18';
+const HIVE_APP_VERSION = '2026.05.14.22';
 const HIVE_VERSION_URL = 'hive-version.json';
 const HIVE_CLOUD_TABLE = 'aurum_hive_accounts';
 const AURUM_REFERRAL_BASE_URL = 'https://backoffice.aurum.foundation/u/';
@@ -359,6 +360,7 @@ function ensureHiveUi() {
               <button class="planner-small-btn secondary" type="button" id="hiveRefreshBtn">Sync now</button>
               <button class="planner-small-btn secondary" type="button" id="hiveResetBtn">Reset sample</button>
               <button class="planner-small-btn secondary" type="button" id="hiveClearSampleBtn">Clear sample</button>
+              <button class="planner-small-btn secondary" type="button" id="hiveDeleteUnfundedSubsBtn">Delete unfunded subs</button>
               <input class="hive-file-input" id="hiveImportJsonInput" type="file" accept="application/json,.json">
             </div>
             <div class="hive-sync-log">
@@ -415,10 +417,10 @@ function ensureHiveUi() {
     if (event.target === modal) event.stopPropagation();
   });
 
-  document.getElementById('hiveEditTab').addEventListener('click', () => setHiveMode('edit'));
-  document.getElementById('hiveAddTab').addEventListener('click', () => setHiveMode('add'));
+  document.getElementById('hiveEditTab').addEventListener('click', handleHiveEditTabClick);
+  document.getElementById('hiveAddTab').addEventListener('click', handleHiveAddTabClick);
   document.getElementById('hiveSaveBtn').addEventListener('click', submitHiveForm);
-  document.getElementById('hiveCancelAddBtn').addEventListener('click', cancelHiveAddMode);
+  document.getElementById('hiveCancelAddBtn').addEventListener('click', cancelHiveFormMode);
   document.getElementById('hiveCollapsePanelBtn').addEventListener('click', () => setHivePanelCollapsed(true));
   document.getElementById('hiveShowPanelBtn').addEventListener('click', () => setHivePanelCollapsed(false));
   document.getElementById('hiveUpdateReloadBtn').addEventListener('click', reloadHiveApp);
@@ -468,6 +470,7 @@ function ensureHiveUi() {
     renderHive();
   });
   document.getElementById('hiveClearSampleBtn').addEventListener('click', clearSampleHive);
+  document.getElementById('hiveDeleteUnfundedSubsBtn').addEventListener('click', deleteUnfundedSubAccounts);
   document.getElementById('hiveClearSyncLogBtn').addEventListener('click', clearHiveSyncLog);
   renderHiveSyncLog();
 }
@@ -793,8 +796,8 @@ async function subscribeToHiveRealtime() {
     .channel('aurum-hive-accounts')
     .on('postgres_changes', { event: '*', schema: 'public', table: HIVE_CLOUD_TABLE }, () => {
       if (!getHiveRefreshInviteId()) return;
-      if (isHiveAddLocked()) {
-        updateSyncStatus('Sync paused while adding an account.', 'local');
+      if (isHiveEditorLocked()) {
+        updateSyncStatus('Sync paused while editing an account.', 'local');
         return;
       }
       clearTimeout(realtimeReloadTimer);
@@ -828,8 +831,8 @@ function startHiveAutoRefresh() {
 function runHiveAutoRefresh() {
   if (!document.getElementById('hiveModal')?.classList.contains('open')) return;
   if (!getHiveRefreshInviteId()) return;
-  if (isHiveAddLocked()) {
-    updateSyncStatus('Auto-sync paused while adding an account.', 'local');
+  if (isHiveEditorLocked()) {
+    updateSyncStatus('Auto-sync paused while editing an account.', 'local');
     return;
   }
   refreshLoadedHiveFromCloud('Hive refreshed from Supabase.', { silent: true, quietMissing: true, auto: true }).catch((error) => {
@@ -1181,9 +1184,9 @@ function getHiveRefreshInviteId() {
 }
 
 async function syncLoadedHiveWithCloud() {
-  if (isHiveAddLocked()) {
-    setMessage('Save or cancel the new account before syncing.', 'error');
-    updateSyncStatus('Sync paused while adding an account.', 'local');
+  if (isHiveEditorLocked()) {
+    setMessage('Save or cancel the current account changes before syncing.', 'error');
+    updateSyncStatus('Sync paused while editing an account.', 'local');
     return false;
   }
   const refreshInviteId = getHiveRefreshInviteId();
@@ -1216,9 +1219,9 @@ async function syncLoadedHiveWithCloud() {
 }
 
 async function refreshLoadedHiveFromCloud(statusMessage, options = {}) {
-  if (isHiveAddLocked()) {
-    if (options.manual) setMessage('Finish adding the account or cancel before syncing.', 'error');
-    updateSyncStatus('Sync paused while adding an account.', 'local');
+  if (isHiveEditorLocked()) {
+    if (options.manual) setMessage('Save or cancel the current account changes before syncing.', 'error');
+    updateSyncStatus('Sync paused while editing an account.', 'local');
     return false;
   }
   const refreshInviteId = getHiveRefreshInviteId();
@@ -1390,13 +1393,20 @@ function renderHiveSyncLog() {
 
 function renderHiveSyncLogDetails(entry) {
   const parts = [];
-  if (entry.added?.length) parts.push(`Added: ${entry.added.slice(0, 4).map(escapeHtml).join(', ')}${entry.added.length > 4 ? '...' : ''}`);
-  if (entry.removed?.length) parts.push(`Removed: ${entry.removed.slice(0, 4).map(escapeHtml).join(', ')}${entry.removed.length > 4 ? '...' : ''}`);
+  if (entry.added?.length) parts.push(`Added: ${entry.added.slice(0, 4).map(formatHiveLogAccount).join(', ')}${entry.added.length > 4 ? '...' : ''}`);
+  if (entry.removed?.length) parts.push(`Removed: ${entry.removed.slice(0, 4).map(formatHiveLogAccount).join(', ')}${entry.removed.length > 4 ? '...' : ''}`);
   if (entry.edited?.length) {
-    const edited = entry.edited.slice(0, 3).map((item) => `${escapeHtml(item.inviteId)} (${item.fields.map(escapeHtml).join(', ')})`);
+    const edited = entry.edited.slice(0, 3).map((item) => `${formatHiveLogAccount(item)} (${item.fields.map(escapeHtml).join(', ')})`);
     parts.push(`Edited: ${edited.join(', ')}${entry.edited.length > 3 ? '...' : ''}`);
   }
   return parts.join('<br>');
+}
+
+function formatHiveLogAccount(item) {
+  if (typeof item === 'string') return escapeHtml(item);
+  const inviteId = escapeHtml(item?.inviteId || 'Unknown ID');
+  const name = String(item?.name || '').trim();
+  return name ? `${inviteId} - ${escapeHtml(name)}` : inviteId;
 }
 
 function diffHiveTrees(beforeNodes, afterNodes) {
@@ -1409,16 +1419,16 @@ function diffHiveTrees(beforeNodes, afterNodes) {
   after.forEach((afterNode, inviteId) => {
     const beforeNode = before.get(inviteId);
     if (!beforeNode) {
-      added.push(inviteId);
+      added.push({ inviteId, name: afterNode.name });
       return;
     }
     const fields = ['name', 'country', 'amount', 'totalTurnover', 'rank', 'type', 'parentInviteId']
       .filter((field) => String(beforeNode[field] ?? '') !== String(afterNode[field] ?? ''));
-    if (fields.length) edited.push({ inviteId, fields });
+    if (fields.length) edited.push({ inviteId, name: afterNode.name || beforeNode.name, fields });
   });
 
-  before.forEach((_, inviteId) => {
-    if (!after.has(inviteId)) removed.push(inviteId);
+  before.forEach((beforeNode, inviteId) => {
+    if (!after.has(inviteId)) removed.push({ inviteId, name: beforeNode.name });
   });
 
   return { added, removed, edited };
@@ -1737,8 +1747,8 @@ function createHiveNode(node, x, y, selectedBranchIds) {
   dot.addEventListener('blur', hideHiveTooltip);
   dot.addEventListener('click', (event) => {
     event.stopPropagation();
-    if (isHiveAddLocked()) {
-      setMessage('Save or cancel the new account before selecting another account.', 'error');
+    if (isHiveEditorLocked()) {
+      setMessage('Save or cancel the current account changes before selecting another account.', 'error');
       return;
     }
     selectedInviteId = node.inviteId;
@@ -1749,8 +1759,8 @@ function createHiveNode(node, x, y, selectedBranchIds) {
   dot.addEventListener('dblclick', (event) => {
     event.preventDefault();
     event.stopPropagation();
-    if (isHiveAddLocked()) {
-      setMessage('Save or cancel the new account before changing the view.', 'error');
+    if (isHiveEditorLocked()) {
+      setMessage('Save or cancel the current account changes before changing the view.', 'error');
       return;
     }
     toggleHiveBranchIsolation(node.inviteId);
@@ -1758,8 +1768,8 @@ function createHiveNode(node, x, y, selectedBranchIds) {
   dot.addEventListener('keydown', (event) => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
-      if (isHiveAddLocked()) {
-        setMessage('Save or cancel the new account before selecting another account.', 'error');
+      if (isHiveEditorLocked()) {
+        setMessage('Save or cancel the current account changes before selecting another account.', 'error');
         return;
       }
       selectedInviteId = node.inviteId;
@@ -2030,6 +2040,48 @@ export function removeHiveItem(inviteId) {
   return removed;
 }
 
+function deleteUnfundedSubAccounts() {
+  if (isHiveEditorLocked()) {
+    setMessage('Save or cancel the current account changes before deleting unfunded sub accounts.', 'error');
+    return;
+  }
+
+  const targets = flattenNodes(hiveData).filter((node) => node.type === 'sub' && Number(node.amount || 0) <= 0);
+  if (!targets.length) {
+    setMessage('No unfunded sub accounts found in the loaded Hive.', 'ok');
+    return;
+  }
+
+  const preview = targets.slice(0, 6).map((node) => `${node.inviteId}${node.name ? ` - ${node.name}` : ''}`).join('\n');
+  const more = targets.length > 6 ? `\n...and ${targets.length - 6} more` : '';
+  if (!window.confirm(`Delete ${targets.length} unfunded sub account${targets.length === 1 ? '' : 's'} from this loaded Hive?\n\n${preview}${more}`)) return;
+
+  const beforeHive = cloneNode(hiveData);
+  const targetIds = new Set(targets.map((node) => node.inviteId));
+  removeUnfundedSubsRecursive(hiveData[0], targetIds);
+  if (targetIds.has(selectedInviteId)) selectedInviteId = hiveData[0]?.inviteId || '';
+  collapsedInviteIds.clear();
+  persistHive();
+  targets.forEach((node) => {
+    deleteCloudInvite(node.inviteId).catch((error) => {
+      console.warn('Cloud unfunded sub account could not be removed.', error);
+    });
+  });
+  renderHive();
+  appendHiveSyncLog('Deleted unfunded sub accounts', diffHiveTrees(beforeHive, hiveData), 'cleanup');
+  setMessage(`Deleted ${targets.length} unfunded sub account${targets.length === 1 ? '' : 's'}.`, 'ok');
+  showHiveStatusToast(`Deleted ${targets.length} unfunded sub account${targets.length === 1 ? '' : 's'}.`, 'ok');
+}
+
+function removeUnfundedSubsRecursive(parent, targetIds) {
+  if (!parent?.children) return;
+  parent.children = parent.children.filter((child) => {
+    if (targetIds.has(child.inviteId)) return false;
+    removeUnfundedSubsRecursive(child, targetIds);
+    return true;
+  });
+}
+
 function findNode(node, inviteId) {
   if (!node) return null;
   if (node.inviteId === inviteId) return node;
@@ -2060,20 +2112,42 @@ function removeNodeRecursive(parent, inviteId) {
   return false;
 }
 
-function setHiveMode(mode) {
+function setHiveMode(mode, options = {}) {
   hiveMode = mode === 'add' ? 'add' : 'edit';
+  hiveEditLocked = hiveMode === 'edit' && Boolean(options.lock);
   setMessage('', '');
   populateHiveForm();
+  if (hiveMode === 'add' || hiveEditLocked) {
+    requestAnimationFrame(() => document.getElementById('hiveInviteId')?.focus());
+  }
 }
 
-function isHiveAddLocked() {
-  return hiveMode === 'add';
+function isHiveEditorLocked() {
+  return hiveMode === 'add' || hiveEditLocked;
 }
 
-function cancelHiveAddMode() {
-  if (hiveMode !== 'add') return;
+function handleHiveEditTabClick() {
+  if (hiveMode === 'add') {
+    setMessage('Save or cancel the new account before editing another account.', 'error');
+    return;
+  }
+  setHiveMode('edit', { lock: true });
+}
+
+function handleHiveAddTabClick() {
+  if (hiveEditLocked) {
+    setMessage('Save or cancel the current edit before adding a new account.', 'error');
+    return;
+  }
+  setHiveMode('add');
+}
+
+function cancelHiveFormMode() {
+  if (!isHiveEditorLocked()) return;
+  const wasAddMode = hiveMode === 'add';
   hiveMode = 'edit';
-  setMessage('New account entry cancelled.', 'ok');
+  hiveEditLocked = false;
+  setMessage(wasAddMode ? 'New account entry cancelled.' : 'Account edit cancelled.', 'ok');
   populateHiveForm();
   runHiveAutoRefresh();
 }
@@ -2134,7 +2208,7 @@ function populateHiveForm() {
     parentInput.placeholder = isLoadedRoot ? 'Optional inviter Referral ID' : 'Managed by parent account';
     autoSubWrap?.classList.remove('visible');
     if (autoSubInput) autoSubInput.checked = false;
-    if (cancelBtn) cancelBtn.style.display = 'none';
+    if (cancelBtn) cancelBtn.style.display = hiveEditLocked ? '' : 'none';
     saveBtn.textContent = 'Save edit';
   } else {
     inviteInput.value = '';
@@ -2285,7 +2359,11 @@ async function submitHiveForm() {
       return;
     }
     const saved = editHiveItem(selected.inviteId, formData);
-    if (saved) rememberInviteId(findTopLocalNode(formData.inviteId)?.inviteId || formData.inviteId);
+    if (saved) {
+      hiveEditLocked = false;
+      populateHiveForm();
+      rememberInviteId(findTopLocalNode(formData.inviteId)?.inviteId || formData.inviteId);
+    }
     setMessage(saved ? 'Account updated.' : 'Could not update account. Check for duplicate Referral ID.', saved ? 'ok' : 'error');
     return;
   }
