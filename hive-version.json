@@ -1,4 +1,14 @@
 {
-  "version": "2026.05.12.1",
-  "name": "Aurum Hive"
+  "version": "2026.05.14.4",
+  "name": "Aurum Hive",
+  "updates": [
+    "New account forms now leave Referral ID empty for manual entry.",
+    "New account forms now keep the previous country selected and leave the name field empty.",
+    "Enabled Invited By ID on the first loaded account so a starter structure can connect to an existing Hive parent.",
+    "Added Clear sample for starting a personal Hive structure and Sync now plus automatic Supabase refresh every few minutes.",
+    "Renamed Amount to Personal investment and added Total turnover across the editor, summaries, exports, and Supabase schema.",
+    "Improved Hive launch reliability from the calculator menu.",
+    "Tree dragging now works in focus mode and isolated branch views.",
+    "Hive version is visible in the top-right header."
+  ]
 }

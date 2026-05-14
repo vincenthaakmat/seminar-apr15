@@ -1,8 +1,13 @@
 {
-  "version": "2026.05.12.2",
+  "version": "2026.05.14.4",
   "name": "Aurum app",
   "message": "Aurum has a fresh update ready. Refresh to load the newest calculator and Hive improvements.",
   "updates": [
+    "Adding Hive accounts now starts with an empty Referral ID so users can enter the exact account ID.",
+    "Adding Hive accounts now starts with a blank name and reuses the last selected account country by default.",
+    "The first loaded Hive account can now enter an Invited By ID so a new personal structure can link into an existing Hive.",
+    "Hive now has a Clear sample option plus manual and automatic Supabase sync for structure changes added elsewhere.",
+    "Hive account editing now labels Amount as Personal investment and adds a Total turnover field backed by the database schema.",
     "My income now includes its own start-date calendar and can automatically set up compounding, switch to simple mode on the target date, and run the main projection.",
     "Breakdown percentage labels now match the selected interval, with weekly, monthly, quarterly, and yearly percentages calculated for that full interval.",
     "Hive opening is more reliable with a direct module fallback, plus improved tree dragging in focused and isolated views.",

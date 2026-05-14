@@ -86,9 +86,10 @@ const HIVE_LAST_INVITE_KEY = 'aurum_hive_last_invite_id_v1';
 const HIVE_ZOOM_KEY = 'aurum_hive_zoom_v1';
 const HIVE_OVERLAY_POSITIONS_KEY = 'aurum_hive_overlay_positions_v1';
 const HIVE_PANEL_COLLAPSED_KEY = 'aurum_hive_panel_collapsed_v1';
+const HIVE_AUTO_REFRESH_MS = 180000;
 const HIVE_MIN_ZOOM = 0.1;
 const HIVE_MAX_ZOOM = 1.2;
-const HIVE_APP_VERSION = '2026.05.12.2';
+const HIVE_APP_VERSION = '2026.05.14.4';
 const HIVE_VERSION_URL = 'hive-version.json';
 const HIVE_CLOUD_TABLE = 'aurum_hive_accounts';
 const AURUM_REFERRAL_BASE_URL = 'https://backoffice.aurum.foundation/u/';
@@ -110,6 +111,7 @@ let supabaseClientPromise = null;
 let activeLookupInviteId = '';
 let hiveRealtimeChannel = null;
 let realtimeReloadTimer = null;
+let hiveAutoRefreshTimer = null;
 const copyFeedbackTimers = new WeakMap();
 
 export function configureHiveSupabase(config) {
@@ -311,15 +313,16 @@ function ensureHiveUi() {
                 <div class="hive-field"><label for="hiveTotalTurnover">Total turnover</label><input id="hiveTotalTurnover" type="number" min="0" step="any"></div>
                 <div class="hive-field"><label for="hiveRank">Rank</label><select id="hiveRank"></select></div>
                 <div class="hive-field"><label for="hiveType">Type</label><input id="hiveType" disabled></div>
-                <div class="hive-field"><label for="hiveParent">Invited By ID</label><input id="hiveParent" disabled></div>
+                <div class="hive-field"><label for="hiveParent">Invited By ID</label><input id="hiveParent" autocomplete="off"></div>
                 <button class="crypto-action-btn" type="button" id="hiveSaveBtn">Save edit</button>
               </div>
             </div>
             <div class="hive-message" id="hiveMessage"></div>
             <div class="hive-actions">
               <button class="planner-small-btn secondary" type="button" id="hiveExportPdfBtn">Export PDF</button>
-              <button class="planner-small-btn secondary" type="button" id="hiveRefreshBtn">Refresh</button>
+              <button class="planner-small-btn secondary" type="button" id="hiveRefreshBtn">Sync now</button>
               <button class="planner-small-btn secondary" type="button" id="hiveResetBtn">Reset sample</button>
+              <button class="planner-small-btn secondary" type="button" id="hiveClearSampleBtn">Clear sample</button>
             </div>
           </section>
           <section class="hive-view-shell">
@@ -399,16 +402,22 @@ function ensureHiveUi() {
   initHiveCanvasPan(hiveCanvas);
   initFloatingHiveOverlays();
   document.getElementById('hiveExportPdfBtn').addEventListener('click', exportSelectedHivePdf);
-  document.getElementById('hiveRefreshBtn').addEventListener('click', () => renderHive());
+  document.getElementById('hiveRefreshBtn').addEventListener('click', () => refreshLoadedHiveFromCloud('Hive refreshed from Supabase.', { manual: true }).catch((error) => {
+    console.warn('Manual Hive refresh failed.', error);
+    setMessage('Supabase refresh failed. Showing the local Hive.', 'error');
+    updateSyncStatus('Manual Supabase refresh failed.', 'local');
+  }));
   document.getElementById('hiveResetBtn').addEventListener('click', () => {
     hiveData.splice(0, hiveData.length, createDefaultHive()[0]);
     selectedInviteId = hiveData[0]?.inviteId || '';
+    rememberInviteId(selectedInviteId);
     isolatedRootInviteId = '';
     collapsedInviteIds.clear();
     setMessage('Sample hive restored.', 'ok');
     persistHive();
     renderHive();
   });
+  document.getElementById('hiveClearSampleBtn').addEventListener('click', clearSampleHive);
 }
 
 function getHiveOverlayPositions() {
@@ -566,6 +575,20 @@ function createDefaultHive() {
   ]));
 }
 
+function createBlankHive() {
+  return [{
+    inviteId: 'ROOT-001',
+    name: 'Main Account',
+    country: DEFAULT_HIVE_COUNTRY,
+    amount: 0,
+    totalTurnover: 0,
+    rank: DEFAULT_HIVE_RANK,
+    type: 'main',
+    parentInviteId: null,
+    children: []
+  }];
+}
+
 function loadLocalHive() {
   try {
     const saved = JSON.parse(localStorage.getItem(HIVE_LOCAL_KEY));
@@ -602,6 +625,15 @@ function rememberInviteId(inviteId) {
     if (activeLookupInviteId) localStorage.setItem(HIVE_LAST_INVITE_KEY, activeLookupInviteId);
   } catch (error) {
     console.warn('Aurum Hive Referral ID could not be remembered.', error);
+  }
+}
+
+function forgetInviteId() {
+  activeLookupInviteId = '';
+  try {
+    localStorage.removeItem(HIVE_LAST_INVITE_KEY);
+  } catch (error) {
+    console.warn('Aurum Hive Referral ID could not be cleared.', error);
   }
 }
 
@@ -720,6 +752,16 @@ async function subscribeToHiveRealtime() {
     .subscribe((status) => {
       if (status === 'SUBSCRIBED') updateSyncStatus('Supabase realtime connected.', 'cloud');
     });
+}
+
+function startHiveAutoRefresh() {
+  if (hiveAutoRefreshTimer) return;
+  hiveAutoRefreshTimer = setInterval(() => {
+    refreshLoadedHiveFromCloud('Hive refreshed from Supabase.', { silent: true }).catch((error) => {
+      console.warn('Aurum Hive scheduled refresh failed.', error);
+      updateSyncStatus('Scheduled Supabase refresh failed. Local cache active.', 'local');
+    });
+  }, HIVE_AUTO_REFRESH_MS);
 }
 
 async function saveHiveToCloud() {
@@ -949,19 +991,38 @@ async function findTopCloudInviteId(supabase, inviteId) {
 }
 
 async function reloadActiveHiveFromCloud(statusMessage) {
-  if (!activeLookupInviteId) return;
-  const cloudNode = await loadHiveFromCloud(activeLookupInviteId);
-  if (!cloudNode) return;
+  return refreshLoadedHiveFromCloud(statusMessage);
+}
+
+function getHiveRefreshInviteId() {
+  return activeLookupInviteId || hiveData[0]?.inviteId || selectedInviteId || '';
+}
+
+async function refreshLoadedHiveFromCloud(statusMessage, options = {}) {
+  const refreshInviteId = getHiveRefreshInviteId();
+  if (!refreshInviteId) {
+    if (options.manual) setMessage('No loaded Referral ID is available to sync.', 'error');
+    return false;
+  }
+
+  const cloudNode = await loadHiveFromCloud(refreshInviteId);
+  if (!cloudNode) {
+    if (options.manual) setMessage('No Supabase structure found for this loaded Referral ID.', 'error');
+    updateSyncStatus(isCloudConfigured() ? 'No Supabase structure found for the loaded Referral ID.' : 'Local database active. Supabase not configured.', 'local');
+    return false;
+  }
 
   hiveData.splice(0, hiveData.length, cloudNode);
-  selectedInviteId = findNode(cloudNode, selectedInviteId) ? selectedInviteId : activeLookupInviteId;
+  selectedInviteId = findNode(cloudNode, selectedInviteId) ? selectedInviteId : refreshInviteId;
   if (isolatedRootInviteId && !findNode(cloudNode, isolatedRootInviteId)) isolatedRootInviteId = '';
   collapsedInviteIds.clear();
   hiveMode = 'edit';
+  rememberInviteId(refreshInviteId);
   saveLocalHive();
   renderHive();
-  setMessage(statusMessage || 'Hive refreshed from Supabase.', 'ok');
-  updateSyncStatus('Supabase realtime connected.', 'cloud');
+  if (!options.silent) setMessage(statusMessage || 'Hive refreshed from Supabase.', 'ok');
+  updateSyncStatus(options.silent ? 'Auto-synced from Supabase.' : 'Synced from Supabase.', 'cloud');
+  return true;
 }
 
 async function cloudInviteExists(inviteId) {
@@ -1044,6 +1105,11 @@ function getMainRankBadge(node) {
   if (!node || node.type !== 'main') return '';
   const rank = normalizeHiveRank(node.rank);
   return rank && rank !== DEFAULT_HIVE_RANK ? rank : '';
+}
+
+function normalizeParentInviteId(value) {
+  const parentInviteId = String(value || '').trim();
+  return parentInviteId && parentInviteId.toLowerCase() !== 'root' ? parentInviteId : null;
 }
 
 function findTopLocalNode(inviteId) {
@@ -1535,7 +1601,8 @@ export function editHiveItem(inviteId, updatedData) {
     country: normalizeHiveCountry(updatedData.country),
     amount: Number(updatedData.amount || 0),
     totalTurnover: Number(updatedData.totalTurnover || 0),
-    rank: Number(updatedData.amount || 0) > 0 ? normalizeHiveRank(updatedData.rank) : DEFAULT_HIVE_RANK
+    rank: Number(updatedData.amount || 0) > 0 ? normalizeHiveRank(updatedData.rank) : DEFAULT_HIVE_RANK,
+    parentInviteId: node === hiveData[0] ? normalizeParentInviteId(updatedData.parentInviteId) : node.parentInviteId
   });
   if (previousInviteId !== nextInviteId) {
     updateChildParentIds(node, previousInviteId, nextInviteId);
@@ -1643,6 +1710,7 @@ function populateHiveForm() {
   }
 
   if (hiveMode === 'edit') {
+    const isLoadedRoot = selected === hiveData[0];
     inviteInput.value = selected.inviteId || '';
     nameInput.value = selected.name || '';
     countryInput.value = normalizeHiveCountry(selected.country);
@@ -1650,17 +1718,21 @@ function populateHiveForm() {
     totalTurnoverInput.value = selected.totalTurnover ?? '';
     rankInput.value = normalizeHiveRank(selected.rank);
     typeInput.value = selected.type || '';
-    parentInput.value = selected.parentInviteId || 'Root';
+    parentInput.value = selected.parentInviteId || '';
+    parentInput.disabled = !isLoadedRoot;
+    parentInput.placeholder = isLoadedRoot ? 'Optional inviter Referral ID' : 'Managed by parent account';
     saveBtn.textContent = 'Save edit';
   } else {
-    inviteInput.value = suggestInviteId(childType);
-    nameInput.value = childType === 'main' ? 'New Main Account' : 'New Sub Account';
-    countryInput.value = DEFAULT_HIVE_COUNTRY;
+    inviteInput.value = '';
+    nameInput.value = '';
+    countryInput.value = normalizeHiveCountry(selected.country);
     amountInput.value = '';
     totalTurnoverInput.value = '';
     rankInput.value = DEFAULT_HIVE_RANK;
     typeInput.value = childType;
     parentInput.value = selected.inviteId;
+    parentInput.disabled = true;
+    parentInput.placeholder = 'Managed by selected parent';
     saveBtn.textContent = `Add ${childType} account`;
   }
 }
@@ -1744,6 +1816,25 @@ function updateHiveBranchHighlightButton() {
   btn.setAttribute('aria-label', btn.title);
 }
 
+function clearSampleHive() {
+  if (!window.confirm('Clear the sample Hive and start with one blank main account? This only changes your local Hive until you save new accounts.')) return;
+  const blankHive = createBlankHive();
+  hiveData.splice(0, hiveData.length, blankHive[0]);
+  selectedInviteId = blankHive[0].inviteId;
+  isolatedRootInviteId = '';
+  highlightedInviteId = '';
+  hiveFocusMode = false;
+  hiveMode = 'edit';
+  collapsedInviteIds.clear();
+  forgetInviteId();
+  const lookupInput = document.getElementById('hiveLookupInviteId');
+  if (lookupInput) lookupInput.value = '';
+  saveLocalHive();
+  renderHive();
+  setMessage('Sample cleared. Edit the root account, then add your own child accounts.', 'ok');
+  updateSyncStatus('Local starter Hive ready. Save edits to sync it to Supabase.', 'local');
+}
+
 async function submitHiveForm() {
   const selected = findNode(hiveData[0], selectedInviteId);
   if (!selected) {
@@ -1757,11 +1848,17 @@ async function submitHiveForm() {
     country: document.getElementById('hiveCountry').value,
     amount: Number(document.getElementById('hiveAmount').value || 0),
     totalTurnover: Number(document.getElementById('hiveTotalTurnover').value || 0),
+    parentInviteId: normalizeParentInviteId(document.getElementById('hiveParent').value),
     rank: document.getElementById('hiveRank').value.trim()
   };
 
   if (!formData.inviteId) {
     setMessage('Referral ID is required.', 'error');
+    return;
+  }
+
+  if (hiveMode === 'edit' && formData.parentInviteId === formData.inviteId) {
+    setMessage('An account cannot invite itself.', 'error');
     return;
   }
 
@@ -1771,6 +1868,7 @@ async function submitHiveForm() {
       return;
     }
     const saved = editHiveItem(selected.inviteId, formData);
+    if (saved) rememberInviteId(findTopLocalNode(formData.inviteId)?.inviteId || formData.inviteId);
     setMessage(saved ? 'Account updated.' : 'Could not update account. Check for duplicate Referral ID.', saved ? 'ok' : 'error');
     return;
   }
@@ -1791,6 +1889,7 @@ async function submitHiveForm() {
     type: childType,
     parentInviteId: selected.inviteId
   });
+  if (added) rememberInviteId(findTopLocalNode(formData.inviteId)?.inviteId || formData.inviteId);
   setMessage(added ? `${childType === 'main' ? 'Main' : 'Sub'} account added.` : 'Could not add account. Check the Referral ID and account rule.', added ? 'ok' : 'error');
 }
 
@@ -1962,6 +2061,7 @@ export function openHiveManager() {
     console.warn('Aurum Hive realtime could not be started.', error);
     updateSyncStatus('Supabase configured. Realtime could not connect.', 'local');
   });
+  startHiveAutoRefresh();
   if (rememberedInviteId) {
     loadHiveFromLookup().catch((error) => {
       console.warn('Remembered Referral ID could not be loaded.', error);
