@@ -92,7 +92,7 @@ const HIVE_SYNC_LOG_LIMIT = 40;
 const HIVE_AUTO_REFRESH_MS = 180000;
 const HIVE_MIN_ZOOM = 0.1;
 const HIVE_MAX_ZOOM = 1.2;
-const HIVE_APP_VERSION = '2026.05.14.23';
+const HIVE_APP_VERSION = '2026.05.14.25';
 const HIVE_VERSION_URL = 'hive-version.json';
 const HIVE_CLOUD_TABLE = 'aurum_hive_accounts';
 const AURUM_REFERRAL_BASE_URL = 'https://backoffice.aurum.foundation/u/';
@@ -320,9 +320,9 @@ function ensureHiveUi() {
                 <input id="hiveLookupInviteId" autocomplete="off" placeholder="Enter Referral ID">
                 <button class="planner-small-btn secondary" type="button" id="hiveLookupBtn">Load</button>
               </div>
-              <div class="hive-field"><label for="hiveNameSearch">Search by name</label></div>
+              <div class="hive-field"><label for="hiveNameSearch">Search by name or Referral ID</label></div>
               <div class="hive-search-row">
-                <input id="hiveNameSearch" autocomplete="off" placeholder="Enter account name">
+                <input id="hiveNameSearch" autocomplete="off" placeholder="Enter name or Referral ID">
                 <button class="planner-small-btn secondary" type="button" id="hiveNameSearchBtn">Find</button>
               </div>
               <div class="hive-status" id="hiveSyncStatus"><span class="hive-status-dot"></span><span>Local database active. Supabase not configured.</span></div>
@@ -942,13 +942,17 @@ function searchHiveByName() {
   const input = document.getElementById('hiveNameSearch');
   const query = String(input?.value || '').trim().toLowerCase();
   if (!query) {
-    setMessage('Enter a name to search.', 'error');
+    setMessage('Enter a name or Referral ID to search.', 'error');
     return;
   }
 
-  const matches = flattenNodes(hiveData).filter((node) => String(node.name || '').toLowerCase().includes(query));
+  const matches = flattenNodes(hiveData).filter((node) => {
+    const name = String(node.name || '').toLowerCase();
+    const inviteId = String(node.inviteId || '').toLowerCase();
+    return name.includes(query) || inviteId.includes(query);
+  });
   if (!matches.length) {
-    setMessage('No account matched that name in the loaded Hive.', 'error');
+    setMessage('No account matched that name or Referral ID in the loaded Hive.', 'error');
     return;
   }
 
@@ -1406,7 +1410,7 @@ function formatHiveLogAccount(item) {
   if (typeof item === 'string') return escapeHtml(item);
   const inviteId = escapeHtml(item?.inviteId || 'Unknown ID');
   const name = String(item?.name || '').trim();
-  return name ? `${inviteId} - ${escapeHtml(name)}` : inviteId;
+  return name ? `${inviteId} (${escapeHtml(name)})` : `${inviteId} (No name)`;
 }
 
 function diffHiveTrees(beforeNodes, afterNodes) {

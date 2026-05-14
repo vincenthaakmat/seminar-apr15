@@ -1,7 +1,9 @@
 {
-  "version": "2026.05.14.23",
+  "version": "2026.05.14.25",
   "name": "Aurum Hive",
   "updates": [
+    "Search now finds accounts by name or Referral ID.",
+    "Sync log entries now display account names directly beside Referral IDs.",
     "Delete unfunded sub now removes only the selected account after confirming its Referral ID and name.",
     "Sync log entries now show account names next to Referral IDs.",
     "Release log refreshed for the protected Save or Cancel workflow in add and edit modes.",

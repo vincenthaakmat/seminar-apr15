@@ -1834,7 +1834,12 @@ body.dark-mode .crypto-action-btn.secondary {
 .app-update-list { margin:12px 0 0; padding-left:18px; color:var(--text-mid); font-size:13px; line-height:1.55; }
 .app-update-list li + li { margin-top:5px; }
 .app-update-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:14px; }
+#appUpdateModal .tool-card { display:flex; flex-direction:column; max-height:min(88vh,780px); overflow:hidden; }
+#appUpdateModal .tool-body { display:flex; flex-direction:column; min-height:0; }
+#appUpdateModal .app-update-list { max-height:min(44vh,360px); overflow-y:auto; padding-right:8px; }
+#appUpdateModal .app-update-actions { position:sticky; bottom:0; margin:14px -1.45rem -1.45rem; padding:12px 1.45rem 1.45rem; background:rgba(248,250,255,.97); border-top:1px solid var(--border); }
 body.dark-mode .planner-card, body.dark-mode .planner-action, body.dark-mode .tool-card, body.dark-mode .tool-header, body.dark-mode .tool-field input, body.dark-mode .tool-field select, body.dark-mode .tool-close, body.dark-mode .compare-summary-card, body.dark-mode .alert-row, body.dark-mode .planner-inline input, body.dark-mode .planner-inline select, body.dark-mode .planner-small-btn.secondary { background:rgba(17,24,39,.78); color:var(--text-mid); border-color:rgba(148,163,184,.18); }
+body.dark-mode #appUpdateModal .app-update-actions { background:rgba(17,24,39,.97); }
 
 </style>
 </head>
@@ -2429,8 +2434,8 @@ body.dark-mode .planner-card, body.dark-mode .planner-action, body.dark-mode .to
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
-<script src="calculator.js?v=2026.05.14.23"></script>
-<script type="module" src="AurumHiveModule.js?v=2026.05.14.23"></script>
+<script src="calculator.js?v=2026.05.14.25"></script>
+<script type="module" src="AurumHiveModule.js?v=2026.05.14.25"></script>
 
 
   <!-- ── Footer copyright ── -->
