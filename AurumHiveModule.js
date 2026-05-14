@@ -86,10 +86,12 @@ const HIVE_LAST_INVITE_KEY = 'aurum_hive_last_invite_id_v1';
 const HIVE_ZOOM_KEY = 'aurum_hive_zoom_v1';
 const HIVE_OVERLAY_POSITIONS_KEY = 'aurum_hive_overlay_positions_v1';
 const HIVE_PANEL_COLLAPSED_KEY = 'aurum_hive_panel_collapsed_v1';
+const HIVE_SYNC_LOG_KEY = 'aurum_hive_sync_log_v1';
+const HIVE_SYNC_LOG_LIMIT = 40;
 const HIVE_AUTO_REFRESH_MS = 180000;
 const HIVE_MIN_ZOOM = 0.1;
 const HIVE_MAX_ZOOM = 1.2;
-const HIVE_APP_VERSION = '2026.05.14.11';
+const HIVE_APP_VERSION = '2026.05.14.18';
 const HIVE_VERSION_URL = 'hive-version.json';
 const HIVE_CLOUD_TABLE = 'aurum_hive_accounts';
 const AURUM_REFERRAL_BASE_URL = 'https://backoffice.aurum.foundation/u/';
@@ -175,6 +177,15 @@ function ensureHiveUi() {
     .hive-health-score { color:#173fcf; font-size:20px; }
     .hive-actions { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:8px; margin-top:12px; }
     .hive-file-input { display:none; }
+    .hive-sync-log { margin-top:12px; border:1px solid var(--border); border-radius:12px; background:rgba(255,255,255,.76); overflow:hidden; }
+    .hive-sync-log-head { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:9px 10px; border-bottom:1px solid var(--border); font-size:11px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; color:var(--text-muted); }
+    .hive-sync-log-clear { border:1px solid var(--border); border-radius:8px; background:var(--surface-2); color:var(--text-mid); padding:5px 7px; font:800 10px 'Inter',sans-serif; cursor:pointer; }
+    .hive-sync-log-list { display:grid; gap:0; max-height:170px; overflow:auto; }
+    .hive-sync-log-item { padding:9px 10px; border-top:1px solid rgba(103,123,185,.12); font-size:11px; line-height:1.42; color:var(--text-mid); }
+    .hive-sync-log-item:first-child { border-top:none; }
+    .hive-sync-log-item strong { color:var(--text); font-size:12px; }
+    .hive-sync-log-time { display:block; margin-bottom:2px; color:var(--text-muted); font-size:10px; font-weight:800; }
+    .hive-sync-log-empty { padding:10px; font-size:11px; color:var(--text-muted); }
     .hive-lookup { display:grid; gap:8px; margin-bottom:14px; padding-bottom:14px; border-bottom:1px solid var(--border); }
     .hive-lookup-row { display:grid; grid-template-columns:1fr auto; gap:8px; }
     .hive-lookup input { width:100%; border:1px solid var(--border); border-radius:10px; padding:10px 11px; color:var(--text); background:#fff; font-family:'Inter',sans-serif; font-size:13px; outline:none; }
@@ -185,12 +196,17 @@ function ensureHiveUi() {
     .hive-status.cloud .hive-status-dot { background:var(--green); }
     .hive-status.local .hive-status-dot { background:#f59e0b; }
     .hive-form { display:grid; gap:10px; margin-top:14px; }
+    .hive-form-actions { display:grid; grid-template-columns:1fr auto; gap:8px; align-items:center; }
+    .hive-form-actions .crypto-action-btn { margin:0; }
     .hive-editor-panel { margin-top:14px; padding:14px; border:1px solid rgba(39,82,231,.24); border-radius:16px; background:#d4dced; box-shadow:inset 0 1px 0 rgba(255,255,255,.52); }
     .hive-editor-panel .hive-form { margin-top:0; }
     .hive-field label { display:block; margin-bottom:5px; font-size:10px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--text-muted); }
     .hive-field input, .hive-field select { width:100%; border:1px solid var(--border); border-radius:10px; padding:10px 11px; color:var(--text); background:#fff; font-family:'Inter',sans-serif; font-size:13px; outline:none; }
     .hive-field input:focus, .hive-field select:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(37,82,231,.12); }
     .hive-field input:disabled { background:var(--surface-3); color:var(--text-muted); cursor:not-allowed; }
+    .hive-checkbox-row { display:none; align-items:center; gap:8px; border:1px solid rgba(37,82,231,.16); border-radius:10px; background:rgba(237,243,255,.72); padding:9px 10px; color:var(--text-mid); font-size:12px; font-weight:800; line-height:1.35; }
+    .hive-checkbox-row.visible { display:flex; }
+    .hive-checkbox-row input { width:16px; height:16px; accent-color:var(--blue); flex:0 0 auto; }
     .hive-mode-tabs { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
     .hive-mode-tab { border:1px solid var(--border); border-radius:10px; background:var(--surface-2); color:var(--text-mid); padding:9px 10px; font:800 12px 'Inter',sans-serif; cursor:pointer; }
     .hive-mode-tab.active { border-color:var(--blue); background:var(--blue-light); color:var(--blue-mid); }
@@ -325,7 +341,14 @@ function ensureHiveUi() {
                 <div class="hive-field"><label for="hiveRank">Rank</label><select id="hiveRank"></select></div>
                 <div class="hive-field"><label for="hiveType">Type</label><input id="hiveType" disabled></div>
                 <div class="hive-field"><label for="hiveParent">Invited By ID</label><input id="hiveParent" autocomplete="off"></div>
-                <button class="crypto-action-btn" type="button" id="hiveSaveBtn">Save edit</button>
+                <label class="hive-checkbox-row" id="hiveAutoSubWrap" for="hiveAutoSubAccounts">
+                  <input id="hiveAutoSubAccounts" type="checkbox">
+                  Auto-create 3 linked subaccounts
+                </label>
+                <div class="hive-form-actions">
+                  <button class="crypto-action-btn" type="button" id="hiveSaveBtn">Save edit</button>
+                  <button class="planner-small-btn secondary" type="button" id="hiveCancelAddBtn">Cancel</button>
+                </div>
               </div>
             </div>
             <div class="hive-message" id="hiveMessage"></div>
@@ -337,6 +360,13 @@ function ensureHiveUi() {
               <button class="planner-small-btn secondary" type="button" id="hiveResetBtn">Reset sample</button>
               <button class="planner-small-btn secondary" type="button" id="hiveClearSampleBtn">Clear sample</button>
               <input class="hive-file-input" id="hiveImportJsonInput" type="file" accept="application/json,.json">
+            </div>
+            <div class="hive-sync-log">
+              <div class="hive-sync-log-head">
+                <span>Sync log</span>
+                <button class="hive-sync-log-clear" type="button" id="hiveClearSyncLogBtn">Clear</button>
+              </div>
+              <div class="hive-sync-log-list" id="hiveSyncLogList"></div>
             </div>
           </section>
           <section class="hive-view-shell">
@@ -388,6 +418,7 @@ function ensureHiveUi() {
   document.getElementById('hiveEditTab').addEventListener('click', () => setHiveMode('edit'));
   document.getElementById('hiveAddTab').addEventListener('click', () => setHiveMode('add'));
   document.getElementById('hiveSaveBtn').addEventListener('click', submitHiveForm);
+  document.getElementById('hiveCancelAddBtn').addEventListener('click', cancelHiveAddMode);
   document.getElementById('hiveCollapsePanelBtn').addEventListener('click', () => setHivePanelCollapsed(true));
   document.getElementById('hiveShowPanelBtn').addEventListener('click', () => setHivePanelCollapsed(false));
   document.getElementById('hiveUpdateReloadBtn').addEventListener('click', reloadHiveApp);
@@ -437,6 +468,8 @@ function ensureHiveUi() {
     renderHive();
   });
   document.getElementById('hiveClearSampleBtn').addEventListener('click', clearSampleHive);
+  document.getElementById('hiveClearSyncLogBtn').addEventListener('click', clearHiveSyncLog);
+  renderHiveSyncLog();
 }
 
 function getHiveOverlayPositions() {
@@ -759,10 +792,14 @@ async function subscribeToHiveRealtime() {
   hiveRealtimeChannel = supabase
     .channel('aurum-hive-accounts')
     .on('postgres_changes', { event: '*', schema: 'public', table: HIVE_CLOUD_TABLE }, () => {
-      if (!activeLookupInviteId) return;
+      if (!getHiveRefreshInviteId()) return;
+      if (isHiveAddLocked()) {
+        updateSyncStatus('Sync paused while adding an account.', 'local');
+        return;
+      }
       clearTimeout(realtimeReloadTimer);
       realtimeReloadTimer = setTimeout(() => {
-        reloadActiveHiveFromCloud('Realtime update received. Hive refreshed.').catch((error) => {
+        refreshLoadedHiveFromCloud('Realtime update received. Hive refreshed.', { quietMissing: true }).catch((error) => {
           console.warn('Aurum Hive realtime reload failed.', error);
           updateSyncStatus('Realtime update received, but reload failed.', 'local');
         });
@@ -774,13 +811,31 @@ async function subscribeToHiveRealtime() {
 }
 
 function startHiveAutoRefresh() {
-  if (hiveAutoRefreshTimer) return;
+  if (hiveAutoRefreshTimer) {
+    runHiveAutoRefresh();
+    return;
+  }
   hiveAutoRefreshTimer = setInterval(() => {
-    refreshLoadedHiveFromCloud('Hive refreshed from Supabase.', { silent: true }).catch((error) => {
-      console.warn('Aurum Hive scheduled refresh failed.', error);
-      updateSyncStatus('Scheduled Supabase refresh failed. Local cache active.', 'local');
-    });
+    runHiveAutoRefresh();
   }, HIVE_AUTO_REFRESH_MS);
+  runHiveAutoRefresh();
+  window.addEventListener('focus', runHiveAutoRefresh);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) runHiveAutoRefresh();
+  });
+}
+
+function runHiveAutoRefresh() {
+  if (!document.getElementById('hiveModal')?.classList.contains('open')) return;
+  if (!getHiveRefreshInviteId()) return;
+  if (isHiveAddLocked()) {
+    updateSyncStatus('Auto-sync paused while adding an account.', 'local');
+    return;
+  }
+  refreshLoadedHiveFromCloud('Hive refreshed from Supabase.', { silent: true, quietMissing: true, auto: true }).catch((error) => {
+    console.warn('Aurum Hive scheduled refresh failed.', error);
+    updateSyncStatus('Scheduled Supabase refresh failed. Local cache active.', 'local');
+  });
 }
 
 async function saveHiveToCloud() {
@@ -1087,8 +1142,8 @@ async function loadHiveFromCloud(inviteId) {
   const supabase = await getSupabaseClient();
   if (!supabase) return null;
 
-  const topInviteId = await findTopCloudInviteId(supabase, inviteId);
-  if (!topInviteId) return null;
+  const requestedInviteId = String(inviteId || '').trim();
+  if (!requestedInviteId) return null;
 
   async function buildSubtree(nodeId) {
     const { data, error } = await supabase
@@ -1114,29 +1169,7 @@ async function loadHiveFromCloud(inviteId) {
     return { ...node, children };
   }
 
-  return buildSubtree(topInviteId);
-}
-
-async function findTopCloudInviteId(supabase, inviteId) {
-  let currentId = inviteId;
-  let lastExistingId = '';
-  const seen = new Set();
-
-  while (currentId && !seen.has(currentId)) {
-    seen.add(currentId);
-    const { data, error } = await supabase
-      .from(HIVE_CLOUD_TABLE)
-      .select('invite_id,parent_invite_id')
-      .eq('invite_id', currentId)
-      .maybeSingle();
-    if (error) throw error;
-    if (!data) return lastExistingId || null;
-    lastExistingId = data.invite_id;
-    if (!data.parent_invite_id) return data.invite_id;
-    currentId = data.parent_invite_id;
-  }
-
-  return lastExistingId || currentId || null;
+  return buildSubtree(requestedInviteId);
 }
 
 async function reloadActiveHiveFromCloud(statusMessage) {
@@ -1148,6 +1181,11 @@ function getHiveRefreshInviteId() {
 }
 
 async function syncLoadedHiveWithCloud() {
+  if (isHiveAddLocked()) {
+    setMessage('Save or cancel the new account before syncing.', 'error');
+    updateSyncStatus('Sync paused while adding an account.', 'local');
+    return false;
+  }
   const refreshInviteId = getHiveRefreshInviteId();
   if (!refreshInviteId) {
     setMessage('Enter or save a Referral ID before syncing.', 'error');
@@ -1170,6 +1208,7 @@ async function syncLoadedHiveWithCloud() {
   saveLocalHive();
   rememberInviteId(hiveData[0]?.inviteId || refreshInviteId);
   await saveHiveToCloud();
+  appendHiveSyncLog('Pushed local Hive to Supabase', diffHiveTrees([], hiveData), 'manual push');
   setMessage('No cloud copy existed yet, so the loaded Hive was saved to Supabase.', 'ok');
   showHiveStatusToast('Hive synced. Local structure saved to Supabase.', 'ok');
   updateSyncStatus('Saved loaded Hive to Supabase.', 'cloud');
@@ -1177,6 +1216,11 @@ async function syncLoadedHiveWithCloud() {
 }
 
 async function refreshLoadedHiveFromCloud(statusMessage, options = {}) {
+  if (isHiveAddLocked()) {
+    if (options.manual) setMessage('Finish adding the account or cancel before syncing.', 'error');
+    updateSyncStatus('Sync paused while adding an account.', 'local');
+    return false;
+  }
   const refreshInviteId = getHiveRefreshInviteId();
   if (!refreshInviteId) {
     if (options.manual) setMessage('No loaded Referral ID is available to sync.', 'error');
@@ -1190,6 +1234,7 @@ async function refreshLoadedHiveFromCloud(statusMessage, options = {}) {
     return false;
   }
 
+  const previousHive = cloneNode(hiveData);
   hiveData.splice(0, hiveData.length, cloudNode);
   selectedInviteId = findNode(cloudNode, selectedInviteId) ? selectedInviteId : refreshInviteId;
   if (isolatedRootInviteId && !findNode(cloudNode, isolatedRootInviteId)) isolatedRootInviteId = '';
@@ -1198,8 +1243,10 @@ async function refreshLoadedHiveFromCloud(statusMessage, options = {}) {
   rememberInviteId(refreshInviteId);
   saveLocalHive();
   renderHive();
+  appendHiveSyncLog(options.silent ? 'Auto-refreshed from Supabase' : 'Pulled latest Hive from Supabase', diffHiveTrees(previousHive, hiveData), options.auto ? 'auto' : (options.manual ? 'manual pull' : 'realtime'));
   if (!options.silent) setMessage(statusMessage || 'Hive refreshed from Supabase.', 'ok');
-  updateSyncStatus(options.silent ? 'Auto-synced from Supabase.' : 'Synced from Supabase.', 'cloud');
+  const syncTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  updateSyncStatus(options.silent ? `Auto-synced from Supabase at ${syncTime}.` : 'Synced from Supabase.', 'cloud');
   return true;
 }
 
@@ -1214,6 +1261,20 @@ async function cloudInviteExists(inviteId) {
     .maybeSingle();
   if (error) throw error;
   return Boolean(data);
+}
+
+async function getExistingCloudInviteIds(inviteIds) {
+  const ids = [...new Set((inviteIds || []).map((inviteId) => String(inviteId || '').trim()).filter(Boolean))];
+  if (!ids.length) return new Set();
+  const supabase = await getSupabaseClient();
+  if (!supabase) return new Set();
+
+  const { data, error } = await supabase
+    .from(HIVE_CLOUD_TABLE)
+    .select('invite_id')
+    .in('invite_id', ids);
+  if (error) throw error;
+  return new Set((data || []).map((row) => row.invite_id));
 }
 
 async function deleteCloudInvite(inviteId) {
@@ -1263,6 +1324,120 @@ function updateSyncStatus(text, mode) {
   if (!status) return;
   status.className = `hive-status ${mode || 'local'}`;
   status.innerHTML = `<span class="hive-status-dot"></span><span>${escapeHtml(text)}</span>`;
+}
+
+function readHiveSyncLog() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(HIVE_SYNC_LOG_KEY) || '[]');
+    return Array.isArray(saved) ? saved : [];
+  } catch (error) {
+    return [];
+  }
+}
+
+function saveHiveSyncLog(entries) {
+  try {
+    localStorage.setItem(HIVE_SYNC_LOG_KEY, JSON.stringify(entries.slice(0, HIVE_SYNC_LOG_LIMIT)));
+  } catch (error) {
+    console.warn('Aurum Hive sync log could not be saved.', error);
+  }
+}
+
+function appendHiveSyncLog(title, diff, source) {
+  if (!diff || (!diff.added.length && !diff.removed.length && !diff.edited.length)) return;
+  const entries = readHiveSyncLog();
+  entries.unshift({
+    id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    at: new Date().toISOString(),
+    title,
+    source,
+    added: diff.added,
+    removed: diff.removed,
+    edited: diff.edited
+  });
+  saveHiveSyncLog(entries);
+  renderHiveSyncLog();
+}
+
+function clearHiveSyncLog() {
+  saveHiveSyncLog([]);
+  renderHiveSyncLog();
+  setMessage('Sync log cleared.', 'ok');
+}
+
+function renderHiveSyncLog() {
+  const list = document.getElementById('hiveSyncLogList');
+  if (!list) return;
+  const entries = readHiveSyncLog();
+  if (!entries.length) {
+    list.innerHTML = '<div class="hive-sync-log-empty">No sync changes recorded yet.</div>';
+    return;
+  }
+  list.innerHTML = entries.slice(0, 8).map((entry) => {
+    const added = entry.added?.length || 0;
+    const removed = entry.removed?.length || 0;
+    const edited = entry.edited?.length || 0;
+    const details = renderHiveSyncLogDetails(entry);
+    return `
+      <div class="hive-sync-log-item">
+        <span class="hive-sync-log-time">${escapeHtml(new Date(entry.at).toLocaleString())} · ${escapeHtml(entry.source || 'sync')}</span>
+        <strong>${escapeHtml(entry.title || 'Hive sync')}</strong><br>
+        ${added} added · ${removed} removed · ${edited} edited${details ? `<br>${details}` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+function renderHiveSyncLogDetails(entry) {
+  const parts = [];
+  if (entry.added?.length) parts.push(`Added: ${entry.added.slice(0, 4).map(escapeHtml).join(', ')}${entry.added.length > 4 ? '...' : ''}`);
+  if (entry.removed?.length) parts.push(`Removed: ${entry.removed.slice(0, 4).map(escapeHtml).join(', ')}${entry.removed.length > 4 ? '...' : ''}`);
+  if (entry.edited?.length) {
+    const edited = entry.edited.slice(0, 3).map((item) => `${escapeHtml(item.inviteId)} (${item.fields.map(escapeHtml).join(', ')})`);
+    parts.push(`Edited: ${edited.join(', ')}${entry.edited.length > 3 ? '...' : ''}`);
+  }
+  return parts.join('<br>');
+}
+
+function diffHiveTrees(beforeNodes, afterNodes) {
+  const before = mapHiveSnapshot(beforeNodes);
+  const after = mapHiveSnapshot(afterNodes);
+  const added = [];
+  const removed = [];
+  const edited = [];
+
+  after.forEach((afterNode, inviteId) => {
+    const beforeNode = before.get(inviteId);
+    if (!beforeNode) {
+      added.push(inviteId);
+      return;
+    }
+    const fields = ['name', 'country', 'amount', 'totalTurnover', 'rank', 'type', 'parentInviteId']
+      .filter((field) => String(beforeNode[field] ?? '') !== String(afterNode[field] ?? ''));
+    if (fields.length) edited.push({ inviteId, fields });
+  });
+
+  before.forEach((_, inviteId) => {
+    if (!after.has(inviteId)) removed.push(inviteId);
+  });
+
+  return { added, removed, edited };
+}
+
+function mapHiveSnapshot(nodes) {
+  const map = new Map();
+  flattenNodes(nodes || []).forEach((node) => {
+    map.set(node.inviteId, {
+      name: node.name || '',
+      country: normalizeHiveCountry(node.country),
+      amount: Number(node.amount || 0),
+      totalTurnover: Number(node.totalTurnover || 0),
+      rank: normalizeHiveRank(node.rank),
+      type: node.type || '',
+      parentInviteId: node.parentInviteId || ''
+    });
+  });
+  return map;
 }
 
 function cloneNode(node) {
@@ -1562,6 +1737,10 @@ function createHiveNode(node, x, y, selectedBranchIds) {
   dot.addEventListener('blur', hideHiveTooltip);
   dot.addEventListener('click', (event) => {
     event.stopPropagation();
+    if (isHiveAddLocked()) {
+      setMessage('Save or cancel the new account before selecting another account.', 'error');
+      return;
+    }
     selectedInviteId = node.inviteId;
     if (highlightedInviteId !== node.inviteId) highlightedInviteId = '';
     hiveMode = 'edit';
@@ -1570,11 +1749,19 @@ function createHiveNode(node, x, y, selectedBranchIds) {
   dot.addEventListener('dblclick', (event) => {
     event.preventDefault();
     event.stopPropagation();
+    if (isHiveAddLocked()) {
+      setMessage('Save or cancel the new account before changing the view.', 'error');
+      return;
+    }
     toggleHiveBranchIsolation(node.inviteId);
   });
   dot.addEventListener('keydown', (event) => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
+      if (isHiveAddLocked()) {
+        setMessage('Save or cancel the new account before selecting another account.', 'error');
+        return;
+      }
       selectedInviteId = node.inviteId;
       if (highlightedInviteId !== node.inviteId) highlightedInviteId = '';
       hiveMode = 'edit';
@@ -1763,6 +1950,37 @@ export function addHiveItem(parentInviteId, newItem) {
   return true;
 }
 
+function createAutoSubAccounts(mainNode) {
+  if (!mainNode || mainNode.type !== 'main') return { created: 0, duplicates: [] };
+  if (!mainNode.children) mainNode.children = [];
+  const existingIds = new Set(flattenNodes(hiveData).map((node) => node.inviteId));
+  const duplicates = [];
+  let created = 0;
+
+  for (let index = 1; index <= 3; index += 1) {
+    const inviteId = `${mainNode.inviteId}-${index}`;
+    if (existingIds.has(inviteId)) {
+      duplicates.push(inviteId);
+      continue;
+    }
+    mainNode.children.push({
+      inviteId,
+      name: '',
+      country: normalizeHiveCountry(mainNode.country),
+      amount: 0,
+      totalTurnover: 0,
+      rank: DEFAULT_HIVE_RANK,
+      type: 'sub',
+      parentInviteId: mainNode.inviteId,
+      children: []
+    });
+    existingIds.add(inviteId);
+    created += 1;
+  }
+
+  return { created, duplicates };
+}
+
 export function editHiveItem(inviteId, updatedData) {
   const node = findNode(hiveData[0], inviteId);
   if (!node) return false;
@@ -1848,6 +2066,18 @@ function setHiveMode(mode) {
   populateHiveForm();
 }
 
+function isHiveAddLocked() {
+  return hiveMode === 'add';
+}
+
+function cancelHiveAddMode() {
+  if (hiveMode !== 'add') return;
+  hiveMode = 'edit';
+  setMessage('New account entry cancelled.', 'ok');
+  populateHiveForm();
+  runHiveAutoRefresh();
+}
+
 function populateRankOptions() {
   const rankInput = document.getElementById('hiveRank');
   if (!rankInput) return;
@@ -1867,6 +2097,7 @@ function populateHiveForm() {
   const editTab = document.getElementById('hiveEditTab');
   const addTab = document.getElementById('hiveAddTab');
   const saveBtn = document.getElementById('hiveSaveBtn');
+  const cancelBtn = document.getElementById('hiveCancelAddBtn');
   const inviteInput = document.getElementById('hiveInviteId');
   const nameInput = document.getElementById('hiveName');
   const countryInput = document.getElementById('hiveCountry');
@@ -1875,6 +2106,8 @@ function populateHiveForm() {
   const rankInput = document.getElementById('hiveRank');
   const typeInput = document.getElementById('hiveType');
   const parentInput = document.getElementById('hiveParent');
+  const autoSubWrap = document.getElementById('hiveAutoSubWrap');
+  const autoSubInput = document.getElementById('hiveAutoSubAccounts');
   if (!selected || !inviteInput || !nameInput || !countryInput || !amountInput || !totalTurnoverInput || !rankInput || !typeInput || !parentInput || !saveBtn) return;
 
   const childType = getAllowedChildType(selected);
@@ -1899,6 +2132,9 @@ function populateHiveForm() {
     parentInput.value = selected.parentInviteId || '';
     parentInput.disabled = !isLoadedRoot;
     parentInput.placeholder = isLoadedRoot ? 'Optional inviter Referral ID' : 'Managed by parent account';
+    autoSubWrap?.classList.remove('visible');
+    if (autoSubInput) autoSubInput.checked = false;
+    if (cancelBtn) cancelBtn.style.display = 'none';
     saveBtn.textContent = 'Save edit';
   } else {
     inviteInput.value = '';
@@ -1911,6 +2147,9 @@ function populateHiveForm() {
     parentInput.value = selected.inviteId;
     parentInput.disabled = true;
     parentInput.placeholder = 'Managed by selected parent';
+    autoSubWrap?.classList.toggle('visible', childType === 'main');
+    if (autoSubInput && childType !== 'main') autoSubInput.checked = false;
+    if (cancelBtn) cancelBtn.style.display = '';
     saveBtn.textContent = `Add ${childType} account`;
   }
 }
@@ -2023,7 +2262,7 @@ async function submitHiveForm() {
   const formData = {
     inviteId: document.getElementById('hiveInviteId').value.trim(),
     name: document.getElementById('hiveName').value.trim(),
-    country: document.getElementById('hiveCountry').value,
+    country: document.getElementById('hiveCountry').value.trim(),
     amount: Number(document.getElementById('hiveAmount').value || 0),
     totalTurnover: Number(document.getElementById('hiveTotalTurnover').value || 0),
     parentInviteId: normalizeParentInviteId(document.getElementById('hiveParent').value),
@@ -2057,8 +2296,22 @@ async function submitHiveForm() {
     return;
   }
 
-  if (await cloudInviteExists(formData.inviteId)) {
-    setMessage('That Referral ID already exists in the cloud database. Load it instead of creating a duplicate.', 'error');
+  const autoCreateSubs = childType === 'main' && document.getElementById('hiveAutoSubAccounts')?.checked;
+  const idsToCreate = [formData.inviteId];
+  if (autoCreateSubs) {
+    const subIds = [1, 2, 3].map((index) => `${formData.inviteId}-${index}`);
+    idsToCreate.push(...subIds);
+    const localIds = new Set(flattenNodes(hiveData).map((node) => node.inviteId));
+    const localDuplicate = idsToCreate.find((inviteId) => localIds.has(inviteId));
+    if (localDuplicate) {
+      setMessage(`Could not add account because ${localDuplicate} already exists locally.`, 'error');
+      return;
+    }
+  }
+  const cloudDuplicates = await getExistingCloudInviteIds(idsToCreate);
+  if (cloudDuplicates.size) {
+    const duplicateId = [...cloudDuplicates][0];
+    setMessage(`Could not add account because ${duplicateId} already exists in Supabase. Load it instead of creating a duplicate.`, 'error');
     return;
   }
 
@@ -2067,8 +2320,18 @@ async function submitHiveForm() {
     type: childType,
     parentInviteId: selected.inviteId
   });
+  let autoSubResult = { created: 0, duplicates: [] };
+  if (added && autoCreateSubs) {
+    const mainNode = findNode(hiveData[0], formData.inviteId);
+    autoSubResult = createAutoSubAccounts(mainNode);
+    persistHive();
+    renderHive();
+  }
   if (added) rememberInviteId(findTopLocalNode(formData.inviteId)?.inviteId || formData.inviteId);
-  setMessage(added ? `${childType === 'main' ? 'Main' : 'Sub'} account added.` : 'Could not add account. Check the Referral ID and account rule.', added ? 'ok' : 'error');
+  const successMessage = autoSubResult.created
+    ? `Main account added with ${autoSubResult.created} linked subaccounts.`
+    : `${childType === 'main' ? 'Main' : 'Sub'} account added.`;
+  setMessage(added ? successMessage : 'Could not add account. Check the Referral ID and account rule.', added ? 'ok' : 'error');
 }
 
 function getAllowedChildType(parent) {
@@ -2260,6 +2523,7 @@ export function openHiveManager() {
   const rememberedInviteId = readLastInviteId();
   const lookupInput = document.getElementById('hiveLookupInviteId');
   if (lookupInput && rememberedInviteId) lookupInput.value = rememberedInviteId;
+  renderHiveSyncLog();
   renderHive();
   setHiveZoom(hiveZoom);
   checkHiveAppVersion();
