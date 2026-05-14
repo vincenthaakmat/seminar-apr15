@@ -1,8 +1,15 @@
 {
-  "version": "2026.05.14.4",
+  "version": "2026.05.14.11",
   "name": "Aurum app",
   "message": "Aurum has a fresh update ready. Refresh to load the newest calculator and Hive improvements.",
   "updates": [
+    "Hive sync now allows external Invited By IDs that are not yet stored in the Hive table, while still validating known parent account types.",
+    "Hive sync errors now explain the exact Supabase issue, including missing or incompatible Invited By ID parents.",
+    "The app update notification now stays above Hive and other active tool screens.",
+    "Loading a Hive by Referral ID now shows a visible success or not-found toast.",
+    "Successful Hive sync now shows a clear green confirmation toast.",
+    "Hive structures can now be exported to JSON and imported again for offline updates before syncing to Supabase.",
+    "Sync now can publish a local Hive to Supabase when no cloud copy exists yet, making it loadable by Referral ID.",
     "Adding Hive accounts now starts with an empty Referral ID so users can enter the exact account ID.",
     "Adding Hive accounts now starts with a blank name and reuses the last selected account country by default.",
     "The first loaded Hive account can now enter an Invited By ID so a new personal structure can link into an existing Hive.",

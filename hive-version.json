@@ -1,7 +1,14 @@
 {
-  "version": "2026.05.14.4",
+  "version": "2026.05.14.11",
   "name": "Aurum Hive",
   "updates": [
+    "External Invited By IDs can now be stored even before that parent account exists in the Hive table.",
+    "Sync failures now show the specific Supabase reason, including missing or wrong-type Invited By ID links.",
+    "App update notifications now remain visible above the Hive screen.",
+    "Loading by Referral ID now shows a visible success or failure toast near the top of the screen.",
+    "Successful Sync now actions show a polished confirmation toast.",
+    "Added JSON export and import so Hive structures can be updated offline and brought back for syncing.",
+    "Sync now publishes a local-only Hive to Supabase when the entered Referral ID has no cloud structure yet.",
     "New account forms now leave Referral ID empty for manual entry.",
     "New account forms now keep the previous country selected and leave the name field empty.",
     "Enabled Invited By ID on the first loaded account so a starter structure can connect to an existing Hive parent.",

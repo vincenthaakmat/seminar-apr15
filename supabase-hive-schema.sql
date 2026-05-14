@@ -6,7 +6,7 @@ create table if not exists public.aurum_hive_accounts (
   total_turnover numeric not null default 0,
   rank text not null default '',
   type text not null check (type in ('main', 'sub')),
-  parent_invite_id text references public.aurum_hive_accounts(invite_id) on delete cascade,
+  parent_invite_id text,
   updated_at timestamptz not null default now()
 );
 
@@ -18,6 +18,9 @@ alter table public.aurum_hive_accounts
 
 alter table public.aurum_hive_accounts
   add column if not exists total_turnover numeric not null default 0;
+
+alter table public.aurum_hive_accounts
+  drop constraint if exists aurum_hive_accounts_parent_invite_id_fkey;
 
 create or replace function public.validate_aurum_hive_account()
 returns trigger
@@ -67,7 +70,7 @@ begin
   where invite_id = new.parent_invite_id;
 
   if parent_type is null then
-    raise exception 'Parent InviteID % does not exist.', new.parent_invite_id;
+    return new;
   end if;
 
   if parent_type = 'main' and new.type <> 'sub' then
