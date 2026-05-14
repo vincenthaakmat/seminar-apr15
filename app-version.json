@@ -1,9 +1,9 @@
 {
-  "version": "2026.05.14.22",
+  "version": "2026.05.14.23",
   "name": "Aurum app",
   "message": "Aurum has a fresh update ready. Refresh to load the newest calculator and Hive improvements.",
   "updates": [
-    "Hive now has an option to delete all unfunded sub accounts from the loaded tree.",
+    "Deleting unfunded sub accounts now targets only the selected account and confirms with Referral ID and name.",
     "Hive sync log entries now include account names alongside Referral IDs.",
     "Release log refreshed for the protected Hive Save or Cancel workflow across add and edit modes.",
     "Hive Edit selected now has a protected Save or Cancel flow that keeps canvas selection and sync paused while editing.",

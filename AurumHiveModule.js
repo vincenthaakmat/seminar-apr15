@@ -92,7 +92,7 @@ const HIVE_SYNC_LOG_LIMIT = 40;
 const HIVE_AUTO_REFRESH_MS = 180000;
 const HIVE_MIN_ZOOM = 0.1;
 const HIVE_MAX_ZOOM = 1.2;
-const HIVE_APP_VERSION = '2026.05.14.22';
+const HIVE_APP_VERSION = '2026.05.14.23';
 const HIVE_VERSION_URL = 'hive-version.json';
 const HIVE_CLOUD_TABLE = 'aurum_hive_accounts';
 const AURUM_REFERRAL_BASE_URL = 'https://backoffice.aurum.foundation/u/';
@@ -360,7 +360,7 @@ function ensureHiveUi() {
               <button class="planner-small-btn secondary" type="button" id="hiveRefreshBtn">Sync now</button>
               <button class="planner-small-btn secondary" type="button" id="hiveResetBtn">Reset sample</button>
               <button class="planner-small-btn secondary" type="button" id="hiveClearSampleBtn">Clear sample</button>
-              <button class="planner-small-btn secondary" type="button" id="hiveDeleteUnfundedSubsBtn">Delete unfunded subs</button>
+              <button class="planner-small-btn secondary" type="button" id="hiveDeleteUnfundedSubsBtn">Delete selected unfunded sub</button>
               <input class="hive-file-input" id="hiveImportJsonInput" type="file" accept="application/json,.json">
             </div>
             <div class="hive-sync-log">
@@ -2042,35 +2042,36 @@ export function removeHiveItem(inviteId) {
 
 function deleteUnfundedSubAccounts() {
   if (isHiveEditorLocked()) {
-    setMessage('Save or cancel the current account changes before deleting unfunded sub accounts.', 'error');
+    setMessage('Save or cancel the current account changes before deleting an unfunded sub account.', 'error');
     return;
   }
 
-  const targets = flattenNodes(hiveData).filter((node) => node.type === 'sub' && Number(node.amount || 0) <= 0);
-  if (!targets.length) {
-    setMessage('No unfunded sub accounts found in the loaded Hive.', 'ok');
+  const selected = findNode(hiveData[0], selectedInviteId);
+  if (!selected) {
+    setMessage('Select an unfunded sub account before deleting.', 'error');
+    return;
+  }
+  if (selected.type !== 'sub' || Number(selected.amount || 0) > 0) {
+    setMessage('Only the selected unfunded sub account can be deleted with this action.', 'error');
     return;
   }
 
-  const preview = targets.slice(0, 6).map((node) => `${node.inviteId}${node.name ? ` - ${node.name}` : ''}`).join('\n');
-  const more = targets.length > 6 ? `\n...and ${targets.length - 6} more` : '';
-  if (!window.confirm(`Delete ${targets.length} unfunded sub account${targets.length === 1 ? '' : 's'} from this loaded Hive?\n\n${preview}${more}`)) return;
+  const accountName = selected.name || 'Unnamed';
+  if (!window.confirm(`Delete this unfunded sub account?\n\nReferral ID: ${selected.inviteId}\nName: ${accountName}`)) return;
 
   const beforeHive = cloneNode(hiveData);
-  const targetIds = new Set(targets.map((node) => node.inviteId));
+  const targetIds = new Set([selected.inviteId]);
   removeUnfundedSubsRecursive(hiveData[0], targetIds);
-  if (targetIds.has(selectedInviteId)) selectedInviteId = hiveData[0]?.inviteId || '';
+  selectedInviteId = selected.parentInviteId && findNode(hiveData[0], selected.parentInviteId) ? selected.parentInviteId : (hiveData[0]?.inviteId || '');
   collapsedInviteIds.clear();
   persistHive();
-  targets.forEach((node) => {
-    deleteCloudInvite(node.inviteId).catch((error) => {
-      console.warn('Cloud unfunded sub account could not be removed.', error);
-    });
+  deleteCloudInvite(selected.inviteId).catch((error) => {
+    console.warn('Cloud unfunded sub account could not be removed.', error);
   });
   renderHive();
-  appendHiveSyncLog('Deleted unfunded sub accounts', diffHiveTrees(beforeHive, hiveData), 'cleanup');
-  setMessage(`Deleted ${targets.length} unfunded sub account${targets.length === 1 ? '' : 's'}.`, 'ok');
-  showHiveStatusToast(`Deleted ${targets.length} unfunded sub account${targets.length === 1 ? '' : 's'}.`, 'ok');
+  appendHiveSyncLog('Deleted selected unfunded sub account', diffHiveTrees(beforeHive, hiveData), 'cleanup');
+  setMessage(`Deleted unfunded sub account ${selected.inviteId} - ${accountName}.`, 'ok');
+  showHiveStatusToast(`Deleted ${selected.inviteId} - ${accountName}.`, 'ok');
 }
 
 function removeUnfundedSubsRecursive(parent, targetIds) {

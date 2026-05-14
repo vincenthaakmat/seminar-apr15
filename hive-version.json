@@ -1,8 +1,8 @@
 {
-  "version": "2026.05.14.22",
+  "version": "2026.05.14.23",
   "name": "Aurum Hive",
   "updates": [
-    "Added a cleanup action for deleting unfunded sub accounts from the loaded Hive.",
+    "Delete unfunded sub now removes only the selected account after confirming its Referral ID and name.",
     "Sync log entries now show account names next to Referral IDs.",
     "Release log refreshed for the protected Save or Cancel workflow in add and edit modes.",
     "Edit selected now enters a protected edit session with Cancel, blocked canvas selection, and paused sync until Save or Cancel.",
