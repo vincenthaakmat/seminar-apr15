@@ -1951,6 +1951,146 @@ body.dark-mode #appUpdateModal .app-update-actions { background:rgba(17,24,39,.9
 body.dark-mode .app-update-badge.new { color:#D1FAE5; background:rgba(16,185,129,.18); border-color:rgba(110,231,183,.42); }
 body.dark-mode .app-toast { box-shadow:0 18px 42px rgba(0,0,0,.42); }
 
+@media (max-width: 720px) {
+  body { padding-bottom: 2.5rem; }
+  .shell { padding: 0 0.85rem; }
+  .hero {
+    padding: 4.8rem 0.95rem 2.3rem;
+    margin-bottom: 1.25rem;
+    border-bottom-left-radius: 24px;
+    border-bottom-right-radius: 24px;
+  }
+  .subtitle { font-size: 14px; line-height: 1.55; }
+  .hero-chips { gap: 7px; margin-top: 1rem; }
+  .hero-chip { padding: 0.58rem 0.72rem; font-size: 11px; }
+  .hero-tools { right: 0.75rem; }
+  .hero-tools-panel {
+    width: min(320px, calc(100vw - 1.5rem));
+    max-height: 72vh;
+    border-radius: 16px;
+  }
+  .card,
+  .section-box,
+  .planner-card,
+  .table-wrap {
+    border-radius: 18px;
+  }
+  .card,
+  .section-box,
+  .planner-card {
+    padding: 1rem;
+  }
+  .card-label,
+  .section-title {
+    margin-bottom: 0.85rem;
+  }
+  .toggle-row { align-items: flex-start; }
+  .btn {
+    border-radius: 16px;
+    padding: 15px;
+    margin-bottom: 1.1rem;
+  }
+  .summary-banner,
+  .summary-banner.has-switches {
+    grid-template-columns: 1fr;
+    gap: 0.7rem;
+    padding: 1rem;
+    border-radius: 20px;
+  }
+  .metric {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: 8px;
+    text-align: left;
+    padding: 0.2rem 0;
+  }
+  .metric-label { margin: 0; }
+  .metric-sub { grid-column: 1 / -1; margin-top: 0; }
+  .metric-value { font-size: 20px; text-align: right; }
+  .chart-head { align-items: stretch; }
+  .chart-switch { width: 100%; justify-content: space-between; }
+  .chart-switch-btn { flex: 1; padding: 8px 10px; }
+  .chart-canvas-wrap { height: 230px; }
+  .table-header {
+    padding: 0.85rem;
+    align-items: stretch;
+  }
+  .filter-tabs {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .filter-tab { padding: 8px 9px; }
+  .table-scroll {
+    overflow: auto;
+    max-height: 58vh;
+    -webkit-overflow-scrolling: touch;
+  }
+  table { min-width: 720px; }
+  th, td { padding-left: 10px !important; padding-right: 10px !important; }
+  .planner-head {
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .planner-inline {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+  .planner-inline input,
+  .planner-inline select,
+  .planner-small-btn {
+    width: 100%;
+  }
+  .planner-action { min-height: 78px; }
+  .tool-modal {
+    align-items: stretch;
+    padding: 0.7rem;
+  }
+  .tool-card,
+  .tool-card.wide {
+    width: 100%;
+    max-height: calc(100vh - 1.4rem);
+    border-radius: 18px;
+  }
+  .tool-header {
+    padding: 1rem;
+    gap: 10px;
+  }
+  .tool-body { padding: 1rem; }
+  .tool-grid,
+  .tool-field,
+  .compare-summary-grid {
+    min-width: 0;
+  }
+  .compare-chart-wrap { height: 260px; }
+  .app-toast {
+    top: 10px;
+    right: 10px;
+    width: calc(100vw - 20px);
+  }
+}
+
+@media (max-width: 420px) {
+  .shell { padding: 0 0.65rem; }
+  .hero { padding-left: 0.75rem; padding-right: 0.75rem; }
+  .hero-chip { width: 100%; justify-content: center; }
+  .input-row { gap: 0.85rem; }
+  .filter-tabs { grid-template-columns: 1fr; }
+  .chart-canvas-wrap { height: 210px; }
+  .metric {
+    grid-template-columns: 1fr;
+    gap: 3px;
+  }
+  .metric-value { text-align: left; }
+  .tool-header {
+    align-items: flex-start;
+  }
+  .tool-close {
+    flex: 0 0 auto;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -2560,9 +2700,9 @@ body.dark-mode .app-toast { box-shadow:0 18px 42px rgba(0,0,0,.42); }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
-<script src="calculator-core.js?v=2026.05.14.37"></script>
-<script src="calculator.js?v=2026.05.14.37"></script>
-<script type="module" src="AurumHiveModule.js?v=2026.05.14.37"></script>
+<script src="calculator-core.js?v=2026.05.14.43"></script>
+<script src="calculator.js?v=2026.05.14.43"></script>
+<script type="module" src="AurumHiveModule.js?v=2026.05.14.43"></script>
 
 
   <!-- ── Footer copyright ── -->
