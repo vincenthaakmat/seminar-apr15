@@ -1,7 +1,13 @@
 {
-  "version": "2026.05.14.25",
+  "version": "2026.05.14.31",
   "name": "Aurum Hive",
   "updates": [
+    "Adding a 4th sub account now shows a rule warning without blocking the save, and unsupported extra subs are shown in grey.",
+    "Selected account and referral link now stay visible outside the Hive summary rollup, and account detail fields remain enabled while Save stays gated until Edit selected or Add child.",
+    "Reloading from the Hive update banner now returns directly to the Hive screen after refresh.",
+    "Hive account detail fields are now read-only until Edit selected or Add child is clicked.",
+    "Hive summary metrics are now inside a compact rollup so Branch Health, Tree Size, Leg Strength, Funded, and Filled Slots can be collapsed.",
+    "Hive panel actions are now tucked into a compact rollup so export, import, sync, reset, clear sample, and delete controls take less space.",
     "Search now finds accounts by name or Referral ID.",
     "Sync log entries now display account names directly beside Referral IDs.",
     "Delete unfunded sub now removes only the selected account after confirming its Referral ID and name.",

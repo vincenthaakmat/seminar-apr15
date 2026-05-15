@@ -1112,6 +1112,34 @@ tr.subtotal-row-compound td:first-child { color: #15803D; text-align: left; }
   color: var(--text-muted);
 }
 
+.footer-changelog-btn {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  width: fit-content;
+  margin-top: 8px;
+  padding: 6px 10px;
+  border: 1px solid rgba(37,82,231,0.18);
+  border-radius: 999px;
+  background: rgba(237,242,255,0.82);
+  color: var(--blue);
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform .13s, border-color .13s, background .13s;
+}
+.footer-changelog-btn:hover {
+  transform: translateY(-1px);
+  border-color: rgba(37,82,231,0.34);
+  background: rgba(219,234,254,0.94);
+}
+.footer-changelog-btn .material-symbols-rounded {
+  font-size: 15px;
+  line-height: 1;
+}
+
 /* ── Compounding switch schedule ── */
 .add-switch-btn {
   background: #1D4ED8;
@@ -1484,6 +1512,7 @@ body.dark-mode .site-footer, body.dark-mode .section-box, body.dark-mode .table-
 body.dark-mode .disclaimer {
   background: rgba(17,24,39,0.74); color: var(--text-mid);
 }
+body.dark-mode .footer-changelog-btn { background:rgba(37,82,231,.14); color:#bfdbfe; border-color:rgba(96,165,250,.24); }
 body.dark-mode input[type="date"] {
   background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
   border-color: #3b82f6;
@@ -1837,7 +1866,30 @@ body.dark-mode .crypto-action-btn.secondary {
 .alert-row strong { color:var(--text); }
 .alert-row button { border:1px solid #fecaca; color:#dc2626; background:#fff; border-radius:10px; padding:6px 9px; cursor:pointer; font-weight:800; }
 .app-update-list { margin:12px 0 0; padding-left:18px; color:var(--text-mid); font-size:13px; line-height:1.55; }
+.app-update-list li { padding-left:2px; }
+.app-update-list li span:last-child { vertical-align:middle; }
 .app-update-list li + li { margin-top:5px; }
+.app-update-badge {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:34px;
+  height:18px;
+  padding:0 7px;
+  margin-right:8px;
+  border-radius:999px;
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:.08em;
+  line-height:1;
+  vertical-align:middle;
+}
+.app-update-badge.new {
+  color:#065F46;
+  background:linear-gradient(135deg,#D1FAE5 0%,#A7F3D0 100%);
+  border:1px solid #6EE7B7;
+  box-shadow:0 6px 14px rgba(16,185,129,.16);
+}
 .app-update-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:14px; }
 #appUpdateModal .tool-card { display:flex; flex-direction:column; max-height:min(88vh,780px); overflow:hidden; }
 #appUpdateModal .tool-body { display:flex; flex-direction:column; min-height:0; }
@@ -1845,6 +1897,7 @@ body.dark-mode .crypto-action-btn.secondary {
 #appUpdateModal .app-update-actions { position:sticky; bottom:0; margin:14px -1.45rem -1.45rem; padding:12px 1.45rem 1.45rem; background:rgba(248,250,255,.97); border-top:1px solid var(--border); }
 body.dark-mode .planner-card, body.dark-mode .planner-action, body.dark-mode .tool-card, body.dark-mode .tool-header, body.dark-mode .tool-field input, body.dark-mode .tool-field select, body.dark-mode .tool-close, body.dark-mode .compare-summary-card, body.dark-mode .alert-row, body.dark-mode .planner-inline input, body.dark-mode .planner-inline select, body.dark-mode .planner-small-btn.secondary { background:rgba(17,24,39,.78); color:var(--text-mid); border-color:rgba(148,163,184,.18); }
 body.dark-mode #appUpdateModal .app-update-actions { background:rgba(17,24,39,.97); }
+body.dark-mode .app-update-badge.new { color:#D1FAE5; background:rgba(16,185,129,.18); border-color:rgba(110,231,183,.42); }
 
 </style>
 </head>
@@ -2167,11 +2220,11 @@ body.dark-mode #appUpdateModal .app-update-actions { background:rgba(17,24,39,.9
         <!-- Deposit schedule -->
         <div class="field">
           <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
-            <label style="margin:0;" class="helper-inline">Additional deposits <span class="helper-tip" title="Add extra deposits on specific projection days or calendar dates. Deposits are applied before that day's profit is calculated.">?</span></label>
+            <label style="margin:0;" class="helper-inline">Additional deposits <span class="helper-tip" title="Add one-time or monthly recurring deposits on specific projection days or calendar dates. Deposits are applied before that day's profit is calculated.">?</span></label>
             <button class="add-switch-btn" onclick="addDeposit()">+ Add deposit</button>
           </div>
           <div id="depositList" style="display:flex; flex-direction:column; gap:6px;"></div>
-          <p class="hint" id="depositHint">Add one or more deposit dates to model extra money added during the projection.</p>
+          <p class="hint" id="depositHint">Add one-time deposits or monthly recurring deposits, such as $500 monthly for 6 months.</p>
         </div>
       </div>
 
@@ -2450,8 +2503,8 @@ body.dark-mode #appUpdateModal .app-update-actions { background:rgba(17,24,39,.9
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
-<script src="calculator.js?v=2026.05.14.26"></script>
-<script type="module" src="AurumHiveModule.js?v=2026.05.14.25"></script>
+<script src="calculator.js?v=2026.05.14.31"></script>
+<script type="module" src="AurumHiveModule.js?v=2026.05.14.31"></script>
 
 
   <!-- ── Footer copyright ── -->
@@ -2460,6 +2513,7 @@ body.dark-mode #appUpdateModal .app-update-actions { background:rgba(17,24,39,.9
     <div class="footer-text">
       <span class="footer-name">Vincent Haakmat</span>
       <span class="footer-copy">&copy; 2026 VHC Solutions B.V.   All rights reserved.</span>
+      <button class="footer-changelog-btn" type="button" onclick="openChangelog()"><span class="material-symbols-rounded">history</span>Changelog</button>
     </div>
   </footer>
 

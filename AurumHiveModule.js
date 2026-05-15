@@ -88,13 +88,15 @@ const HIVE_ZOOM_KEY = 'aurum_hive_zoom_v1';
 const HIVE_OVERLAY_POSITIONS_KEY = 'aurum_hive_overlay_positions_v1';
 const HIVE_PANEL_COLLAPSED_KEY = 'aurum_hive_panel_collapsed_v1';
 const HIVE_SYNC_LOG_KEY = 'aurum_hive_sync_log_v1';
+const HIVE_REOPEN_AFTER_RELOAD_KEY = 'aurum_hive_reopen_after_reload_v1';
 const HIVE_SYNC_LOG_LIMIT = 40;
 const HIVE_AUTO_REFRESH_MS = 180000;
 const HIVE_MIN_ZOOM = 0.1;
 const HIVE_MAX_ZOOM = 1.2;
-const HIVE_APP_VERSION = '2026.05.14.25';
+const HIVE_APP_VERSION = '2026.05.14.31';
 const HIVE_VERSION_URL = 'hive-version.json';
 const HIVE_CLOUD_TABLE = 'aurum_hive_accounts';
+const HIVE_SUPPORTED_SUB_LIMIT = 3;
 const AURUM_REFERRAL_BASE_URL = 'https://backoffice.aurum.foundation/u/';
 const HIVE_RANKS = ['NOVA', 'VOYAGER', 'VANGUARD', 'VANGUARD PRO', 'NEXUS', 'ORACLE', 'PRIME', 'ELITE', 'MAGNAT', 'MYTHOS', 'LEGEND'];
 const DEFAULT_HIVE_RANK = 'NOVA';
@@ -156,7 +158,14 @@ function ensureHiveUi() {
     .hive-panel-title-actions { display:flex; align-items:center; gap:8px; }
     .hive-panel-toggle { display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border:1px solid var(--border); border-radius:8px; background:var(--surface-2); color:var(--text-mid); cursor:pointer; }
     .hive-panel-toggle:hover { border-color:var(--blue); color:var(--blue-mid); background:var(--blue-light); }
-    .hive-summary { display:grid; gap:8px; font-size:13px; color:var(--text-mid); line-height:1.45; }
+    .hive-summary-rollup { margin-bottom:12px; border:1px solid var(--border); border-radius:12px; background:rgba(255,255,255,.82); overflow:hidden; }
+    .hive-summary-rollup summary { list-style:none; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; color:var(--text); font:900 12px 'Inter',sans-serif; cursor:pointer; user-select:none; }
+    .hive-summary-rollup summary::-webkit-details-marker { display:none; }
+    .hive-summary-rollup summary::after { content:'expand_more'; font-family:'Material Symbols Rounded'; font-size:20px; color:var(--text-muted); transition:transform .15s; }
+    .hive-summary-rollup[open] summary::after { transform:rotate(180deg); }
+    .hive-summary-rollup-hint { margin-left:auto; color:var(--text-muted); font-size:10px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; white-space:nowrap; }
+    .hive-summary { display:grid; gap:8px; padding:0 12px 12px; font-size:13px; color:var(--text-mid); line-height:1.45; }
+    .hive-summary-static { padding:0; margin-bottom:12px; }
     .hive-summary-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; }
     .hive-summary-card { border:1px solid var(--border); border-radius:12px; background:linear-gradient(180deg,#fff 0%,#f3f6ff 100%); padding:10px; box-shadow:0 6px 16px rgba(25,45,110,.07); min-width:0; }
     .hive-summary-card.wide { grid-column:1 / -1; }
@@ -176,7 +185,15 @@ function ensureHiveUi() {
     .hive-copy-btn.copied { border-color:rgba(22,163,74,.34); background:#dcfce7; color:#15803d; }
     .hive-health-card { border-color:rgba(37,82,231,.28); background:linear-gradient(135deg,#edf3ff 0%,#ffffff 100%); }
     .hive-health-score { color:#173fcf; font-size:20px; }
-    .hive-actions { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:8px; margin-top:12px; }
+    .hive-action-rollup { margin-top:12px; border:1px solid var(--border); border-radius:12px; background:rgba(255,255,255,.8); overflow:hidden; }
+    .hive-action-rollup summary { list-style:none; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; color:var(--text); font:900 12px 'Inter',sans-serif; cursor:pointer; user-select:none; }
+    .hive-action-rollup summary::-webkit-details-marker { display:none; }
+    .hive-action-rollup summary::after { content:'expand_more'; font-family:'Material Symbols Rounded'; font-size:20px; color:var(--text-muted); transition:transform .15s; }
+    .hive-action-rollup[open] summary::after { transform:rotate(180deg); }
+    .hive-action-rollup-hint { margin-left:auto; color:var(--text-muted); font-size:10px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; white-space:nowrap; }
+    .hive-actions { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; padding:0 12px 12px; }
+    .hive-danger-btn { background:#dc2626 !important; border-color:#b91c1c !important; color:#fff !important; box-shadow:0 8px 18px rgba(220,38,38,.22); }
+    .hive-danger-btn:hover { background:#b91c1c !important; border-color:#991b1b !important; color:#fff !important; }
     .hive-file-input { display:none; }
     .hive-sync-log { margin-top:12px; border:1px solid var(--border); border-radius:12px; background:rgba(255,255,255,.76); overflow:hidden; }
     .hive-sync-log-head { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:9px 10px; border-bottom:1px solid var(--border); font-size:11px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; color:var(--text-muted); }
@@ -205,6 +222,8 @@ function ensureHiveUi() {
     .hive-field input, .hive-field select { width:100%; border:1px solid var(--border); border-radius:10px; padding:10px 11px; color:var(--text); background:#fff; font-family:'Inter',sans-serif; font-size:13px; outline:none; }
     .hive-field input:focus, .hive-field select:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(37,82,231,.12); }
     .hive-field input:disabled { background:var(--surface-3); color:var(--text-muted); cursor:not-allowed; }
+    .hive-field input[readonly] { background:#fff; color:var(--text); cursor:text; }
+    .hive-form-actions button:disabled { opacity:.62; cursor:not-allowed; }
     .hive-checkbox-row { display:none; align-items:center; gap:8px; border:1px solid rgba(37,82,231,.16); border-radius:10px; background:rgba(237,243,255,.72); padding:9px 10px; color:var(--text-mid); font-size:12px; font-weight:800; line-height:1.35; }
     .hive-checkbox-row.visible { display:flex; }
     .hive-checkbox-row input { width:16px; height:16px; accent-color:var(--blue); flex:0 0 auto; }
@@ -213,6 +232,7 @@ function ensureHiveUi() {
     .hive-mode-tab.active { border-color:var(--blue); background:var(--blue-light); color:var(--blue-mid); }
     .hive-message { min-height:18px; margin-top:10px; font-size:12px; color:var(--text-muted); }
     .hive-message.error { color:var(--red); }
+    .hive-message.warning { color:#b45309; }
     .hive-message.ok { color:var(--green); }
     .hive-view-shell { min-width:0; border-radius:18px; background:linear-gradient(135deg,#13203d,#173fcf 58%,#06b6d4); color:#fff; overflow:hidden; }
     .hive-view-toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 14px; border-bottom:1px solid rgba(255,255,255,.16); background:rgba(15,23,42,.26); }
@@ -267,7 +287,9 @@ function ensureHiveUi() {
     .hive-dot-sub { background:#16a34a; }
     .hive-dot-main.unfunded { background:#2563eb; }
     .hive-dot-sub.unfunded { background:#facc15; }
+    .hive-dot-sub.unsupported { background:#9ca3af; }
     .hive-dot-sub.unfunded::before { color:#111827; }
+    .hive-dot-sub.unsupported::before { color:#fff; }
     .hive-dot-main.selected, .hive-dot-sub.selected { outline:4px solid rgba(250,204,21,.95); outline-offset:4px; }
     .hive-dot-main::before, .hive-dot-sub::before { color:#fff; font:900 18px 'Inter',sans-serif; }
     .hive-dot-main::before { content:'M'; }
@@ -327,7 +349,14 @@ function ensureHiveUi() {
               </div>
               <div class="hive-status" id="hiveSyncStatus"><span class="hive-status-dot"></span><span>Local database active. Supabase not configured.</span></div>
             </div>
-            <div class="hive-summary" id="hiveSummary"></div>
+            <div class="hive-summary hive-summary-static" id="hiveSummaryStatic"></div>
+            <details class="hive-summary-rollup">
+              <summary>
+                Hive summary
+                <span class="hive-summary-rollup-hint">Health, size, legs</span>
+              </summary>
+              <div class="hive-summary" id="hiveSummary"></div>
+            </details>
             <div class="hive-mode-tabs">
               <button class="hive-mode-tab active" type="button" id="hiveEditTab">Edit selected</button>
               <button class="hive-mode-tab" type="button" id="hiveAddTab">Add child</button>
@@ -353,16 +382,22 @@ function ensureHiveUi() {
               </div>
             </div>
             <div class="hive-message" id="hiveMessage"></div>
-            <div class="hive-actions">
-              <button class="planner-small-btn secondary" type="button" id="hiveExportPdfBtn">Export PDF</button>
-              <button class="planner-small-btn secondary" type="button" id="hiveExportJsonBtn">Export JSON</button>
-              <button class="planner-small-btn secondary" type="button" id="hiveImportJsonBtn">Import JSON</button>
-              <button class="planner-small-btn secondary" type="button" id="hiveRefreshBtn">Sync now</button>
-              <button class="planner-small-btn secondary" type="button" id="hiveResetBtn">Reset sample</button>
-              <button class="planner-small-btn secondary" type="button" id="hiveClearSampleBtn">Clear sample</button>
-              <button class="planner-small-btn secondary" type="button" id="hiveDeleteUnfundedSubsBtn">Delete selected unfunded sub</button>
-              <input class="hive-file-input" id="hiveImportJsonInput" type="file" accept="application/json,.json">
-            </div>
+            <details class="hive-action-rollup">
+              <summary>
+                Hive actions
+                <span class="hive-action-rollup-hint">Export, import, sync</span>
+              </summary>
+              <div class="hive-actions">
+                <button class="planner-small-btn secondary" type="button" id="hiveExportPdfBtn">Export PDF</button>
+                <button class="planner-small-btn secondary" type="button" id="hiveExportJsonBtn">Export JSON</button>
+                <button class="planner-small-btn secondary" type="button" id="hiveImportJsonBtn">Import JSON</button>
+                <button class="planner-small-btn secondary" type="button" id="hiveRefreshBtn">Sync now</button>
+                <button class="planner-small-btn secondary" type="button" id="hiveResetBtn">Reset sample</button>
+                <button class="planner-small-btn secondary" type="button" id="hiveClearSampleBtn">Clear sample</button>
+                <button class="planner-small-btn secondary hive-danger-btn" type="button" id="hiveDeleteUnfundedSubsBtn">Delete selected unfunded sub</button>
+                <input class="hive-file-input" id="hiveImportJsonInput" type="file" accept="application/json,.json">
+              </div>
+            </details>
             <div class="hive-sync-log">
               <div class="hive-sync-log-head">
                 <span>Sync log</span>
@@ -400,6 +435,7 @@ function ensureHiveUi() {
                 <div class="hive-legend-row"><span class="hive-legend-dot" style="background:#16a34a;"></span>Funded sub</div>
                 <div class="hive-legend-row"><span class="hive-legend-dot" style="background:#2563eb;"></span>Unfunded main</div>
                 <div class="hive-legend-row"><span class="hive-legend-dot" style="background:#facc15;"></span>Unfunded sub</div>
+                <div class="hive-legend-row"><span class="hive-legend-dot" style="background:#9ca3af;"></span>Unsupported extra sub</div>
                 <div class="hive-legend-row"><span class="hive-legend-badge">RANK</span>Rank badge</div>
               </div>
               <div id="hiveContainer" class="hive-tree"></div>
@@ -771,6 +807,9 @@ async function checkHiveAppVersion() {
 }
 
 function reloadHiveApp() {
+  try {
+    sessionStorage.setItem(HIVE_REOPEN_AFTER_RELOAD_KEY, '1');
+  } catch (error) {}
   window.location.reload();
 }
 
@@ -1740,7 +1779,8 @@ function createHiveNode(node, x, y, selectedBranchIds) {
   const isSearchHit = node.inviteId === highlightedInviteId;
   const isInSelectedBranch = hiveBranchHighlightMode && selectedBranchIds.has(node.inviteId);
   const isUnfunded = Number(node.amount || 0) <= 0;
-  dot.className = `${node.type === 'main' ? 'hive-dot-main' : 'hive-dot-sub'}${isSelected ? ' selected' : ''}${isInSelectedBranch ? ' in-selected-branch' : ''}${isSearchHit ? ' search-hit' : ''}${isUnfunded ? ' unfunded' : ''}`;
+  const isUnsupportedSub = isUnsupportedSubAccount(node);
+  dot.className = `${node.type === 'main' ? 'hive-dot-main' : 'hive-dot-sub'}${isSelected ? ' selected' : ''}${isInSelectedBranch ? ' in-selected-branch' : ''}${isSearchHit ? ' search-hit' : ''}${isUnfunded ? ' unfunded' : ''}${isUnsupportedSub ? ' unsupported' : ''}`;
   dot.setAttribute('role', 'button');
   dot.setAttribute('tabindex', '0');
   dot.setAttribute('aria-label', `Select ${node.name}`);
@@ -1833,7 +1873,7 @@ function showHiveTooltip(node, anchorEl) {
       Personal investment: $${Number(node.amount || 0).toLocaleString()}<br>
       Total turnover: $${Number(node.totalTurnover || 0).toLocaleString()}<br>
       Rank: ${rankHtml}<br>
-      Type: ${escapeHtml(node.type)}
+      Type: ${escapeHtml(node.type)}${isUnsupportedSubAccount(node) ? '<br>Status: Unsupported extra sub account' : ''}
     </div>
   `;
 }
@@ -1933,8 +1973,27 @@ function renderMiniMap(layout) {
 }
 
 function getMiniMapColor(node) {
+  if (isUnsupportedSubAccount(node)) return '#9ca3af';
   if (Number(node.amount || 0) <= 0) return node.type === 'main' ? '#2563eb' : '#facc15';
   return node.type === 'main' ? '#dc2626' : '#16a34a';
+}
+
+function getDirectSubCount(node) {
+  if (!node || node.type !== 'main') return 0;
+  return (node.children || []).filter((child) => child.type === 'sub').length;
+}
+
+function isUnsupportedSubAccount(node) {
+  if (!node || node.type !== 'sub' || !node.parentInviteId) return false;
+  const parent = findNode(hiveData[0], node.parentInviteId);
+  if (!parent || parent.type !== 'main') return false;
+  const subSiblings = (parent.children || []).filter((child) => child.type === 'sub');
+  return subSiblings.findIndex((child) => child.inviteId === node.inviteId) >= HIVE_SUPPORTED_SUB_LIMIT;
+}
+
+function getUnsupportedSubWarning(parent) {
+  if (!parent || parent.type !== 'main' || getDirectSubCount(parent) < HIVE_SUPPORTED_SUB_LIMIT) return '';
+  return 'Warning: a 4th sub account is not supported by the standard Hive structure rules. You can still add it, but it will be shown in grey.';
 }
 
 export function addHiveItem(parentInviteId, newItem) {
@@ -2144,7 +2203,10 @@ function handleHiveAddTabClick() {
     setMessage('Save or cancel the current edit before adding a new account.', 'error');
     return;
   }
+  const selected = findNode(hiveData[0], selectedInviteId);
   setHiveMode('add');
+  const warning = getUnsupportedSubWarning(selected);
+  if (warning && getAllowedChildType(selected) === 'sub') setMessage(warning, 'warning');
 }
 
 function cancelHiveFormMode() {
@@ -2192,7 +2254,8 @@ function populateHiveForm() {
   const childType = getAllowedChildType(selected);
   if (hiveMode === 'add' && !childType) hiveMode = 'edit';
 
-  editTab?.classList.toggle('active', hiveMode === 'edit');
+  const editorActive = hiveMode === 'add' || hiveEditLocked;
+  editTab?.classList.toggle('active', hiveEditLocked);
   addTab?.classList.toggle('active', hiveMode === 'add');
   if (addTab) {
     addTab.textContent = childType ? `Add ${childType}` : 'Add child';
@@ -2209,7 +2272,8 @@ function populateHiveForm() {
     rankInput.value = normalizeHiveRank(selected.rank);
     typeInput.value = selected.type || '';
     parentInput.value = selected.parentInviteId || '';
-    parentInput.disabled = !isLoadedRoot;
+    parentInput.disabled = false;
+    parentInput.readOnly = !editorActive || !isLoadedRoot;
     parentInput.placeholder = isLoadedRoot ? 'Optional inviter Referral ID' : 'Managed by parent account';
     autoSubWrap?.classList.remove('visible');
     if (autoSubInput) autoSubInput.checked = false;
@@ -2224,13 +2288,27 @@ function populateHiveForm() {
     rankInput.value = DEFAULT_HIVE_RANK;
     typeInput.value = childType;
     parentInput.value = selected.inviteId;
-    parentInput.disabled = true;
+    parentInput.disabled = false;
+    parentInput.readOnly = true;
     parentInput.placeholder = 'Managed by selected parent';
     autoSubWrap?.classList.toggle('visible', childType === 'main');
     if (autoSubInput && childType !== 'main') autoSubInput.checked = false;
     if (cancelBtn) cancelBtn.style.display = '';
     saveBtn.textContent = `Add ${childType} account`;
   }
+
+  inviteInput.disabled = false;
+  nameInput.disabled = false;
+  countryInput.disabled = false;
+  amountInput.disabled = false;
+  totalTurnoverInput.disabled = false;
+  rankInput.disabled = false;
+  inviteInput.readOnly = !editorActive;
+  nameInput.readOnly = !editorActive;
+  amountInput.readOnly = !editorActive;
+  totalTurnoverInput.readOnly = !editorActive;
+  typeInput.disabled = true;
+  saveBtn.disabled = !editorActive;
 }
 
 function applyHiveTransform() {
@@ -2332,6 +2410,10 @@ function clearSampleHive() {
 }
 
 async function submitHiveForm() {
+  if (!isHiveEditorLocked()) {
+    setMessage('Click Edit selected or Add child before changing account details.', 'error');
+    return;
+  }
   const selected = findNode(hiveData[0], selectedInviteId);
   if (!selected) {
     setMessage('Select an account first.', 'error');
@@ -2378,6 +2460,7 @@ async function submitHiveForm() {
     setMessage('This account cannot add a child account.', 'error');
     return;
   }
+  const addingUnsupportedSub = childType === 'sub' && getDirectSubCount(selected) >= HIVE_SUPPORTED_SUB_LIMIT;
 
   const autoCreateSubs = childType === 'main' && document.getElementById('hiveAutoSubAccounts')?.checked;
   const idsToCreate = [formData.inviteId];
@@ -2413,8 +2496,10 @@ async function submitHiveForm() {
   if (added) rememberInviteId(findTopLocalNode(formData.inviteId)?.inviteId || formData.inviteId);
   const successMessage = autoSubResult.created
     ? `Main account added with ${autoSubResult.created} linked subaccounts.`
+    : addingUnsupportedSub
+      ? 'Sub account added as an unsupported extra sub and shown in grey.'
     : `${childType === 'main' ? 'Main' : 'Sub'} account added.`;
-  setMessage(added ? successMessage : 'Could not add account. Check the Referral ID and account rule.', added ? 'ok' : 'error');
+  setMessage(added ? successMessage : 'Could not add account. Check the Referral ID and account rule.', added ? (addingUnsupportedSub ? 'warning' : 'ok') : 'error');
 }
 
 function getAllowedChildType(parent) {
@@ -2481,6 +2566,7 @@ function updateChildParentIds(node, previousInviteId, nextInviteId) {
 
 function renderHiveSummary() {
   const summary = document.getElementById('hiveSummary');
+  const staticSummary = document.getElementById('hiveSummaryStatic');
   if (!summary) return;
 
   const selected = findNode(hiveData[0], selectedInviteId);
@@ -2497,22 +2583,29 @@ function renderHiveSummary() {
   const openSlots = selected ? getOpenSlotStats(selected) : { subSlots: 0, mainSlots: 0, total: 0 };
   const health = selected ? getBranchHealth(selected, loadedAmount) : null;
 
+  if (staticSummary) {
+    staticSummary.innerHTML = `
+      <div class="hive-summary-grid">
+        <div class="hive-summary-card wide">
+          <div class="hive-summary-label">Selected</div>
+          <div class="hive-summary-value">${escapeHtml(selected?.name || 'None')}</div>
+          <div class="hive-summary-note">${escapeHtml(selected?.inviteId || '')}</div>
+        </div>
+        ${selected ? `
+          <div class="hive-summary-card wide">
+            <div class="hive-summary-label">Referral link</div>
+            <div class="hive-copy-row">
+              <div class="hive-copy-link" title="${escapeHtml(getReferralLink(selected.inviteId))}">${escapeHtml(getReferralLink(selected.inviteId))}</div>
+              <button class="hive-copy-btn" type="button" data-copy-referral="${escapeHtml(selected.inviteId)}">Copy</button>
+            </div>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }
+
   summary.innerHTML = `
     <div class="hive-summary-grid">
-      <div class="hive-summary-card wide">
-        <div class="hive-summary-label">Selected</div>
-        <div class="hive-summary-value">${escapeHtml(selected?.name || 'None')}</div>
-        <div class="hive-summary-note">${escapeHtml(selected?.inviteId || '')}</div>
-      </div>
-      ${selected ? `
-        <div class="hive-summary-card wide">
-          <div class="hive-summary-label">Referral link</div>
-          <div class="hive-copy-row">
-            <div class="hive-copy-link" title="${escapeHtml(getReferralLink(selected.inviteId))}">${escapeHtml(getReferralLink(selected.inviteId))}</div>
-            <button class="hive-copy-btn" type="button" data-copy-referral="${escapeHtml(selected.inviteId)}">Copy</button>
-          </div>
-        </div>
-      ` : ''}
       ${health ? `
         <div class="hive-summary-card hive-health-card">
           <div class="hive-summary-label">Branch health</div>
@@ -2565,7 +2658,7 @@ function renderHiveSummary() {
       </div>
     </div>
   `;
-  summary.querySelectorAll('[data-copy-referral]').forEach((button) => {
+  document.querySelectorAll('#hiveSummaryStatic [data-copy-referral], #hiveSummary [data-copy-referral]').forEach((button) => {
     button.addEventListener('click', () => copyReferralLink(button.dataset.copyReferral, button));
   });
 }
@@ -2624,6 +2717,13 @@ export function openHiveManager() {
 }
 
 window.openHiveManager = openHiveManager;
+
+try {
+  if (sessionStorage.getItem(HIVE_REOPEN_AFTER_RELOAD_KEY) === '1') {
+    sessionStorage.removeItem(HIVE_REOPEN_AFTER_RELOAD_KEY);
+    requestAnimationFrame(() => openHiveManager());
+  }
+} catch (error) {}
 
 window.AurumHiveModule = {
   hiveData,
