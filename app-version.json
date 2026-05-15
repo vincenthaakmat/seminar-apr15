@@ -1,8 +1,9 @@
 {
-  "version": "2026.05.14.31",
+  "version": "2026.05.14.32",
   "name": "Aurum app",
   "message": "Aurum has a fresh update ready. Refresh to load the newest calculator and Hive improvements.",
   "updates": [
+    "ROI Calculator simple-mode charts now distinguish total value from active balance, so profits that are set aside are visible instead of looking like compounded balance growth.",
     "[NEW] The footer now includes a Changelog button that opens the release notes at any time.",
     "[NEW] Changelog entries can now show a NEW badge for newly added functionality, separate from fixes and behavior updates.",
     "ROI Calculator mixed simple/compound projections now keep simple-mode profits in the projected value after switching back to compounding, and grouped percentages account for deposits inside the period.",

@@ -128,17 +128,19 @@ function updateChartLabels() {
   const labels = pts.map(r => getChartPointLabel(r));
   chartInst.data.labels = labels;
 
-  if (chartInst.data?.datasets?.[1]) {
+  const packageDataset = chartInst.data?.datasets?.find(dataset => dataset.label === 'Package upgrade');
+  if (packageDataset) {
     const packageUpgradePts = pts.filter((r, i) => i > 0 && r.pkgKey !== pts[i - 1].pkgKey);
-    chartInst.data.datasets[1].data = packageUpgradePts.map(p => ({ x: getChartPointLabel(p), y: +p.projectedValue.toFixed(2), pkg: p.pkgLabel, day: p.day }));
+    packageDataset.data = packageUpgradePts.map(p => ({ x: getChartPointLabel(p), y: +p.projectedValue.toFixed(2), pkg: p.pkgLabel, day: p.day }));
   }
-  if (chartInst.data?.datasets?.[2]) {
+  const milestoneDataset = chartInst.data?.datasets?.find(dataset => dataset.label === 'Milestone');
+  if (milestoneDataset) {
     const milestonePts = [];
     [10000, 25000, 50000, 100000].forEach(target => {
       const hit = pts.find(p => p.projectedValue >= target);
       if (hit) milestonePts.push(hit);
     });
-    chartInst.data.datasets[2].data = milestonePts.map(p => ({ x: getChartPointLabel(p), y: +p.projectedValue.toFixed(2), day: p.day }));
+    milestoneDataset.data = milestonePts.map(p => ({ x: getChartPointLabel(p), y: +p.projectedValue.toFixed(2), day: p.day }));
   }
 
   chartInst.update();
@@ -868,6 +870,8 @@ function calculate() {
       isCompound, switched,
       deposit: depositToday,
       deposited: depositToday > 0,
+      activeValue: endBal,
+      withdrawnProfit: profitPool,
       projectedValue: endBal + profitPool
     });
   }
@@ -884,7 +888,8 @@ function calculate() {
   animateValue(document.getElementById('m-final'), finalBalance, fmt, 2350);
   animateValue(document.getElementById('m-roi'), roi, v => v.toFixed(1) + '%', 2550);
   document.getElementById('m-sub').textContent = `${yLabel} · ${numDays} days`;
-  document.getElementById('chart-label').textContent = `Portfolio growth · ${yLabel} · start ${fmt(initial)}` + (hasDeposits ? ` · deposits ${fmt(totalDeposits)}` : '') + (hasSwitches ? ` · ${switchCount} switch${switchCount !== 1 ? 'es' : ''}` : '');
+  const hasSimpleMode = simpleDays > 0;
+  document.getElementById('chart-label').textContent = `${hasSimpleMode ? 'Total value and active balance' : 'Portfolio growth'} · ${yLabel} · start ${fmt(initial)}` + (hasDeposits ? ` · deposits ${fmt(totalDeposits)}` : '') + (hasSwitches ? ` · ${switchCount} switch${switchCount !== 1 ? 'es' : ''}` : '');
 
   const badge = document.getElementById('mode-badge');
   if (hasSwitches) {
@@ -970,37 +975,54 @@ function buildChart(randomMode) {
   grad.addColorStop(1, 'rgba(37,99,235,0.02)');
   const pointColors = pts.map(r => r.deposited ? '#0EA5E9' : (r.isCompound ? '#16A34A' : '#D97706'));
   const pointRadii  = pts.map(r => (r.switched || r.deposited) ? 5 : 0);
+  const hasSimpleMode = allRows.some(r => !r.isCompound || Number(r.withdrawnProfit || 0) > 0);
   const packageUpgradePts = pts.filter((r, i) => i > 0 && r.pkgKey !== pts[i - 1].pkgKey);
   const milestonePts = [];
   [10000, 25000, 50000, 100000].forEach(target => {
     const hit = pts.find(p => p.projectedValue >= target);
     if (hit) milestonePts.push(hit);
   });
+  const datasets = [{
+    label: 'Total value',
+    data: pts.map(r => +r.projectedValue.toFixed(2)),
+    borderColor: randomMode ? pts.map(r => r.isCompound ? '#2563EB' : '#D97706') : '#2563EB',
+    backgroundColor: grad,
+    borderWidth: 2.5,
+    pointRadius: randomMode ? pointRadii : 0,
+    pointBackgroundColor: pointColors,
+    pointBorderColor: '#fff',
+    pointBorderWidth: 1.5,
+    fill: true,
+    tension: 0.35,
+    segment: randomMode ? { borderColor: c => pts[c.p0DataIndex] && pts[c.p0DataIndex].isCompound ? '#2563EB' : '#D97706' } : undefined
+  }];
+  if (hasSimpleMode) {
+    datasets.push({
+      label: 'Active balance',
+      data: pts.map(r => +Number(r.activeValue ?? r.end ?? r.projectedValue).toFixed(2)),
+      borderColor: '#64748B',
+      backgroundColor: 'transparent',
+      borderWidth: 2,
+      borderDash: [6, 5],
+      pointRadius: 0,
+      fill: false,
+      tension: 0.25
+    });
+  }
+  datasets.push({
+    type: 'scatter', label: 'Package upgrade',
+    data: packageUpgradePts.map(p => ({ x: getChartPointLabel(p), y: +p.projectedValue.toFixed(2), pkg: p.pkgLabel, day: p.day })),
+    pointRadius: 5, pointHoverRadius: 6, pointBackgroundColor: '#8B5CF6', pointBorderColor: '#fff', pointBorderWidth: 2
+  }, {
+    type: 'scatter', label: 'Milestone',
+    data: milestonePts.map(p => ({ x: getChartPointLabel(p), y: +p.projectedValue.toFixed(2), day: p.day })),
+    pointRadius: 4, pointHoverRadius: 5, pointBackgroundColor: '#06B6D4', pointBorderColor: '#fff', pointBorderWidth: 2
+  });
   chartInst = new Chart(ctx, {
     type: 'line',
     data: {
       labels: pts.map(r => getChartPointLabel(r)),
-      datasets: [{
-        data: pts.map(r => +r.projectedValue.toFixed(2)),
-        borderColor: randomMode ? pts.map(r => r.isCompound ? '#2563EB' : '#D97706') : '#2563EB',
-        backgroundColor: grad,
-        borderWidth: 2.5,
-        pointRadius: randomMode ? pointRadii : 0,
-        pointBackgroundColor: pointColors,
-        pointBorderColor: '#fff',
-        pointBorderWidth: 1.5,
-        fill: true,
-        tension: 0.35,
-        segment: randomMode ? { borderColor: c => pts[c.p0DataIndex] && pts[c.p0DataIndex].isCompound ? '#2563EB' : '#D97706' } : undefined
-      }, {
-        type: 'scatter', label: 'Package upgrade',
-        data: packageUpgradePts.map(p => ({ x: getChartPointLabel(p), y: +p.projectedValue.toFixed(2), pkg: p.pkgLabel, day: p.day })),
-        pointRadius: 5, pointHoverRadius: 6, pointBackgroundColor: '#8B5CF6', pointBorderColor: '#fff', pointBorderWidth: 2
-      }, {
-        type: 'scatter', label: 'Milestone',
-        data: milestonePts.map(p => ({ x: getChartPointLabel(p), y: +p.projectedValue.toFixed(2), day: p.day })),
-        pointRadius: 4, pointHoverRadius: 5, pointBackgroundColor: '#06B6D4', pointBorderColor: '#fff', pointBorderWidth: 2
-      }]
+      datasets
     },
     options: {
       responsive: true, maintainAspectRatio: false,
@@ -1015,7 +1037,11 @@ function buildChart(randomMode) {
               if (c.dataset.label === 'Milestone') return `Milestone hit around ${chartLabelMode === 'date' ? formatDateShort(getDateForDay(c.raw.day)) : 'day ' + c.raw.day}`;
               const ri = Math.min(Math.round(c.dataIndex * step), allRows.length - 1);
               const r = allRows[ri];
-              const lines = ['Package: ' + r.pkgLabel, 'Projected value: ' + fmt(r.projectedValue)];
+              const lines = ['Package: ' + r.pkgLabel, 'Total value: ' + fmt(r.projectedValue)];
+              if (hasSimpleMode) {
+                lines.push('Active balance: ' + fmt(r.activeValue ?? r.end));
+                if (r.withdrawnProfit) lines.push('Set-aside profit: ' + fmt(r.withdrawnProfit));
+              }
               if (randomMode) lines.push('Mode: ' + (r.isCompound ? '⬆ Compounding' : '➡ Simple'));
               if (r.deposited) lines.push('Deposit: +' + fmt(r.deposit || 0));
               if (r.switched) lines.push('⚡ Switch ' + (chartLabelMode === 'date' ? formatDateShort(getDateForDay(r.day)) : 'day ' + r.day));
@@ -1031,6 +1057,14 @@ function buildChart(randomMode) {
       }
     }
   });
+  document.getElementById('chartLegend').innerHTML = `
+    <span style="display:flex;align-items:center;gap:5px;"><span style="width:24px;height:3px;background:#2563EB;border-radius:2px;display:inline-block;"></span>Total value</span>
+    <span style="display:flex;align-items:center;gap:5px;"><span style="width:24px;height:3px;background:#D97706;border-radius:2px;display:inline-block;"></span>Simple value phase</span>
+    ${hasSimpleMode ? '<span style="display:flex;align-items:center;gap:5px;"><span style="width:24px;height:0;border-top:3px dashed #64748B;border-radius:2px;display:inline-block;"></span>Active balance</span>' : ''}
+    <span style="display:flex;align-items:center;gap:5px;"><span style="width:8px;height:8px;border-radius:50%;background:#16A34A;display:inline-block;border:2px solid white;box-shadow:0 0 0 1px #16A34A;"></span>Switch point</span>
+    <span style="display:flex;align-items:center;gap:5px;"><span style="width:8px;height:8px;border-radius:50%;background:#8B5CF6;display:inline-block;border:2px solid white;box-shadow:0 0 0 1px #8B5CF6;"></span>Package upgrade</span>
+    <span style="display:flex;align-items:center;gap:5px;"><span style="width:8px;height:8px;border-radius:50%;background:#06B6D4;display:inline-block;border:2px solid white;box-shadow:0 0 0 1px #06B6D4;"></span>Milestone</span>
+  `;
   document.getElementById('chartLegend').style.display = 'flex';
 }
 
