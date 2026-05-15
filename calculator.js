@@ -57,12 +57,29 @@ function formatDateShort(value) {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
+function toLocalISODate(date) {
+  if (!(date instanceof Date) || isNaN(date.getTime())) return getTodayLocalISO();
+  const tzOffset = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() - tzOffset).toISOString().slice(0, 10);
+}
+
+function addMonthsClamped(dateValue, months) {
+  const base = new Date((dateValue || getTodayLocalISO()) + 'T00:00:00');
+  if (isNaN(base.getTime())) return getTodayLocalISO();
+  const target = new Date(base);
+  const day = base.getDate();
+  target.setDate(1);
+  target.setMonth(base.getMonth() + months);
+  const lastDay = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
+  target.setDate(Math.min(day, lastDay));
+  return toLocalISODate(target);
+}
+
 function getDateForDay(day) {
   const date = getStartDateObj();
   const offset = Math.max(0, (parseInt(day, 10) || 1) - 1);
   date.setDate(date.getDate() + offset);
-  const tzOffset = date.getTimezoneOffset() * 60000;
-  return new Date(date.getTime() - tzOffset).toISOString().slice(0, 10);
+  return toLocalISODate(date);
 }
 
 function getDayFromDate(value) {
@@ -268,11 +285,7 @@ function calculateDayAfterMonthsFromBase(i, months) {
   const baseDateStr = getBaseDateForSwitch(i);
   if (!baseDateStr) return switches[i]?.day || 1;
 
-  const baseDate = new Date(baseDateStr + 'T00:00:00');
-  const targetDate = new Date(baseDate);
-  targetDate.setMonth(targetDate.getMonth() + months);
-
-  return Math.max(getBaseDayForSwitch(i) + 1, getDayFromDate(targetDate.toISOString().slice(0, 10)));
+  return Math.max(getBaseDayForSwitch(i) + 1, getDayFromDate(addMonthsClamped(baseDateStr, months)));
 }
 
 function recalcRelativeSwitchesFrom(startIndex) {
@@ -294,9 +307,7 @@ function getSelectedMonthValue(sw, i) {
   if (!switchDate || !baseDateStr) return '';
 
   for (const m of monthOptions) {
-    const d = new Date(baseDateStr + 'T00:00:00');
-    d.setMonth(d.getMonth() + m);
-    const expected = d.toISOString().slice(0, 10);
+    const expected = addMonthsClamped(baseDateStr, m);
     if (expected === switchDate) return String(m);
   }
   return '';
@@ -389,7 +400,7 @@ function saveSchedule() {
     name,
     startOn,
     switches: switches.map(s => ({ ...s })),
-    deposits: deposits.map(d => ({ day: Number(d.day) || 1, amount: normalizeDepositAmount(d.amount) }))
+    deposits: deposits.map(d => ({ day: Number(d.day) || 1, amount: normalizeDepositAmount(d.amount), frequency: normalizeDepositFrequency(d.frequency), months: normalizeDepositMonths(d.months) }))
   });
   saveSchedulesToStorage(schedules);
   document.getElementById('scheduleName').value = '';
@@ -402,7 +413,7 @@ function loadSchedule(id) {
   if (!sched) return;
 
   switches = Array.isArray(sched.switches) ? sched.switches.map(s => ({ ...s })) : [];
-  deposits = Array.isArray(sched.deposits) ? sched.deposits.map(d => ({ day: Number(d.day) || 1, amount: normalizeDepositAmount(d.amount) })) : [];
+  deposits = Array.isArray(sched.deposits) ? sched.deposits.map(d => ({ day: Number(d.day) || 1, amount: normalizeDepositAmount(d.amount), frequency: normalizeDepositFrequency(d.frequency), months: normalizeDepositMonths(d.months) })) : [];
   document.getElementById('compoundToggle').checked = sched.startOn;
   onCompoundToggle();  // updates sublabel + re-renders list
   renderDepositList();
@@ -427,7 +438,7 @@ function renderSavedSchedules() {
     const row = document.createElement('div');
     row.className = 'saved-schedule-row';
     const switchCount = sched.switches?.length || 0;
-    const depositCount = sched.deposits?.length || 0;
+    const depositCount = sched.deposits?.reduce((sum, d) => sum + (normalizeDepositFrequency(d.frequency) === 'monthly' ? normalizeDepositMonths(d.months) : 1), 0) || 0;
     const firstDay = sched.switches?.[0]?.day || sched.deposits?.[0]?.day || 1;
     const meta = `${switchCount} switch${switchCount !== 1 ? 'es' : ''} · ${depositCount} deposit${depositCount !== 1 ? 's' : ''} · starts ${sched.startOn ? '↑ compound' : '→ simple'} · first ${formatDateShort(getDateForDay(firstDay))}`;
     row.innerHTML = `
@@ -441,16 +452,42 @@ function renderSavedSchedules() {
 }
 
 /* ── Deposit schedule management ── */
-let deposits = []; // [{day, amount}]
+let deposits = []; // [{day, amount, frequency?: 'once'|'monthly', months?: number}]
 
 function normalizeDepositAmount(value) {
   const amount = Number(value);
   return Number.isFinite(amount) && amount > 0 ? amount : 0;
 }
 
+function normalizeDepositFrequency(value) {
+  return value === 'monthly' ? 'monthly' : 'once';
+}
+
+function normalizeDepositMonths(value) {
+  const months = parseInt(value, 10);
+  return !isNaN(months) && months > 0 ? Math.min(120, months) : 1;
+}
+
+function getDepositOccurrenceDays(dep) {
+  const day = parseInt(dep?.day, 10);
+  const amount = normalizeDepositAmount(dep?.amount);
+  if (isNaN(day) || day < 1 || amount <= 0) return [];
+  if (normalizeDepositFrequency(dep?.frequency) !== 'monthly') return [day];
+
+  const startDate = new Date(getDateForDay(day) + 'T00:00:00');
+  if (isNaN(startDate.getTime())) return [day];
+
+  const months = normalizeDepositMonths(dep?.months);
+  const days = [];
+  for (let i = 0; i < months; i++) {
+    days.push(getDayFromDate(addMonthsClamped(getDateForDay(day), i)));
+  }
+  return days;
+}
+
 function addDeposit() {
   const lastDay = deposits.length ? deposits[deposits.length - 1].day : 1;
-  deposits.push({ day: lastDay + 30, amount: 1000 });
+  deposits.push({ day: lastDay + 30, amount: 1000, frequency: 'once', months: 1 });
   renderDepositList();
 }
 
@@ -474,6 +511,24 @@ function setDepositAmount(i, val) {
   deposits[i].amount = normalizeDepositAmount(val);
 }
 
+function setDepositFrequency(i, val) {
+  if (!deposits[i]) return;
+  deposits[i].frequency = normalizeDepositFrequency(val);
+  if (deposits[i].frequency === 'once') deposits[i].months = 1;
+  else deposits[i].months = normalizeDepositMonths(deposits[i].months || 6);
+}
+
+function setDepositMonths(i, val) {
+  if (!deposits[i]) return;
+  deposits[i].months = normalizeDepositMonths(val);
+}
+
+function getDepositTotalForRow(dep) {
+  const amount = normalizeDepositAmount(dep?.amount);
+  const months = normalizeDepositFrequency(dep?.frequency) === 'monthly' ? normalizeDepositMonths(dep?.months) : 1;
+  return amount * months;
+}
+
 function renderDepositList() {
   const list = document.getElementById('depositList');
   const hint = document.getElementById('depositHint');
@@ -489,6 +544,8 @@ function renderDepositList() {
     const row = document.createElement('div');
     row.className = 'switch-row deposit-row';
     const depositDate = getDateForDay(dep.day);
+    const frequency = normalizeDepositFrequency(dep.frequency);
+    const months = normalizeDepositMonths(dep.months);
     row.innerHTML = `
       <div class="switch-row-top">
         <span class="switch-row-label">On day</span>
@@ -502,7 +559,19 @@ function renderDepositList() {
         <input class="deposit-amount-input" type="number" min="0" step="0.01" value="${normalizeDepositAmount(dep.amount)}"
           onchange="setDepositAmount(${i}, this.value); renderDepositList()"
           oninput="setDepositAmount(${i}, this.value)">
-        <span class="switch-date-pill">+${fmt(normalizeDepositAmount(dep.amount))}</span>
+        <span class="switch-row-label">Repeat</span>
+        <select class="switch-months" onchange="setDepositFrequency(${i}, this.value); renderDepositList()">
+          <option value="once" ${frequency === 'once' ? 'selected' : ''}>One time</option>
+          <option value="monthly" ${frequency === 'monthly' ? 'selected' : ''}>Monthly</option>
+        </select>
+        ${frequency === 'monthly' ? `
+          <span class="switch-row-label">for</span>
+          <input type="number" min="1" max="120" value="${months}"
+            onchange="setDepositMonths(${i}, this.value); renderDepositList()"
+            oninput="setDepositMonths(${i}, this.value)">
+          <span class="switch-row-label">months</span>
+        ` : ''}
+        <span class="switch-date-pill">+${fmt(getDepositTotalForRow(dep))}</span>
       </div>
       <div class="switch-row-bottom">
         <button class="switch-remove" onclick="removeDeposit(${i})" title="Remove">✕</button>
@@ -729,9 +798,11 @@ function buildSwitchMap() {
 function buildDepositMap(source = deposits) {
   const map = {};
   (source || []).forEach(dep => {
-    const day = parseInt(dep?.day, 10);
     const amount = normalizeDepositAmount(dep?.amount);
-    if (!isNaN(day) && day >= 1 && amount > 0) map[day] = (map[day] || 0) + amount;
+    if (amount <= 0) return;
+    getDepositOccurrenceDays(dep).forEach(day => {
+      if (!isNaN(day) && day >= 1) map[day] = (map[day] || 0) + amount;
+    });
   });
   return map;
 }
@@ -760,8 +831,8 @@ function calculate() {
     const switched = switchMap[d] !== undefined;
     if (switched) {
       const newMode = switchMap[d] === 'on';
-      if (!isCompound && newMode) { balance = simplePrincipal; profitPool = 0; }
-      else if (isCompound && !newMode) { simplePrincipal = balance; profitPool = 0; }
+      if (!isCompound && newMode) balance = simplePrincipal;
+      else if (isCompound && !newMode) simplePrincipal = balance;
       isCompound = newMode;
       switchCount++;
     }
@@ -797,7 +868,7 @@ function calculate() {
       isCompound, switched,
       deposit: depositToday,
       deposited: depositToday > 0,
-      projectedValue: isCompound ? endBal : initial + cumulativeDeposits + cumulativeProfit
+      projectedValue: endBal + profitPool
     });
   }
 
@@ -1024,7 +1095,9 @@ function aggregate(rows, view) {
     const topKey = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
     const pkg    = PKGS.find(p => p.key === topKey);
 
-    const intervalRate = start ? profit / start : 0;
+    const depositAfterPeriodStart = chunk.slice(1).reduce((s, r) => s + (r.deposit || 0), 0);
+    const intervalBase = start + depositAfterPeriodStart;
+    const intervalRate = intervalBase ? profit / intervalBase : 0;
 
     buckets.push({
       label: getDetailBucketLabel(view, startDay, endDay, num),
@@ -1774,7 +1847,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 /* ── Planning tools: scenarios, comparisons, reverse calculator, price alerts ── */
-const AURUM_APP_VERSION = '2026.05.14.26';
+const AURUM_APP_VERSION = '2026.05.14.31';
 const AURUM_VERSION_URL = 'app-version.json';
 const AURUM_VERSION_CHECK_MS = 60000;
 const AURUM_UPDATE_REQUESTED_KEY = 'aurum_update_requested_version';
@@ -1826,23 +1899,66 @@ function escapeUpdateHtml(value) {
   ));
 }
 
-function showAppUpdatePrompt(info) {
+function normalizeUpdateItem(item) {
+  if (item && typeof item === 'object') {
+    return {
+      text: String(item.text || item.message || ''),
+      type: String(item.type || '').toLowerCase()
+    };
+  }
+  const text = String(item || '');
+  const newMatch = text.match(/^\s*(?:\[NEW\]|NEW:)\s*(.+)$/i);
+  if (newMatch) return { text: newMatch[1], type: 'new' };
+  return { text, type: '' };
+}
+
+function renderUpdateItem(item) {
+  const update = normalizeUpdateItem(item);
+  const badge = update.type === 'new'
+    ? '<span class="app-update-badge new">NEW</span>'
+    : '';
+  return `<li>${badge}<span>${escapeUpdateHtml(update.text)}</span></li>`;
+}
+
+function showAppUpdatePrompt(info, options = {}) {
   const latestVersion = String(info?.version || '').trim();
-  if (!latestVersion || appUpdatePromptedVersion === latestVersion) return;
+  if (!latestVersion || (!options.force && appUpdatePromptedVersion === latestVersion)) return;
   appUpdatePromptedVersion = latestVersion;
 
+  const title = document.getElementById('appUpdateTitle');
   const subtitle = document.getElementById('appUpdateSubtitle');
   const intro = document.getElementById('appUpdateIntro');
   const notes = document.getElementById('appUpdateNotes');
-  if (subtitle) subtitle.textContent = `You are using ${AURUM_APP_VERSION}. Version ${latestVersion} is available.`;
-  if (intro) intro.textContent = info?.message || 'Refresh to load the newest features and fixes.';
+  if (title) title.innerHTML = `<span class="material-symbols-rounded">${options.force ? 'history' : 'new_releases'}</span>${options.force ? 'Changelog' : 'New version available'}`;
+  if (subtitle) subtitle.textContent = options.force
+    ? `Aurum app version ${latestVersion}`
+    : `You are using ${AURUM_APP_VERSION}. Version ${latestVersion} is available.`;
+  if (intro) intro.textContent = options.force
+    ? 'Recent features, fixes, and behavior updates.'
+    : (info?.message || 'Refresh to load the newest features and fixes.');
   if (notes) {
     const releaseNotes = Array.isArray(info?.updates) ? info.updates : [];
     notes.innerHTML = releaseNotes.length
-      ? releaseNotes.map(item => `<li>${escapeUpdateHtml(item)}</li>`).join('')
+      ? releaseNotes.map(renderUpdateItem).join('')
       : '<li>General improvements and fixes.</li>';
   }
   document.getElementById('appUpdateModal')?.classList.add('open');
+}
+
+async function openChangelog() {
+  try {
+    const response = await fetch(`${AURUM_VERSION_URL}?t=${Date.now()}`, { cache: 'no-store' });
+    if (!response.ok) throw new Error('Version log could not be loaded.');
+    const info = await response.json();
+    showAppUpdatePrompt(info, { force: true });
+  } catch (error) {
+    console.warn('Aurum changelog could not be loaded.', error);
+    showAppUpdatePrompt({
+      version: AURUM_APP_VERSION,
+      message: 'Recent features, fixes, and behavior updates.',
+      updates: ['Changelog is temporarily unavailable. Please try again in a moment.']
+    }, { force: true });
+  }
 }
 
 async function checkAppVersion() {
@@ -1884,7 +2000,7 @@ function getCurrentScenarioConfig() {
     variance: Number(document.getElementById('variance')?.value || 0),
     startOn: !!document.getElementById('compoundToggle')?.checked,
     switches: (switches || []).map(s => ({ day: Number(s.day) || 1, mode: s.mode === 'off' ? 'off' : 'on', monthsAfterPrev: Number(s.monthsAfterPrev) || undefined })),
-    deposits: (deposits || []).map(d => ({ day: Number(d.day) || 1, amount: normalizeDepositAmount(d.amount) }))
+    deposits: (deposits || []).map(d => ({ day: Number(d.day) || 1, amount: normalizeDepositAmount(d.amount), frequency: normalizeDepositFrequency(d.frequency), months: normalizeDepositMonths(d.months) }))
   };
 }
 
@@ -1896,7 +2012,7 @@ function applyScenarioConfig(cfg) {
   document.getElementById('variance').value = cfg.variance || 0;
   document.getElementById('compoundToggle').checked = cfg.startOn !== false;
   switches = Array.isArray(cfg.switches) ? cfg.switches.map(s => ({ day: Number(s.day) || 1, mode: s.mode === 'off' ? 'off' : 'on', monthsAfterPrev: Number(s.monthsAfterPrev) || undefined })) : [];
-  deposits = Array.isArray(cfg.deposits) ? cfg.deposits.map(d => ({ day: Number(d.day) || 1, amount: normalizeDepositAmount(d.amount) })) : [];
+  deposits = Array.isArray(cfg.deposits) ? cfg.deposits.map(d => ({ day: Number(d.day) || 1, amount: normalizeDepositAmount(d.amount), frequency: normalizeDepositFrequency(d.frequency), months: normalizeDepositMonths(d.months) })) : [];
   onCompoundToggle();
   renderDepositList();
   onAmountInput();
@@ -1917,7 +2033,7 @@ function renderScenarioSelect() {
   items.forEach(item => {
     const opt = document.createElement('option');
     opt.value = item.id;
-    const depositCount = item.config.deposits?.length || 0;
+    const depositCount = item.config.deposits?.reduce((sum, d) => sum + (normalizeDepositFrequency(d.frequency) === 'monthly' ? normalizeDepositMonths(d.months) : 1), 0) || 0;
     opt.textContent = `${item.name} · ${fmt(Number(item.config.amount || 0))} · ${item.config.years || 1}y${depositCount ? ' · ' + depositCount + ' deposits' : ''}`;
     sel.appendChild(opt);
   });
@@ -1963,8 +2079,8 @@ function simulateScenarioConfig(cfg, modeOverride, offsets) {
   for (let d = 1; d <= numDays; d++) {
     if (switchMap[d] !== undefined) {
       const newMode = switchMap[d] === 'on';
-      if (!isCompound && newMode) { balance = simplePrincipal; profitPool = 0; }
-      else if (isCompound && !newMode) { simplePrincipal = balance; profitPool = 0; }
+      if (!isCompound && newMode) balance = simplePrincipal;
+      else if (isCompound && !newMode) simplePrincipal = balance;
       isCompound = newMode;
     }
     const depositToday = normalizeDepositAmount(depositMap[d]);
@@ -1981,7 +2097,7 @@ function simulateScenarioConfig(cfg, modeOverride, offsets) {
     if (isCompound) { balance += profit; endBal = balance; }
     else { profitPool += profit; endBal = simplePrincipal; }
     cumulativeProfit += profit;
-    rows.push({ day: d, end: endBal, projectedValue: isCompound ? endBal : initial + cumulativeDeposits + cumulativeProfit, profit, deposit: depositToday, pkgLabel: pkg.label, isCompound });
+    rows.push({ day: d, end: endBal, projectedValue: endBal + profitPool, profit, deposit: depositToday, pkgLabel: pkg.label, isCompound });
   }
   const finalValue = rows.length ? rows[rows.length - 1].projectedValue : initial;
   const totalProfit = rows.reduce((s,r) => s + r.profit, 0);
