@@ -515,6 +515,7 @@ input[type="text"]:focus {
 }
 .switch-pill.on  { background: #DCFCE7; color: #15803D; border: 1px solid #BBF7D0; }
 .switch-pill.off { background: #FEF9C3; color: #A16207; border: 1px solid #FDE68A; }
+.switch-pill.deposit { background: #E0F2FE; color: #0369A1; border: 1px solid #BAE6FD; }
 
 .metric { text-align: center; }
 
@@ -1163,6 +1164,10 @@ tr.subtotal-row-compound td:first-child { color: #15803D; text-align: left; }
   width: 86px;
   flex-shrink: 0;
   border-radius: 12px;
+}
+
+.switch-row input.deposit-amount-input {
+  width: 120px;
 }
 
 .switch-row input[type="date"] {
@@ -2158,6 +2163,16 @@ body.dark-mode #appUpdateModal .app-update-actions { background:rgba(17,24,39,.9
             <div id="savedSchedulesList" style="display:flex; flex-direction:column; gap:5px;"></div>
           </div>
         </div>
+
+        <!-- Deposit schedule -->
+        <div class="field">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+            <label style="margin:0;" class="helper-inline">Additional deposits <span class="helper-tip" title="Add extra deposits on specific projection days or calendar dates. Deposits are applied before that day's profit is calculated.">?</span></label>
+            <button class="add-switch-btn" onclick="addDeposit()">+ Add deposit</button>
+          </div>
+          <div id="depositList" style="display:flex; flex-direction:column; gap:6px;"></div>
+          <p class="hint" id="depositHint">Add one or more deposit dates to model extra money added during the projection.</p>
+        </div>
       </div>
 
       <div class="card">
@@ -2402,6 +2417,7 @@ body.dark-mode #appUpdateModal .app-update-actions { background:rgba(17,24,39,.9
                 <th id="th-period" style="text-align:left">Period</th>
                 <th style="text-align:left">Package</th>
                 <th>Starting balance</th>
+                <th>Deposit</th>
                 <th id="th-rate">Daily percentage</th>
                 <th>Profit</th>
                 <th>Ending balance</th>
@@ -2434,7 +2450,7 @@ body.dark-mode #appUpdateModal .app-update-actions { background:rgba(17,24,39,.9
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
-<script src="calculator.js?v=2026.05.14.25"></script>
+<script src="calculator.js?v=2026.05.14.26"></script>
 <script type="module" src="AurumHiveModule.js?v=2026.05.14.25"></script>
 
 

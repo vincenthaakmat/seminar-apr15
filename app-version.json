@@ -1,8 +1,9 @@
 {
-  "version": "2026.05.14.25",
+  "version": "2026.05.14.26",
   "name": "Aurum app",
   "message": "Aurum has a fresh update ready. Refresh to load the newest calculator and Hive improvements.",
   "updates": [
+    "ROI Calculator now supports multiple additional deposits on specific days or dates, including saved scenarios, charts, and exports.",
     "Hive search now matches both account names and Referral IDs.",
     "Update dialog actions now stay visible while long change logs scroll, and Hive sync log names display beside Referral IDs.",
     "Deleting unfunded sub accounts now targets only the selected account and confirms with Referral ID and name.",

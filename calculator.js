@@ -75,6 +75,7 @@ function getDayFromDate(value) {
 
 function onStartDateChange() {
   renderSwitchList();
+  renderDepositList();
   if (allRows.length) {
     updateChartLabels();
     setView(curView);
@@ -100,7 +101,7 @@ function updateChartLabels() {
   updateChartModeButtons();
   if (!allRows.length) return;
   if (!chartInst || typeof Chart === 'undefined') {
-    buildChart(Object.keys(buildSwitchMap()).length > 0);
+    buildChart(Object.keys(buildSwitchMap()).length > 0 || Object.keys(buildDepositMap()).length > 0);
     return;
   }
 
@@ -112,7 +113,7 @@ function updateChartLabels() {
 
   if (chartInst.data?.datasets?.[1]) {
     const packageUpgradePts = pts.filter((r, i) => i > 0 && r.pkgKey !== pts[i - 1].pkgKey);
-    chartInst.data.datasets[1].data = packageUpgradePts.map(p => ({ x: getChartPointLabel(p), y: +p.end.toFixed(2), pkg: p.pkgLabel, day: p.day }));
+    chartInst.data.datasets[1].data = packageUpgradePts.map(p => ({ x: getChartPointLabel(p), y: +p.projectedValue.toFixed(2), pkg: p.pkgLabel, day: p.day }));
   }
   if (chartInst.data?.datasets?.[2]) {
     const milestonePts = [];
@@ -120,7 +121,7 @@ function updateChartLabels() {
       const hit = pts.find(p => p.projectedValue >= target);
       if (hit) milestonePts.push(hit);
     });
-    chartInst.data.datasets[2].data = milestonePts.map(p => ({ x: getChartPointLabel(p), y: +p.end.toFixed(2), day: p.day }));
+    chartInst.data.datasets[2].data = milestonePts.map(p => ({ x: getChartPointLabel(p), y: +p.projectedValue.toFixed(2), day: p.day }));
   }
 
   chartInst.update();
@@ -312,7 +313,7 @@ function renderSwitchList() {
   hint.style.display = switches.length ? 'none' : '';
 
   // Show/hide save wrap
-  document.getElementById('switchSaveWrap').style.display = switches.length ? '' : 'none';
+  document.getElementById('switchSaveWrap').style.display = (switches.length || deposits.length) ? '' : 'none';
 
   switches.forEach((sw, i) => {
     const row = document.createElement('div');
@@ -379,7 +380,7 @@ function saveSchedulesToStorage(schedules) {
 function saveSchedule() {
   const name = document.getElementById('scheduleName').value.trim();
   if (!name) { document.getElementById('scheduleName').focus(); return; }
-  if (!switches.length) return;
+  if (!switches.length && !deposits.length) return;
 
   const startOn   = document.getElementById('compoundToggle').checked;
   const schedules = loadSchedulesFromStorage();
@@ -387,7 +388,8 @@ function saveSchedule() {
     id: Date.now(),
     name,
     startOn,
-    switches: switches.map(s => ({ ...s }))
+    switches: switches.map(s => ({ ...s })),
+    deposits: deposits.map(d => ({ day: Number(d.day) || 1, amount: normalizeDepositAmount(d.amount) }))
   });
   saveSchedulesToStorage(schedules);
   document.getElementById('scheduleName').value = '';
@@ -399,9 +401,11 @@ function loadSchedule(id) {
   const sched = schedules.find(s => s.id === id);
   if (!sched) return;
 
-  switches = sched.switches.map(s => ({ ...s }));
+  switches = Array.isArray(sched.switches) ? sched.switches.map(s => ({ ...s })) : [];
+  deposits = Array.isArray(sched.deposits) ? sched.deposits.map(d => ({ day: Number(d.day) || 1, amount: normalizeDepositAmount(d.amount) })) : [];
   document.getElementById('compoundToggle').checked = sched.startOn;
   onCompoundToggle();  // updates sublabel + re-renders list
+  renderDepositList();
 }
 
 function deleteSchedule(id) {
@@ -422,8 +426,10 @@ function renderSavedSchedules() {
   schedules.forEach(sched => {
     const row = document.createElement('div');
     row.className = 'saved-schedule-row';
-    const firstSwitchDay = sched.switches?.[0]?.day || 1;
-    const meta = `${sched.switches.length} switch${sched.switches.length !== 1 ? 'es' : ''} · starts ${sched.startOn ? '↑ compound' : '→ simple'} · first ${formatDateShort(getDateForDay(firstSwitchDay))}`;
+    const switchCount = sched.switches?.length || 0;
+    const depositCount = sched.deposits?.length || 0;
+    const firstDay = sched.switches?.[0]?.day || sched.deposits?.[0]?.day || 1;
+    const meta = `${switchCount} switch${switchCount !== 1 ? 'es' : ''} · ${depositCount} deposit${depositCount !== 1 ? 's' : ''} · starts ${sched.startOn ? '↑ compound' : '→ simple'} · first ${formatDateShort(getDateForDay(firstDay))}`;
     row.innerHTML = `
       <span class="saved-schedule-name" title="${sched.name}">${sched.name}</span>
       <span class="saved-schedule-meta">${meta}</span>
@@ -432,6 +438,80 @@ function renderSavedSchedules() {
     `;
     list.appendChild(row);
   });
+}
+
+/* ── Deposit schedule management ── */
+let deposits = []; // [{day, amount}]
+
+function normalizeDepositAmount(value) {
+  const amount = Number(value);
+  return Number.isFinite(amount) && amount > 0 ? amount : 0;
+}
+
+function addDeposit() {
+  const lastDay = deposits.length ? deposits[deposits.length - 1].day : 1;
+  deposits.push({ day: lastDay + 30, amount: 1000 });
+  renderDepositList();
+}
+
+function removeDeposit(i) {
+  deposits.splice(i, 1);
+  renderDepositList();
+}
+
+function setDepositDay(i, val) {
+  const d = parseInt(val, 10);
+  if (!isNaN(d) && d >= 1 && deposits[i]) deposits[i].day = d;
+}
+
+function setDepositDate(i, value) {
+  if (!value || !deposits[i]) return;
+  deposits[i].day = getDayFromDate(value);
+}
+
+function setDepositAmount(i, val) {
+  if (!deposits[i]) return;
+  deposits[i].amount = normalizeDepositAmount(val);
+}
+
+function renderDepositList() {
+  const list = document.getElementById('depositList');
+  const hint = document.getElementById('depositHint');
+  if (!list) return;
+
+  deposits.sort((a, b) => a.day - b.day);
+  list.innerHTML = '';
+  if (hint) hint.style.display = deposits.length ? 'none' : '';
+  const saveWrap = document.getElementById('switchSaveWrap');
+  if (saveWrap) saveWrap.style.display = (switches.length || deposits.length) ? '' : 'none';
+
+  deposits.forEach((dep, i) => {
+    const row = document.createElement('div');
+    row.className = 'switch-row deposit-row';
+    const depositDate = getDateForDay(dep.day);
+    row.innerHTML = `
+      <div class="switch-row-top">
+        <span class="switch-row-label">On day</span>
+        <input type="number" min="1" value="${dep.day}"
+          onchange="setDepositDay(${i}, this.value); renderDepositList()"
+          oninput="setDepositDay(${i}, this.value)">
+        <span class="switch-row-label">Date</span>
+        <input type="date" value="${depositDate}" min="${getStartDateValue()}"
+          onchange="setDepositDate(${i}, this.value); renderDepositList()">
+        <span class="switch-row-label">Deposit</span>
+        <input class="deposit-amount-input" type="number" min="0" step="0.01" value="${normalizeDepositAmount(dep.amount)}"
+          onchange="setDepositAmount(${i}, this.value); renderDepositList()"
+          oninput="setDepositAmount(${i}, this.value)">
+        <span class="switch-date-pill">+${fmt(normalizeDepositAmount(dep.amount))}</span>
+      </div>
+      <div class="switch-row-bottom">
+        <button class="switch-remove" onclick="removeDeposit(${i})" title="Remove">✕</button>
+      </div>
+    `;
+    list.appendChild(row);
+  });
+
+  try { applyTheme(localStorage.getItem('aurum_theme') || 'light'); } catch (e) { applyTheme('light'); }
 }
 
 let allRows   = [];
@@ -457,6 +537,7 @@ function resetCalculator() {
   document.getElementById('variance').value = 30;
   document.getElementById('compoundToggle').checked = true;
   switches = [];
+  deposits = [];
   document.getElementById('scheduleName').value = '';
   document.getElementById('results').className = 'results';
   lastCalcSummary = null;
@@ -464,6 +545,7 @@ function resetCalculator() {
   lastMilestones = [];
   if (chartInst) { chartInst.destroy(); chartInst = null; }
   onCompoundToggle();
+  renderDepositList();
   onAmountInput();
 }
 
@@ -505,27 +587,35 @@ function animateTextNumber(el, valueText, duration = 1800) {
   animateValue(el, end, v => `${prefix}${v.toFixed(decimals)}${suffix}`, duration);
 }
 
-function simulateMode(initial, numDays, forceCompound, offsets) {
+function simulateMode(initial, numDays, forceCompound, offsets, depositMap = {}) {
   let balance = initial;
   let totalProfit = 0;
+  let simplePrincipal = initial;
+  let cumulativeDeposits = 0;
   let cumulativeValue = initial;
   let crossoverDay = null;
   for (let d = 1; d <= numDays; d++) {
-    const pkg = getPkg(forceCompound ? balance : initial);
+    const depositToday = normalizeDepositAmount(depositMap[d]);
+    if (depositToday > 0) {
+      cumulativeDeposits += depositToday;
+      if (forceCompound) balance += depositToday;
+      else simplePrincipal += depositToday;
+    }
+    const principal = forceCompound ? balance : simplePrincipal;
+    const pkg = getPkg(principal);
     const offset = offsets[d - 1];
-    const principal = forceCompound ? balance : initial;
     const profit = principal * pkg.daily * offset;
     totalProfit += profit;
     if (forceCompound) {
       balance += profit;
       cumulativeValue = balance;
     } else {
-      cumulativeValue = initial + totalProfit;
+      cumulativeValue = initial + cumulativeDeposits + totalProfit;
     }
-    if (crossoverDay === null && cumulativeValue >= initial * 2) crossoverDay = d;
+    if (crossoverDay === null && cumulativeValue >= (initial + cumulativeDeposits) * 2) crossoverDay = d;
   }
   return {
-    finalValue: forceCompound ? balance : initial + totalProfit,
+    finalValue: forceCompound ? balance : initial + cumulativeDeposits + totalProfit,
     totalProfit,
     crossoverDay
   };
@@ -590,14 +680,15 @@ function setInsights(initial, numDays, totalProfit, finalBalance, startOn, switc
   const avgDailyProfit = totalProfit / numDays;
 
   let doubledRow = allRows.find(row => {
-    const totalValue = row.isCompound ? row.end : initial + allRows.slice(0, row.day).reduce((s, r) => s + r.profit, 0);
-    return totalValue >= initial * 2;
+    const investedToDate = initial + allRows.slice(0, row.day).reduce((s, r) => s + (r.deposit || 0), 0);
+    return row.projectedValue >= investedToDate * 2;
   });
   if (!doubledRow) {
-    let sum = 0;
+    let sum = 0, deposited = 0;
     for (const row of allRows) {
       sum += row.profit;
-      if (!row.isCompound && initial + sum >= initial * 2) { doubledRow = row; break; }
+      deposited += row.deposit || 0;
+      if (!row.isCompound && initial + deposited + sum >= (initial + deposited) * 2) { doubledRow = row; break; }
     }
   }
 
@@ -609,11 +700,12 @@ function setInsights(initial, numDays, totalProfit, finalBalance, startOn, switc
   document.getElementById('insight-high-profit-note').textContent = `Day ${highestProfitRow.day} · ${highestProfitRow.pkgLabel} · ${(highestProfitRow.rate * 100).toFixed(4)}% daily`; 
 
   if (doubledRow) {
+    const investedAtDouble = initial + allRows.slice(0, doubledRow.day).reduce((s, r) => s + (r.deposit || 0), 0);
     animateTextNumber(document.getElementById('insight-double'), `Day ${doubledRow.day}`, 2100);
-    document.getElementById('insight-double-note').textContent = `Your projected value crosses ${fmt(initial * 2)} on day ${doubledRow.day}`;
+    document.getElementById('insight-double-note').textContent = `Your projected value crosses ${fmt(investedAtDouble * 2)} on day ${doubledRow.day}`;
   } else {
     document.getElementById('insight-double').textContent = 'Not reached';
-    document.getElementById('insight-double-note').textContent = `Projection ends at ${fmt(initial + totalProfit)} total projected value`;
+    document.getElementById('insight-double-note').textContent = `Projection ends at ${fmt(finalBalance)} total projected value`;
   }
 
   animateValue(document.getElementById('insight-avg-profit'), avgDailyProfit, fmt, 2200);
@@ -634,6 +726,16 @@ function buildSwitchMap() {
   return map;
 }
 
+function buildDepositMap(source = deposits) {
+  const map = {};
+  (source || []).forEach(dep => {
+    const day = parseInt(dep?.day, 10);
+    const amount = normalizeDepositAmount(dep?.amount);
+    if (!isNaN(day) && day >= 1 && amount > 0) map[day] = (map[day] || 0) + amount;
+  });
+  return map;
+}
+
 function calculate() {
   const initial  = parseFloat(document.getElementById('amount').value);
   const years    = Math.min(10, Math.max(0.0833, parseFloat(document.getElementById('years').value) || 1));
@@ -645,10 +747,13 @@ function calculate() {
   const switchMap = buildSwitchMap();
   Object.keys(switchMap).forEach(day => { if (+day > numDays) delete switchMap[day]; });
   const hasSwitches = Object.keys(switchMap).length > 0;
+  const depositMap = buildDepositMap();
+  Object.keys(depositMap).forEach(day => { if (+day > numDays) delete depositMap[day]; });
+  const hasDeposits = Object.keys(depositMap).length > 0;
 
   allRows = [];
   let balance = initial, profitPool = 0, simplePrincipal = initial, isCompound = startOn;
-  let switchCount = 0, compoundDays = 0, simpleDays = 0, cumulativeProfit = 0;
+  let switchCount = 0, compoundDays = 0, simpleDays = 0, cumulativeProfit = 0, cumulativeDeposits = 0;
   const offsets = [];
 
   for (let d = 1; d <= numDays; d++) {
@@ -659,6 +764,12 @@ function calculate() {
       else if (isCompound && !newMode) { simplePrincipal = balance; profitPool = 0; }
       isCompound = newMode;
       switchCount++;
+    }
+    const depositToday = normalizeDepositAmount(depositMap[d]);
+    if (depositToday > 0) {
+      cumulativeDeposits += depositToday;
+      if (isCompound) balance += depositToday;
+      else simplePrincipal += depositToday;
     }
     const pkg = getPkg(isCompound ? balance : simplePrincipal);
     const offset = rnd(variance);
@@ -684,13 +795,17 @@ function calculate() {
       start: startBal, profit: actualProfit, end: endBal,
       rate: pkg.daily * offset,
       isCompound, switched,
-      projectedValue: isCompound ? endBal : initial + cumulativeProfit
+      deposit: depositToday,
+      deposited: depositToday > 0,
+      projectedValue: isCompound ? endBal : initial + cumulativeDeposits + cumulativeProfit
     });
   }
 
-  const finalBalance = allRows[allRows.length - 1].end;
+  const finalBalance = allRows[allRows.length - 1].projectedValue;
   const totalProfit  = allRows.reduce((sum, r) => sum + r.profit, 0);
-  const roi          = (totalProfit / initial) * 100;
+  const totalDeposits = Object.values(depositMap).reduce((sum, amount) => sum + amount, 0);
+  const totalInvested = initial + totalDeposits;
+  const roi          = (totalProfit / totalInvested) * 100;
   const yLabel       = years === 1 ? '1 year' : years + ' years';
 
   animateValue(document.getElementById('m-start'), initial, fmt, 1700);
@@ -698,7 +813,7 @@ function calculate() {
   animateValue(document.getElementById('m-final'), finalBalance, fmt, 2350);
   animateValue(document.getElementById('m-roi'), roi, v => v.toFixed(1) + '%', 2550);
   document.getElementById('m-sub').textContent = `${yLabel} · ${numDays} days`;
-  document.getElementById('chart-label').textContent = `Portfolio growth · ${yLabel} · start ${fmt(initial)}` + (hasSwitches ? ` · ${switchCount} switch${switchCount !== 1 ? 'es' : ''}` : '');
+  document.getElementById('chart-label').textContent = `Portfolio growth · ${yLabel} · start ${fmt(initial)}` + (hasDeposits ? ` · deposits ${fmt(totalDeposits)}` : '') + (hasSwitches ? ` · ${switchCount} switch${switchCount !== 1 ? 'es' : ''}` : '');
 
   const badge = document.getElementById('mode-badge');
   if (hasSwitches) {
@@ -724,8 +839,8 @@ function calculate() {
   }
 
   setCompare({
-    compound: simulateMode(initial, numDays, true, offsets),
-    simple: simulateMode(initial, numDays, false, offsets)
+    compound: simulateMode(initial, numDays, true, offsets, depositMap),
+    simple: simulateMode(initial, numDays, false, offsets, depositMap)
   });
 
   const milestones = [];
@@ -737,19 +852,19 @@ function calculate() {
       if (idx > 0) milestones.push({ day: row.day, label: `${row.pkgLabel} reached on day ${row.day}`, icon: 'workspace_premium' });
     }
   });
-  [10000, 25000, 50000, 100000, initial * 2].forEach(target => {
+  [10000, 25000, 50000, 100000, totalInvested * 2].forEach(target => {
     const hit = allRows.find(r => r.projectedValue >= target);
-    if (hit) milestones.push({ day: hit.day, label: target === initial * 2 ? `Capital doubled by day ${hit.day}` : `${fmt(target)} reached on day ${hit.day}`, icon: target === initial * 2 ? 'bolt' : 'flag' });
+    if (hit) milestones.push({ day: hit.day, label: target === totalInvested * 2 ? `Invested capital doubled by day ${hit.day}` : `${fmt(target)} reached on day ${hit.day}`, icon: target === totalInvested * 2 ? 'bolt' : 'flag' });
   });
   const highProfitRow = allRows.reduce((best, row) => row.profit > best.profit ? row : best, allRows[0]);
   milestones.push({ day: highProfitRow.day, label: `Highest daily profit ${fmt(highProfitRow.profit)} on day ${highProfitRow.day}`, icon: 'trending_up' });
   milestones.sort((a, b) => a.day - b.day);
   setMilestones(milestones);
 
-  lastCalcSummary = { initial, years, numDays, variance, startOn, switchCount, compoundDays, simpleDays, finalBalance, totalProfit, roi, yLabel, offsets };
+  lastCalcSummary = { initial, years, numDays, variance, startOn, switchCount, compoundDays, simpleDays, finalBalance, totalProfit, totalDeposits, totalInvested, roi, yLabel, offsets };
 
   document.getElementById('results').className = 'results visible';
-  try { buildChart(hasSwitches); } catch (e) { console.error('Chart build failed', e); }
+  try { buildChart(hasSwitches || hasDeposits); } catch (e) { console.error('Chart build failed', e); }
   setView(curView);
   setTimeout(() => document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
 }
@@ -782,8 +897,8 @@ function buildChart(randomMode) {
   const grad = ctx.createLinearGradient(0, 0, 0, 270);
   grad.addColorStop(0, 'rgba(37,99,235,0.22)');
   grad.addColorStop(1, 'rgba(37,99,235,0.02)');
-  const pointColors = pts.map(r => r.isCompound ? '#16A34A' : '#D97706');
-  const pointRadii  = pts.map(r => r.switched ? 5 : 0);
+  const pointColors = pts.map(r => r.deposited ? '#0EA5E9' : (r.isCompound ? '#16A34A' : '#D97706'));
+  const pointRadii  = pts.map(r => (r.switched || r.deposited) ? 5 : 0);
   const packageUpgradePts = pts.filter((r, i) => i > 0 && r.pkgKey !== pts[i - 1].pkgKey);
   const milestonePts = [];
   [10000, 25000, 50000, 100000].forEach(target => {
@@ -795,7 +910,7 @@ function buildChart(randomMode) {
     data: {
       labels: pts.map(r => getChartPointLabel(r)),
       datasets: [{
-        data: pts.map(r => +r.end.toFixed(2)),
+        data: pts.map(r => +r.projectedValue.toFixed(2)),
         borderColor: randomMode ? pts.map(r => r.isCompound ? '#2563EB' : '#D97706') : '#2563EB',
         backgroundColor: grad,
         borderWidth: 2.5,
@@ -808,11 +923,11 @@ function buildChart(randomMode) {
         segment: randomMode ? { borderColor: c => pts[c.p0DataIndex] && pts[c.p0DataIndex].isCompound ? '#2563EB' : '#D97706' } : undefined
       }, {
         type: 'scatter', label: 'Package upgrade',
-        data: packageUpgradePts.map(p => ({ x: getChartPointLabel(p), y: +p.end.toFixed(2), pkg: p.pkgLabel, day: p.day })),
+        data: packageUpgradePts.map(p => ({ x: getChartPointLabel(p), y: +p.projectedValue.toFixed(2), pkg: p.pkgLabel, day: p.day })),
         pointRadius: 5, pointHoverRadius: 6, pointBackgroundColor: '#8B5CF6', pointBorderColor: '#fff', pointBorderWidth: 2
       }, {
         type: 'scatter', label: 'Milestone',
-        data: milestonePts.map(p => ({ x: getChartPointLabel(p), y: +p.end.toFixed(2), day: p.day })),
+        data: milestonePts.map(p => ({ x: getChartPointLabel(p), y: +p.projectedValue.toFixed(2), day: p.day })),
         pointRadius: 4, pointHoverRadius: 5, pointBackgroundColor: '#06B6D4', pointBorderColor: '#fff', pointBorderWidth: 2
       }]
     },
@@ -831,6 +946,7 @@ function buildChart(randomMode) {
               const r = allRows[ri];
               const lines = ['Package: ' + r.pkgLabel, 'Projected value: ' + fmt(r.projectedValue)];
               if (randomMode) lines.push('Mode: ' + (r.isCompound ? '⬆ Compounding' : '➡ Simple'));
+              if (r.deposited) lines.push('Deposit: +' + fmt(r.deposit || 0));
               if (r.switched) lines.push('⚡ Switch ' + (chartLabelMode === 'date' ? formatDateShort(getDateForDay(r.day)) : 'day ' + r.day));
               return lines;
             }
@@ -877,9 +993,11 @@ function aggregate(rows, view) {
     return rows.map(r => ({
       label: getDetailBucketLabel('daily', r.day, r.day, r.day),
       pkgKey: r.pkgKey, pkgLabel: r.pkgLabel,
-      start: r.start, profit: r.profit, end: r.end,
+      start: r.start, profit: r.profit, end: r.projectedValue,
       rate: r.start ? r.profit / r.start : r.rate,
       isCompound: r.isCompound, switched: r.switched,
+      deposit: r.deposit || 0,
+      deposited: !!r.deposited,
       startDay: r.day,
       endDay: r.day
     }));
@@ -892,9 +1010,11 @@ function aggregate(rows, view) {
   for (let i = 0; i < rows.length; i += size) {
     const chunk  = rows.slice(i, i + size);
     const start  = chunk[0].start;
-    const end    = chunk[chunk.length - 1].end;
+    const end    = chunk[chunk.length - 1].projectedValue;
     const profit = chunk.reduce((s, r) => s + r.profit, 0);
+    const deposit = chunk.reduce((s, r) => s + (r.deposit || 0), 0);
     const hasSwitches = chunk.some(r => r.switched);
+    const hasDeposits = deposit > 0;
     const compoundDays = chunk.filter(r => r.isCompound).length;
     const startDay = chunk[0].day;
     const endDay = chunk[chunk.length - 1].day;
@@ -912,6 +1032,8 @@ function aggregate(rows, view) {
       start, profit, end,
       rate: intervalRate,
       switched: hasSwitches,
+      deposit,
+      deposited: hasDeposits,
       isCompound: compoundDays > chunk.length / 2,
       startDay,
       endDay
@@ -936,6 +1058,7 @@ function setView(view) {
   tbody.innerHTML   = '';
   let prevPkgKey    = null;
   const hasSwitches = switches.length > 0;
+  const hasDeposits = deposits.length > 0;
 
   let phaseProfit  = 0;
   let phaseStart   = null;   // ending balance at phase start (for compound: to show growth)
@@ -949,7 +1072,7 @@ function setView(view) {
       sub.className = 'subtotal-row-compound';
       sub.innerHTML =
         `<td colspan="2">↑ Compound phase total profit</td>` +
-        `<td>—</td><td>—</td>` +
+        `<td>—</td><td>—</td><td>—</td>` +
         `<td>+${fmt(phaseProfit)}</td>` +
         `<td>—</td>`;
     } else {
@@ -957,7 +1080,7 @@ function setView(view) {
       sub.className = 'subtotal-row';
       sub.innerHTML =
         `<td colspan="2">→ Simple phase total profit</td>` +
-        `<td>—</td><td>—</td>` +
+        `<td>—</td><td>—</td><td>—</td>` +
         `<td>+${fmt(phaseProfit)}</td>` +
         `<td>—</td>`;
     }
@@ -989,6 +1112,7 @@ function setView(view) {
     const classes = [];
     if (tierChanged) classes.push('tier-change');
     if (b.switched) classes.push('switch-day-row');
+    if (b.deposited) classes.push('switch-day-row');
     if (classes.length) tr.className = classes.join(' ');
 
     let modePill = '';
@@ -1002,6 +1126,9 @@ function setView(view) {
         modePill += '<span class="switch-pill" style="background:#EFF6FF;color:#2563EB;border-color:#BFDBFE;">⚡</span>';
       }
     }
+    if (hasDeposits && b.deposited) {
+      modePill += `<span class="switch-pill deposit">+${fmt(b.deposit)}</span>`;
+    }
 
     const prevRate = prevBucket && prevBucket.rate !== undefined ? prevBucket.rate : undefined;
     const rateHtml = b.rate !== undefined
@@ -1012,6 +1139,7 @@ function setView(view) {
       `<td>${b.label}${modePill}</td>` +
       `<td><span class="pkg-pill">${b.pkgLabel}</span></td>` +
       `<td class="col-start">${fmt(b.start)}</td>` +
+      `<td class="col-deposit">${b.deposit ? '+' + fmt(b.deposit) : '—'}</td>` +
       `<td class="col-rate">${rateHtml}</td>` +
       `<td class="col-profit">+${fmt(b.profit)}</td>` +
       `<td class="col-end">${fmt(b.end)}</td>`;
@@ -1048,6 +1176,7 @@ document.getElementById('startDate').value = getTodayLocalISO();
 onAmountInput();
 onCompoundToggle();
 renderSwitchList();
+renderDepositList();
 renderSavedSchedules();
 
 function openSettings() {
@@ -1155,7 +1284,10 @@ function getExportMeta() {
   const startDate = getStartDateValue();
   const numDays  = Math.round(years * 365);
   const yLabel   = years === 1 ? '1 year' : years + ' years';
-  return { initial, years, numDays, variance, compound, startDate, yLabel };
+  const depositMap = buildDepositMap();
+  Object.keys(depositMap).forEach(day => { if (+day > numDays) delete depositMap[day]; });
+  const totalDeposits = Object.values(depositMap).reduce((sum, amount) => sum + amount, 0);
+  return { initial, years, numDays, variance, compound, startDate, yLabel, totalDeposits, depositCount: Object.keys(depositMap).length };
 }
 
 function buildAllViewsData() {
@@ -1174,6 +1306,7 @@ function exportExcel() {
   const summaryData = [
     ['Aurum ROI Projection Summary'], [],
     ['Starting amount', fmt(meta.initial)],
+    ['Additional deposits', fmt(meta.totalDeposits || 0)],
     ['Starting date', formatDateDisplay(meta.startDate)],
     ['Projection period', meta.yLabel + ' (' + meta.numDays + ' days)'],
     ['Interest mode', meta.compound ? 'Compounding' : 'Simple (no compounding)'],
@@ -1197,9 +1330,9 @@ function exportExcel() {
   wsMilestones['!cols'] = [{wch:48},{wch:12}];
   XLSX.utils.book_append_sheet(wb, wsMilestones, 'Milestones');
   Object.entries(views).forEach(([view, buckets]) => {
-    const rows = [['Period','Package','Starting Balance ($)',`${getDetailRateHeader(curView)} (%)`,'Profit ($)','Ending Balance ($)'], ...buckets.map(b => [b.label, b.pkgLabel, +b.start.toFixed(2), +(b.rate * 100).toFixed(4), +b.profit.toFixed(2), +b.end.toFixed(2)])];
+    const rows = [['Period','Package','Starting Balance ($)','Deposit ($)',`${getDetailRateHeader(view)} (%)`,'Profit ($)','Ending Balance ($)'], ...buckets.map(b => [b.label, b.pkgLabel, +b.start.toFixed(2), +(b.deposit || 0).toFixed(2), +(b.rate * 100).toFixed(4), +b.profit.toFixed(2), +b.end.toFixed(2)])];
     const ws = XLSX.utils.aoa_to_sheet(rows);
-    ws['!cols'] = [{wch:14},{wch:12},{wch:22},{wch:16},{wch:16},{wch:22}];
+    ws['!cols'] = [{wch:14},{wch:12},{wch:22},{wch:14},{wch:16},{wch:16},{wch:22}];
     XLSX.utils.book_append_sheet(wb, ws, view.charAt(0).toUpperCase() + view.slice(1));
   });
   XLSX.writeFile(wb, `aurum-roi-enhanced-${meta.yLabel.replace(' ','-')}-${Date.now()}.xlsx`);
@@ -1218,7 +1351,7 @@ function exportPDF() {
   doc.setFontSize(9); doc.setTextColor(214,228,255); doc.text('Generated ' + new Date().toLocaleString(), W - 14, 20, { align: 'right' });
   doc.setTextColor(15,23,42); doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.text('Projection Summary', 14, 39);
   doc.autoTable({ startY: 42, body: [
-    ['Starting amount', fmt(meta.initial)], ['Starting date', formatDateDisplay(meta.startDate)], ['Projection period', meta.yLabel + ' · ' + meta.numDays + ' days'], ['Interest mode', meta.compound ? 'Compounding' : 'Simple (no compounding)'],
+    ['Starting amount', fmt(meta.initial)], ['Additional deposits', fmt(meta.totalDeposits || 0)], ['Starting date', formatDateDisplay(meta.startDate)], ['Projection period', meta.yLabel + ' · ' + meta.numDays + ' days'], ['Interest mode', meta.compound ? 'Compounding' : 'Simple (no compounding)'],
     ['Daily variance', meta.variance + '%'], ['Total profit', document.getElementById('m-profit').textContent], ['Final balance', document.getElementById('m-final').textContent], ['Overall ROI', document.getElementById('m-roi').textContent]
   ], theme: 'plain', styles: { fontSize: 9, cellPadding: 2.5 }, columnStyles: { 0: { fontStyle: 'bold', textColor: [100,116,139], cellWidth: 50 }, 1: { textColor: [15,23,42] } }, margin: { left: 14, right: 14 } });
   let y = doc.lastAutoTable.finalY + 8;
@@ -1242,7 +1375,7 @@ function exportPDF() {
   const viewBuckets = aggregate(allRows, curView);
   const viewLabel = { daily:'Daily', weekly:'Weekly', monthly:'Monthly', quarterly:'Quarterly', yearly:'Yearly' }[curView];
   doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.text(`Breakdown — ${viewLabel} view`, 14, y);
-  doc.autoTable({ startY: y + 3, head: [['Period', 'Package', 'Start', getDetailRateHeader(curView), 'Profit', 'End']], body: viewBuckets.slice(0, 100).map(b => [b.label, b.pkgLabel, fmt(b.start), (b.rate * 100).toFixed(4) + '%', '+' + fmt(b.profit), fmt(b.end)]), theme: 'striped', headStyles: { fillColor: blue, textColor: 255, fontSize: 8, fontStyle: 'bold' }, bodyStyles: { fontSize: 7.5 }, margin: { left: 14, right: 14 }, columnStyles: { 0: { cellWidth: 22 }, 1: { cellWidth: 22 }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right', textColor: green }, 5: { halign: 'right', textColor: blue, fontStyle: 'bold' } } });
+  doc.autoTable({ startY: y + 3, head: [['Period', 'Package', 'Start', 'Deposit', getDetailRateHeader(curView), 'Profit', 'End']], body: viewBuckets.slice(0, 100).map(b => [b.label, b.pkgLabel, fmt(b.start), b.deposit ? '+' + fmt(b.deposit) : '—', (b.rate * 100).toFixed(4) + '%', '+' + fmt(b.profit), fmt(b.end)]), theme: 'striped', headStyles: { fillColor: blue, textColor: 255, fontSize: 8, fontStyle: 'bold' }, bodyStyles: { fontSize: 7.5 }, margin: { left: 14, right: 14 }, columnStyles: { 0: { cellWidth: 20 }, 1: { cellWidth: 20 }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right', textColor: green }, 6: { halign: 'right', textColor: blue, fontStyle: 'bold' } } });
   const pageCount = doc.internal.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) { doc.setPage(i); doc.setFontSize(7.5); doc.setTextColor(148,163,184); doc.text('Aurum ROI Calculator · Enhanced export · For illustrative purposes only · Not financial advice', 14, 292); doc.text(`Page ${i} of ${pageCount}`, W - 14, 292, { align: 'right' }); }
   doc.save(`aurum-roi-enhanced-${meta.yLabel.replace(' ','-')}-${Date.now()}.pdf`);
@@ -1641,7 +1774,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 /* ── Planning tools: scenarios, comparisons, reverse calculator, price alerts ── */
-const AURUM_APP_VERSION = '2026.05.14.25';
+const AURUM_APP_VERSION = '2026.05.14.26';
 const AURUM_VERSION_URL = 'app-version.json';
 const AURUM_VERSION_CHECK_MS = 60000;
 const AURUM_UPDATE_REQUESTED_KEY = 'aurum_update_requested_version';
@@ -1750,7 +1883,8 @@ function getCurrentScenarioConfig() {
     years: Number(document.getElementById('years')?.value || 1),
     variance: Number(document.getElementById('variance')?.value || 0),
     startOn: !!document.getElementById('compoundToggle')?.checked,
-    switches: (switches || []).map(s => ({ day: Number(s.day) || 1, mode: s.mode === 'off' ? 'off' : 'on', monthsAfterPrev: Number(s.monthsAfterPrev) || undefined }))
+    switches: (switches || []).map(s => ({ day: Number(s.day) || 1, mode: s.mode === 'off' ? 'off' : 'on', monthsAfterPrev: Number(s.monthsAfterPrev) || undefined })),
+    deposits: (deposits || []).map(d => ({ day: Number(d.day) || 1, amount: normalizeDepositAmount(d.amount) }))
   };
 }
 
@@ -1762,7 +1896,9 @@ function applyScenarioConfig(cfg) {
   document.getElementById('variance').value = cfg.variance || 0;
   document.getElementById('compoundToggle').checked = cfg.startOn !== false;
   switches = Array.isArray(cfg.switches) ? cfg.switches.map(s => ({ day: Number(s.day) || 1, mode: s.mode === 'off' ? 'off' : 'on', monthsAfterPrev: Number(s.monthsAfterPrev) || undefined })) : [];
+  deposits = Array.isArray(cfg.deposits) ? cfg.deposits.map(d => ({ day: Number(d.day) || 1, amount: normalizeDepositAmount(d.amount) })) : [];
   onCompoundToggle();
+  renderDepositList();
   onAmountInput();
 }
 
@@ -1781,7 +1917,8 @@ function renderScenarioSelect() {
   items.forEach(item => {
     const opt = document.createElement('option');
     opt.value = item.id;
-    opt.textContent = `${item.name} · ${fmt(Number(item.config.amount || 0))} · ${item.config.years || 1}y`;
+    const depositCount = item.config.deposits?.length || 0;
+    opt.textContent = `${item.name} · ${fmt(Number(item.config.amount || 0))} · ${item.config.years || 1}y${depositCount ? ' · ' + depositCount + ' deposits' : ''}`;
     sel.appendChild(opt);
   });
 }
@@ -1815,11 +1952,13 @@ function simulateScenarioConfig(cfg, modeOverride, offsets) {
   const startOn = modeOverride === 'compound' ? true : modeOverride === 'simple' ? false : cfg.startOn !== false;
   const localSwitches = modeOverride ? [] : (cfg.switches || []);
   const switchMap = {};
+  const depositMap = buildDepositMap(cfg.deposits || []);
+  Object.keys(depositMap).forEach(day => { if (+day > numDays) delete depositMap[day]; });
   localSwitches.forEach(sw => {
     const day = parseInt(sw.day, 10);
     if (!isNaN(day) && day >= 1 && day <= numDays) switchMap[day] = sw.mode === 'off' ? 'off' : 'on';
   });
-  let balance = initial, simplePrincipal = initial, profitPool = 0, isCompound = startOn, cumulativeProfit = 0;
+  let balance = initial, simplePrincipal = initial, profitPool = 0, isCompound = startOn, cumulativeProfit = 0, cumulativeDeposits = 0;
   const rows = [];
   for (let d = 1; d <= numDays; d++) {
     if (switchMap[d] !== undefined) {
@@ -1827,6 +1966,12 @@ function simulateScenarioConfig(cfg, modeOverride, offsets) {
       if (!isCompound && newMode) { balance = simplePrincipal; profitPool = 0; }
       else if (isCompound && !newMode) { simplePrincipal = balance; profitPool = 0; }
       isCompound = newMode;
+    }
+    const depositToday = normalizeDepositAmount(depositMap[d]);
+    if (depositToday > 0) {
+      cumulativeDeposits += depositToday;
+      if (isCompound) balance += depositToday;
+      else simplePrincipal += depositToday;
     }
     const principal = isCompound ? balance : simplePrincipal;
     const pkg = getPkg(principal);
@@ -1836,12 +1981,16 @@ function simulateScenarioConfig(cfg, modeOverride, offsets) {
     if (isCompound) { balance += profit; endBal = balance; }
     else { profitPool += profit; endBal = simplePrincipal; }
     cumulativeProfit += profit;
-    rows.push({ day: d, end: endBal, projectedValue: isCompound ? endBal : initial + cumulativeProfit, profit, pkgLabel: pkg.label, isCompound });
+    rows.push({ day: d, end: endBal, projectedValue: isCompound ? endBal : initial + cumulativeDeposits + cumulativeProfit, profit, deposit: depositToday, pkgLabel: pkg.label, isCompound });
   }
   const finalValue = rows.length ? rows[rows.length - 1].projectedValue : initial;
   const totalProfit = rows.reduce((s,r) => s + r.profit, 0);
-  const doubled = rows.find(r => r.projectedValue >= initial * 2);
-  return { rows, initial, numDays, finalValue, totalProfit, roi: (totalProfit / initial) * 100, doubledDay: doubled?.day || null };
+  const totalDeposits = Object.values(depositMap).reduce((s, n) => s + n, 0);
+  const doubled = rows.find((r, i) => {
+    const investedToDate = initial + rows.slice(0, i + 1).reduce((s, x) => s + (x.deposit || 0), 0);
+    return r.projectedValue >= investedToDate * 2;
+  });
+  return { rows, initial, numDays, finalValue, totalProfit, roi: (totalProfit / (initial + totalDeposits)) * 100, doubledDay: doubled?.day || null };
 }
 
 function makeSharedOffsets(numDays, variance) {
