@@ -1,8 +1,17 @@
 {
-  "version": "2026.05.14.32",
+  "version": "2026.05.14.37",
   "name": "Aurum app",
   "message": "Aurum has a fresh update ready. Refresh to load the newest calculator and Hive improvements.",
   "updates": [
+    "Hive update reload now uses a cache-busted refresh and returns to the Hive without repeatedly showing the same update loop.",
+    "Hive Summary and Hive actions now have stronger collapsed-section styling so they read as expandable panel areas.",
+    "Hive legend now includes the white question-mark placeholder subaccount marker.",
+    "Auto-created Hive subaccounts now show as white question-mark placeholders until the user replaces their name and generated Referral ID.",
+    "Legacy Hive prototypes and support snippets were moved into docs/legacy-hive so the app root is easier to maintain.",
+    "Supabase Hive schema now has an additive hardening path for trimmed account text, non-negative money fields, and faster update lookups.",
+    "Hive import and Supabase sync now validate structure integrity before accepting or publishing account data.",
+    "Export and price alert reminders now use visible app toasts instead of disruptive browser alerts.",
+    "ROI Calculator now uses a shared calculation core with regression tests covering compounding, simple mode, switches, deposits, and variance.",
     "ROI Calculator simple-mode charts now distinguish total value from active balance, so profits that are set aside are visible instead of looking like compounded balance growth.",
     "[NEW] The footer now includes a Changelog button that opens the release notes at any time.",
     "[NEW] Changelog entries can now show a NEW badge for newly added functionality, separate from fixes and behavior updates.",

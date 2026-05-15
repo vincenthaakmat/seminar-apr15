@@ -190,6 +190,14 @@ function rnd(variance) {
   return 1 - Math.random() * f;
 }
 
+function runProjectionCore(options) {
+  const core = globalThis.AurumCalculatorCore;
+  if (!core || typeof core.simulateProjection !== 'function') {
+    throw new Error('Aurum calculator core is not loaded.');
+  }
+  return core.simulateProjection({ packages: PKGS, ...options });
+}
+
 function onAmountInput() {
   const val  = parseFloat(document.getElementById('amount').value);
   const info = document.getElementById('pkg-info');
@@ -659,35 +667,22 @@ function animateTextNumber(el, valueText, duration = 1800) {
 }
 
 function simulateMode(initial, numDays, forceCompound, offsets, depositMap = {}) {
-  let balance = initial;
-  let totalProfit = 0;
-  let simplePrincipal = initial;
-  let cumulativeDeposits = 0;
-  let cumulativeValue = initial;
+  const projection = runProjectionCore({
+    initial,
+    numDays,
+    startOn: forceCompound,
+    offsets,
+    depositMap
+  });
+  let runningDeposits = 0;
   let crossoverDay = null;
-  for (let d = 1; d <= numDays; d++) {
-    const depositToday = normalizeDepositAmount(depositMap[d]);
-    if (depositToday > 0) {
-      cumulativeDeposits += depositToday;
-      if (forceCompound) balance += depositToday;
-      else simplePrincipal += depositToday;
-    }
-    const principal = forceCompound ? balance : simplePrincipal;
-    const pkg = getPkg(principal);
-    const offset = offsets[d - 1];
-    const profit = principal * pkg.daily * offset;
-    totalProfit += profit;
-    if (forceCompound) {
-      balance += profit;
-      cumulativeValue = balance;
-    } else {
-      cumulativeValue = initial + cumulativeDeposits + totalProfit;
-    }
-    if (crossoverDay === null && cumulativeValue >= (initial + cumulativeDeposits) * 2) crossoverDay = d;
+  for (const row of projection.rows) {
+    runningDeposits += row.deposit || 0;
+    if (crossoverDay === null && row.projectedValue >= (initial + runningDeposits) * 2) crossoverDay = row.day;
   }
   return {
-    finalValue: forceCompound ? balance : initial + cumulativeDeposits + totalProfit,
-    totalProfit,
+    finalValue: projection.finalValue,
+    totalProfit: projection.totalProfit,
     crossoverDay
   };
 }
@@ -824,61 +819,15 @@ function calculate() {
   Object.keys(depositMap).forEach(day => { if (+day > numDays) delete depositMap[day]; });
   const hasDeposits = Object.keys(depositMap).length > 0;
 
-  allRows = [];
-  let balance = initial, profitPool = 0, simplePrincipal = initial, isCompound = startOn;
-  let switchCount = 0, compoundDays = 0, simpleDays = 0, cumulativeProfit = 0, cumulativeDeposits = 0;
-  const offsets = [];
-
-  for (let d = 1; d <= numDays; d++) {
-    const switched = switchMap[d] !== undefined;
-    if (switched) {
-      const newMode = switchMap[d] === 'on';
-      if (!isCompound && newMode) balance = simplePrincipal;
-      else if (isCompound && !newMode) simplePrincipal = balance;
-      isCompound = newMode;
-      switchCount++;
-    }
-    const depositToday = normalizeDepositAmount(depositMap[d]);
-    if (depositToday > 0) {
-      cumulativeDeposits += depositToday;
-      if (isCompound) balance += depositToday;
-      else simplePrincipal += depositToday;
-    }
-    const pkg = getPkg(isCompound ? balance : simplePrincipal);
-    const offset = rnd(variance);
-    offsets.push(offset);
-    let actualProfit, startBal, endBal;
-    if (isCompound) {
-      compoundDays++;
-      actualProfit = balance * pkg.daily * offset;
-      startBal = balance;
-      balance += actualProfit;
-      endBal = balance;
-    } else {
-      simpleDays++;
-      actualProfit = simplePrincipal * pkg.daily * offset;
-      profitPool += actualProfit;
-      startBal = simplePrincipal;
-      endBal = simplePrincipal;
-    }
-    cumulativeProfit += actualProfit;
-    allRows.push({
-      day: d,
-      pkgKey: pkg.key, pkgLabel: pkg.label,
-      start: startBal, profit: actualProfit, end: endBal,
-      rate: pkg.daily * offset,
-      isCompound, switched,
-      deposit: depositToday,
-      deposited: depositToday > 0,
-      activeValue: endBal,
-      withdrawnProfit: profitPool,
-      projectedValue: endBal + profitPool
-    });
-  }
-
-  const finalBalance = allRows[allRows.length - 1].projectedValue;
-  const totalProfit  = allRows.reduce((sum, r) => sum + r.profit, 0);
-  const totalDeposits = Object.values(depositMap).reduce((sum, amount) => sum + amount, 0);
+  const projection = runProjectionCore({ initial, numDays, startOn, switchMap, depositMap, variance });
+  allRows = projection.rows;
+  const offsets = projection.offsets;
+  const switchCount = projection.switchCount;
+  const compoundDays = projection.compoundDays;
+  const simpleDays = projection.simpleDays;
+  const finalBalance = projection.finalValue;
+  const totalProfit = projection.totalProfit;
+  const totalDeposits = projection.totalDeposits;
   const totalInvested = initial + totalDeposits;
   const roi          = (totalProfit / totalInvested) * 100;
   const yLabel       = years === 1 ? '1 year' : years + ' years';
@@ -1406,7 +1355,10 @@ function buildAllViewsData() {
 
 /* ── Excel export ── */
 function exportExcel() {
-  if (!allRows.length || !lastCalcSummary) return alert('Run a calculation first.');
+  if (!allRows.length || !lastCalcSummary) {
+    showAppToast('Run a calculation first, then export to Excel.', 'warn');
+    return;
+  }
   const meta   = getExportMeta();
   const views  = buildAllViewsData();
   const wb     = XLSX.utils.book_new();
@@ -1447,7 +1399,10 @@ function exportExcel() {
 
 /* ── PDF export ── */
 function exportPDF() {
-  if (!allRows.length || !lastCalcSummary) return alert('Run a calculation first.');
+  if (!allRows.length || !lastCalcSummary) {
+    showAppToast('Run a calculation first, then export to PDF.', 'warn');
+    return;
+  }
   const { jsPDF } = window.jspdf;
   const doc  = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const meta = getExportMeta();
@@ -1881,7 +1836,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 /* ── Planning tools: scenarios, comparisons, reverse calculator, price alerts ── */
-const AURUM_APP_VERSION = '2026.05.14.31';
+const AURUM_APP_VERSION = '2026.05.14.37';
 const AURUM_VERSION_URL = 'app-version.json';
 const AURUM_VERSION_CHECK_MS = 60000;
 const AURUM_UPDATE_REQUESTED_KEY = 'aurum_update_requested_version';
@@ -1891,11 +1846,31 @@ let strategyCompareChart = null;
 let reverseLastAmount = null;
 let incomeLastAmount = null;
 let appUpdatePromptedVersion = '';
+let appToastTimer = null;
 
 function closeToolModal(id) {
   const el = document.getElementById(id);
   if (el) el.classList.remove('open');
 }
+
+function showAppToast(message, type = 'info', timeout = 4200) {
+  const toast = document.getElementById('appToast');
+  const text = document.getElementById('appToastText');
+  const icon = document.getElementById('appToastIcon');
+  if (!toast) {
+    console.log(message);
+    return;
+  }
+  const mode = ['success', 'warn', 'error'].includes(type) ? type : 'info';
+  toast.className = `app-toast ${mode}`;
+  if (text) text.textContent = message || 'Action completed.';
+  if (icon) icon.textContent = mode === 'success' ? 'check_circle' : mode === 'warn' ? 'warning' : mode === 'error' ? 'error' : 'info';
+  toast.classList.add('visible');
+  clearTimeout(appToastTimer);
+  appToastTimer = setTimeout(() => toast.classList.remove('visible'), timeout);
+}
+
+window.showAurumToast = showAppToast;
 
 window.openHiveManager = window.openHiveManager || async function openHiveManagerFallback() {
   try {
@@ -1911,7 +1886,7 @@ window.openHiveManager = window.openHiveManager || async function openHiveManage
   } catch (error) {
     console.warn('Aurum Hive could not be loaded.', error);
   }
-  alert('The Hive is still loading. Please try again in a moment.');
+  showAppToast('The Hive is still loading. Please try again in a moment.', 'warn');
 };
 
 function compareAppVersions(current, latest) {
@@ -2108,34 +2083,11 @@ function simulateScenarioConfig(cfg, modeOverride, offsets) {
     const day = parseInt(sw.day, 10);
     if (!isNaN(day) && day >= 1 && day <= numDays) switchMap[day] = sw.mode === 'off' ? 'off' : 'on';
   });
-  let balance = initial, simplePrincipal = initial, profitPool = 0, isCompound = startOn, cumulativeProfit = 0, cumulativeDeposits = 0;
-  const rows = [];
-  for (let d = 1; d <= numDays; d++) {
-    if (switchMap[d] !== undefined) {
-      const newMode = switchMap[d] === 'on';
-      if (!isCompound && newMode) balance = simplePrincipal;
-      else if (isCompound && !newMode) simplePrincipal = balance;
-      isCompound = newMode;
-    }
-    const depositToday = normalizeDepositAmount(depositMap[d]);
-    if (depositToday > 0) {
-      cumulativeDeposits += depositToday;
-      if (isCompound) balance += depositToday;
-      else simplePrincipal += depositToday;
-    }
-    const principal = isCompound ? balance : simplePrincipal;
-    const pkg = getPkg(principal);
-    const offset = offsets?.[d - 1] ?? 1;
-    const profit = principal * pkg.daily * offset;
-    let endBal;
-    if (isCompound) { balance += profit; endBal = balance; }
-    else { profitPool += profit; endBal = simplePrincipal; }
-    cumulativeProfit += profit;
-    rows.push({ day: d, end: endBal, projectedValue: endBal + profitPool, profit, deposit: depositToday, pkgLabel: pkg.label, isCompound });
-  }
-  const finalValue = rows.length ? rows[rows.length - 1].projectedValue : initial;
-  const totalProfit = rows.reduce((s,r) => s + r.profit, 0);
-  const totalDeposits = Object.values(depositMap).reduce((s, n) => s + n, 0);
+  const projection = runProjectionCore({ initial, numDays, startOn, switchMap, depositMap, offsets });
+  const rows = projection.rows;
+  const finalValue = projection.finalValue;
+  const totalProfit = projection.totalProfit;
+  const totalDeposits = projection.totalDeposits;
   const doubled = rows.find((r, i) => {
     const investedToDate = initial + rows.slice(0, i + 1).reduce((s, x) => s + (x.deposit || 0), 0);
     return r.projectedValue >= investedToDate * 2;
@@ -2411,7 +2363,7 @@ async function checkPriceAlerts(showQuietStatus) {
   });
   if (changed) {
     writePriceAlerts(items);
-    alert('Aurum price alert\n\n' + triggeredMessages.join('\n'));
+    showAppToast('Aurum price alert: ' + triggeredMessages.join(' | '), 'success', 8000);
   } else if (showQuietStatus) {
     const st = document.getElementById('alertsStatus');
     if (st) st.textContent = 'Alerts checked. No triggers yet.';

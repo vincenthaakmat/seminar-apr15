@@ -89,11 +89,12 @@ const HIVE_OVERLAY_POSITIONS_KEY = 'aurum_hive_overlay_positions_v1';
 const HIVE_PANEL_COLLAPSED_KEY = 'aurum_hive_panel_collapsed_v1';
 const HIVE_SYNC_LOG_KEY = 'aurum_hive_sync_log_v1';
 const HIVE_REOPEN_AFTER_RELOAD_KEY = 'aurum_hive_reopen_after_reload_v1';
+const HIVE_UPDATE_REQUESTED_KEY = 'aurum_hive_update_requested_version_v1';
 const HIVE_SYNC_LOG_LIMIT = 40;
 const HIVE_AUTO_REFRESH_MS = 180000;
 const HIVE_MIN_ZOOM = 0.1;
 const HIVE_MAX_ZOOM = 1.2;
-const HIVE_APP_VERSION = '2026.05.14.31';
+const HIVE_APP_VERSION = '2026.05.14.37';
 const HIVE_VERSION_URL = 'hive-version.json';
 const HIVE_CLOUD_TABLE = 'aurum_hive_accounts';
 const HIVE_SUPPORTED_SUB_LIMIT = 3;
@@ -118,6 +119,7 @@ let hiveRealtimeChannel = null;
 let realtimeReloadTimer = null;
 let hiveAutoRefreshTimer = null;
 let hiveSyncToastTimer = null;
+let hiveUpdatePromptedVersion = '';
 const copyFeedbackTimers = new WeakMap();
 
 export function configureHiveSupabase(config) {
@@ -158,12 +160,12 @@ function ensureHiveUi() {
     .hive-panel-title-actions { display:flex; align-items:center; gap:8px; }
     .hive-panel-toggle { display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border:1px solid var(--border); border-radius:8px; background:var(--surface-2); color:var(--text-mid); cursor:pointer; }
     .hive-panel-toggle:hover { border-color:var(--blue); color:var(--blue-mid); background:var(--blue-light); }
-    .hive-summary-rollup { margin-bottom:12px; border:1px solid var(--border); border-radius:12px; background:rgba(255,255,255,.82); overflow:hidden; }
-    .hive-summary-rollup summary { list-style:none; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; color:var(--text); font:900 12px 'Inter',sans-serif; cursor:pointer; user-select:none; }
+    .hive-summary-rollup { margin-bottom:12px; border:1px solid rgba(37,82,231,.30); border-radius:12px; background:linear-gradient(180deg,#eef4ff 0%,#ffffff 100%); overflow:hidden; box-shadow:0 10px 24px rgba(25,45,110,.10); }
+    .hive-summary-rollup summary { list-style:none; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 13px; color:#173fcf; background:linear-gradient(135deg,#dbeafe 0%,#eff6ff 58%,#ffffff 100%); border-bottom:1px solid rgba(37,82,231,.12); font:900 12px 'Inter',sans-serif; cursor:pointer; user-select:none; }
     .hive-summary-rollup summary::-webkit-details-marker { display:none; }
-    .hive-summary-rollup summary::after { content:'expand_more'; font-family:'Material Symbols Rounded'; font-size:20px; color:var(--text-muted); transition:transform .15s; }
+    .hive-summary-rollup summary::after { content:'expand_more'; display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:999px; background:#fff; border:1px solid rgba(37,82,231,.18); font-family:'Material Symbols Rounded'; font-size:20px; color:#173fcf; transition:transform .15s; box-shadow:0 4px 10px rgba(25,45,110,.08); }
     .hive-summary-rollup[open] summary::after { transform:rotate(180deg); }
-    .hive-summary-rollup-hint { margin-left:auto; color:var(--text-muted); font-size:10px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; white-space:nowrap; }
+    .hive-summary-rollup-hint { margin-left:auto; color:#2752e7; font-size:10px; font-weight:900; letter-spacing:.04em; text-transform:uppercase; white-space:nowrap; }
     .hive-summary { display:grid; gap:8px; padding:0 12px 12px; font-size:13px; color:var(--text-mid); line-height:1.45; }
     .hive-summary-static { padding:0; margin-bottom:12px; }
     .hive-summary-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; }
@@ -185,12 +187,12 @@ function ensureHiveUi() {
     .hive-copy-btn.copied { border-color:rgba(22,163,74,.34); background:#dcfce7; color:#15803d; }
     .hive-health-card { border-color:rgba(37,82,231,.28); background:linear-gradient(135deg,#edf3ff 0%,#ffffff 100%); }
     .hive-health-score { color:#173fcf; font-size:20px; }
-    .hive-action-rollup { margin-top:12px; border:1px solid var(--border); border-radius:12px; background:rgba(255,255,255,.8); overflow:hidden; }
-    .hive-action-rollup summary { list-style:none; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; color:var(--text); font:900 12px 'Inter',sans-serif; cursor:pointer; user-select:none; }
+    .hive-action-rollup { margin-top:12px; border:1px solid rgba(37,82,231,.30); border-radius:12px; background:linear-gradient(180deg,#eef4ff 0%,#ffffff 100%); overflow:hidden; box-shadow:0 10px 24px rgba(25,45,110,.10); }
+    .hive-action-rollup summary { list-style:none; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 13px; color:#173fcf; background:linear-gradient(135deg,#dbeafe 0%,#eff6ff 58%,#ffffff 100%); border-bottom:1px solid rgba(37,82,231,.12); font:900 12px 'Inter',sans-serif; cursor:pointer; user-select:none; }
     .hive-action-rollup summary::-webkit-details-marker { display:none; }
-    .hive-action-rollup summary::after { content:'expand_more'; font-family:'Material Symbols Rounded'; font-size:20px; color:var(--text-muted); transition:transform .15s; }
+    .hive-action-rollup summary::after { content:'expand_more'; display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:999px; background:#fff; border:1px solid rgba(37,82,231,.18); font-family:'Material Symbols Rounded'; font-size:20px; color:#173fcf; transition:transform .15s; box-shadow:0 4px 10px rgba(25,45,110,.08); }
     .hive-action-rollup[open] summary::after { transform:rotate(180deg); }
-    .hive-action-rollup-hint { margin-left:auto; color:var(--text-muted); font-size:10px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; white-space:nowrap; }
+    .hive-action-rollup-hint { margin-left:auto; color:#2752e7; font-size:10px; font-weight:900; letter-spacing:.04em; text-transform:uppercase; white-space:nowrap; }
     .hive-actions { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; padding:0 12px 12px; }
     .hive-danger-btn { background:#dc2626 !important; border-color:#b91c1c !important; color:#fff !important; box-shadow:0 8px 18px rgba(220,38,38,.22); }
     .hive-danger-btn:hover { background:#b91c1c !important; border-color:#991b1b !important; color:#fff !important; }
@@ -261,6 +263,7 @@ function ensureHiveUi() {
     .hive-legend { display:grid; gap:6px; padding:10px; width:190px; font:800 11px 'Inter',sans-serif; }
     .hive-legend-row { display:flex; align-items:center; gap:8px; color:rgba(255,255,255,.9); }
     .hive-legend-dot { width:13px; height:13px; border-radius:50%; border:2px solid rgba(255,255,255,.8); flex:0 0 auto; }
+    .hive-legend-placeholder { display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; border-radius:50%; border:2px solid #dbeafe; background:#fff; color:#173fcf; font:900 12px 'Inter',sans-serif; flex:0 0 auto; }
     .hive-legend-badge { border-radius:999px; background:rgba(255,255,255,.18); color:#fff; padding:2px 6px; font-size:10px; }
     .hive-minimap { width:190px; height:130px; padding:8px; }
     .hive-minimap svg { display:block; width:100%; height:100%; }
@@ -288,12 +291,14 @@ function ensureHiveUi() {
     .hive-dot-main.unfunded { background:#2563eb; }
     .hive-dot-sub.unfunded { background:#facc15; }
     .hive-dot-sub.unsupported { background:#9ca3af; }
+    .hive-dot-sub.placeholder { background:#fff; border-color:#dbeafe; box-shadow:0 14px 28px rgba(0,0,0,.22), 0 0 0 5px rgba(37,99,235,.16); }
     .hive-dot-sub.unfunded::before { color:#111827; }
     .hive-dot-sub.unsupported::before { color:#fff; }
     .hive-dot-main.selected, .hive-dot-sub.selected { outline:4px solid rgba(250,204,21,.95); outline-offset:4px; }
     .hive-dot-main::before, .hive-dot-sub::before { color:#fff; font:900 18px 'Inter',sans-serif; }
     .hive-dot-main::before { content:'M'; }
     .hive-dot-sub::before { content:'S'; }
+    .hive-dot-sub.placeholder::before { content:'?'; color:#173fcf; font-size:25px; }
     @media (max-width: 900px) { .hive-layout { grid-template-columns:1fr; } .hive-modal-card { width:calc(100vw - 18px); } }
   `;
   document.head.appendChild(style);
@@ -435,6 +440,7 @@ function ensureHiveUi() {
                 <div class="hive-legend-row"><span class="hive-legend-dot" style="background:#16a34a;"></span>Funded sub</div>
                 <div class="hive-legend-row"><span class="hive-legend-dot" style="background:#2563eb;"></span>Unfunded main</div>
                 <div class="hive-legend-row"><span class="hive-legend-dot" style="background:#facc15;"></span>Unfunded sub</div>
+                <div class="hive-legend-row"><span class="hive-legend-placeholder">?</span>Placeholder sub</div>
                 <div class="hive-legend-row"><span class="hive-legend-dot" style="background:#9ca3af;"></span>Unsupported extra sub</div>
                 <div class="hive-legend-row"><span class="hive-legend-badge">RANK</span>Rank badge</div>
               </div>
@@ -765,6 +771,8 @@ function persistHive() {
   saveLocalHive();
   saveHiveToCloud().catch((error) => {
     console.warn('Aurum Hive cloud sync failed.', error);
+    setMessage(getHiveErrorMessage(error), 'error');
+    showHiveStatusToast(getHiveErrorMessage(error), 'error');
     updateSyncStatus('Local saved. Supabase sync failed.', 'local');
   });
 }
@@ -786,6 +794,7 @@ function showHiveUpdateBanner(latestVersion) {
   const banner = document.getElementById('hiveUpdateBanner');
   const text = document.getElementById('hiveUpdateText');
   if (!banner) return;
+  hiveUpdatePromptedVersion = latestVersion;
   if (text) {
     text.textContent = `You are using ${HIVE_APP_VERSION}. Version ${latestVersion} is available.`;
   }
@@ -798,6 +807,7 @@ async function checkHiveAppVersion() {
     if (!response.ok) return;
     const data = await response.json();
     const latestVersion = String(data?.version || '').trim();
+    if (latestVersion && sessionStorage.getItem(HIVE_UPDATE_REQUESTED_KEY) === latestVersion) return;
     if (latestVersion && compareVersionParts(HIVE_APP_VERSION, latestVersion) > 0) {
       showHiveUpdateBanner(latestVersion);
     }
@@ -807,10 +817,17 @@ async function checkHiveAppVersion() {
 }
 
 function reloadHiveApp() {
+  const version = hiveUpdatePromptedVersion || HIVE_APP_VERSION;
   try {
     sessionStorage.setItem(HIVE_REOPEN_AFTER_RELOAD_KEY, '1');
+    sessionStorage.setItem(HIVE_UPDATE_REQUESTED_KEY, version);
+    sessionStorage.setItem('aurum_update_requested_version', version);
   } catch (error) {}
-  window.location.reload();
+  const url = new URL(window.location.href);
+  url.searchParams.set('appv', version);
+  url.searchParams.set('hivev', version);
+  url.searchParams.set('reload', String(Date.now()));
+  window.location.replace(url.toString());
 }
 
 function isCloudConfigured() {
@@ -881,6 +898,7 @@ function runHiveAutoRefresh() {
 }
 
 async function saveHiveToCloud() {
+  const validation = validateHiveStructureForSync(hiveData);
   const supabase = await getSupabaseClient();
   if (!supabase) {
     updateSyncStatus('Local database active. Supabase not configured.', 'local');
@@ -902,7 +920,7 @@ async function saveHiveToCloud() {
     return;
   }
   if (error) throw error;
-  updateSyncStatus('Saved locally and synced to Supabase.', 'cloud');
+  updateSyncStatus(`Saved ${validation.total} account${validation.total !== 1 ? 's' : ''} locally and synced to Supabase.`, 'cloud');
 }
 
 async function validateExternalCloudParents(supabase, rows) {
@@ -1038,6 +1056,7 @@ async function importHiveJson(event) {
     const parsed = JSON.parse(await file.text());
     const importedRoots = extractImportedHiveRoots(parsed);
     const normalizedRoots = normalizeImportedHiveRoots(importedRoots);
+    const validation = validateHiveStructureForSync(normalizedRoots);
     hiveData.splice(0, hiveData.length, ...normalizedRoots);
     selectedInviteId = normalizedRoots[0]?.inviteId || '';
     highlightedInviteId = '';
@@ -1048,7 +1067,8 @@ async function importHiveJson(event) {
     rememberInviteId(selectedInviteId);
     saveLocalHive();
     renderHive();
-    setMessage('Hive structure imported. Review it, then use Sync now to publish changes to Supabase.', 'ok');
+    setMessage(`Hive structure imported: ${validation.total} account${validation.total !== 1 ? 's' : ''} (${validation.main} main, ${validation.sub} sub). Review it, then use Sync now to publish changes to Supabase.`, 'ok');
+    showHiveStatusToast('Hive import validated and loaded.', 'ok');
     updateSyncStatus('Imported offline Hive structure into local cache.', 'local');
   } catch (error) {
     console.warn('Hive JSON import failed.', error);
@@ -1081,17 +1101,20 @@ function normalizeImportedHiveRoots(roots) {
       throw new Error(`Account ${inviteId} must be a ${expectedType} account based on its parent.`);
     }
 
+    const amount = normalizeHiveMoney(node.amount, 'Personal investment', inviteId);
+    const totalTurnover = normalizeHiveMoney(node.totalTurnover ?? node.total_turnover, 'Total turnover', inviteId);
     const childExpectedType = type === 'main' ? 'sub' : 'main';
     const children = Array.isArray(node.children) ? node.children : [];
     return {
       inviteId,
       name: String(node.name || '').trim(),
       country: normalizeHiveCountry(node.country),
-      amount: Number(node.amount || 0),
-      totalTurnover: Number(node.totalTurnover ?? node.total_turnover ?? 0),
-      rank: Number(node.amount || 0) > 0 ? normalizeHiveRank(node.rank) : DEFAULT_HIVE_RANK,
+      amount,
+      totalTurnover,
+      rank: amount > 0 ? normalizeHiveRank(node.rank) : DEFAULT_HIVE_RANK,
       type,
       parentInviteId: parentInviteId || normalizeParentInviteId(node.parentInviteId ?? node.parent_invite_id),
+      needsSetup: node.needsSetup === true,
       children: children.map((child) => normalizeNode(child, inviteId, childExpectedType))
     };
   }
@@ -1518,6 +1541,50 @@ function normalizeParentInviteId(value) {
   return parentInviteId && parentInviteId.toLowerCase() !== 'root' ? parentInviteId : null;
 }
 
+function normalizeHiveMoney(value, fieldLabel, inviteId) {
+  const amount = Number(value || 0);
+  if (!Number.isFinite(amount) || amount < 0) {
+    throw new Error(`${fieldLabel} for ${inviteId || 'an imported account'} must be 0 or higher.`);
+  }
+  return amount;
+}
+
+function validateHiveStructureForSync(roots) {
+  if (!Array.isArray(roots) || !roots.length) throw new Error('Hive structure does not contain any accounts.');
+
+  const seen = new Set();
+  let total = 0;
+  let main = 0;
+  let sub = 0;
+
+  function visit(node, parent = null) {
+    if (!node || typeof node !== 'object') throw new Error('Hive structure contains an invalid account.');
+    const inviteId = String(node.inviteId || '').trim();
+    if (!inviteId) throw new Error('Every Hive account needs a Referral ID before syncing.');
+    if (seen.has(inviteId)) throw new Error(`Duplicate Referral ID found before sync: ${inviteId}`);
+    seen.add(inviteId);
+
+    const type = node.type === 'sub' ? 'sub' : node.type === 'main' ? 'main' : '';
+    if (!type) throw new Error(`Account ${inviteId} must be either a main or sub account.`);
+    if (parent) {
+      const expectedType = parent.type === 'main' ? 'sub' : 'main';
+      if (type !== expectedType) throw new Error(`Account ${inviteId} must be a ${expectedType} account under ${parent.inviteId}.`);
+      if (node.parentInviteId !== parent.inviteId) throw new Error(`Account ${inviteId} has an Invited By ID mismatch. Expected ${parent.inviteId}.`);
+    }
+
+    normalizeHiveMoney(node.amount, 'Personal investment', inviteId);
+    normalizeHiveMoney(node.totalTurnover, 'Total turnover', inviteId);
+
+    total += 1;
+    if (type === 'main') main += 1;
+    if (type === 'sub') sub += 1;
+    (node.children || []).forEach((child) => visit(child, node));
+  }
+
+  roots.forEach((root) => visit(root));
+  return { total, main, sub };
+}
+
 function findTopLocalNode(inviteId) {
   const node = findNode(hiveData[0], inviteId);
   if (!node) return null;
@@ -1780,7 +1847,8 @@ function createHiveNode(node, x, y, selectedBranchIds) {
   const isInSelectedBranch = hiveBranchHighlightMode && selectedBranchIds.has(node.inviteId);
   const isUnfunded = Number(node.amount || 0) <= 0;
   const isUnsupportedSub = isUnsupportedSubAccount(node);
-  dot.className = `${node.type === 'main' ? 'hive-dot-main' : 'hive-dot-sub'}${isSelected ? ' selected' : ''}${isInSelectedBranch ? ' in-selected-branch' : ''}${isSearchHit ? ' search-hit' : ''}${isUnfunded ? ' unfunded' : ''}${isUnsupportedSub ? ' unsupported' : ''}`;
+  const isPlaceholderSub = isAutoPlaceholderSub(node);
+  dot.className = `${node.type === 'main' ? 'hive-dot-main' : 'hive-dot-sub'}${isSelected ? ' selected' : ''}${isInSelectedBranch ? ' in-selected-branch' : ''}${isSearchHit ? ' search-hit' : ''}${isUnfunded ? ' unfunded' : ''}${isUnsupportedSub ? ' unsupported' : ''}${isPlaceholderSub ? ' placeholder' : ''}`;
   dot.setAttribute('role', 'button');
   dot.setAttribute('tabindex', '0');
   dot.setAttribute('aria-label', `Select ${node.name}`);
@@ -1873,7 +1941,7 @@ function showHiveTooltip(node, anchorEl) {
       Personal investment: $${Number(node.amount || 0).toLocaleString()}<br>
       Total turnover: $${Number(node.totalTurnover || 0).toLocaleString()}<br>
       Rank: ${rankHtml}<br>
-      Type: ${escapeHtml(node.type)}${isUnsupportedSubAccount(node) ? '<br>Status: Unsupported extra sub account' : ''}
+      Type: ${escapeHtml(node.type)}${isUnsupportedSubAccount(node) ? '<br>Status: Unsupported extra sub account' : ''}${isAutoPlaceholderSub(node) ? '<br>Status: Placeholder - update name and Referral ID' : ''}
     </div>
   `;
 }
@@ -1973,9 +2041,24 @@ function renderMiniMap(layout) {
 }
 
 function getMiniMapColor(node) {
+  if (isAutoPlaceholderSub(node)) return '#ffffff';
   if (isUnsupportedSubAccount(node)) return '#9ca3af';
   if (Number(node.amount || 0) <= 0) return node.type === 'main' ? '#2563eb' : '#facc15';
   return node.type === 'main' ? '#dc2626' : '#16a34a';
+}
+
+function getAutoPlaceholderInviteId(parentInviteId, index) {
+  return `${String(parentInviteId || '').trim()}-${index}`;
+}
+
+function isGeneratedPlaceholderInviteId(node) {
+  if (!node || !node.parentInviteId) return false;
+  return [1, 2, 3].some((index) => node.inviteId === getAutoPlaceholderInviteId(node.parentInviteId, index));
+}
+
+function isAutoPlaceholderSub(node) {
+  if (!node || node.type !== 'sub') return false;
+  return node.needsSetup === true || (isGeneratedPlaceholderInviteId(node) && !String(node.name || '').trim());
 }
 
 function getDirectSubCount(node) {
@@ -2031,7 +2114,7 @@ function createAutoSubAccounts(mainNode) {
   let created = 0;
 
   for (let index = 1; index <= 3; index += 1) {
-    const inviteId = `${mainNode.inviteId}-${index}`;
+    const inviteId = getAutoPlaceholderInviteId(mainNode.inviteId, index);
     if (existingIds.has(inviteId)) {
       duplicates.push(inviteId);
       continue;
@@ -2045,6 +2128,7 @@ function createAutoSubAccounts(mainNode) {
       rank: DEFAULT_HIVE_RANK,
       type: 'sub',
       parentInviteId: mainNode.inviteId,
+      needsSetup: true,
       children: []
     });
     existingIds.add(inviteId);
@@ -2064,14 +2148,17 @@ export function editHiveItem(inviteId, updatedData) {
   if (duplicate) return false;
 
   const previousInviteId = node.inviteId;
+  const nextName = String(updatedData.name || '').trim();
+  const stillNeedsSetup = isAutoPlaceholderSub(node) && !(nextName && nextInviteId !== previousInviteId);
   Object.assign(node, {
     inviteId: nextInviteId,
-    name: String(updatedData.name || '').trim(),
+    name: nextName,
     country: normalizeHiveCountry(updatedData.country),
     amount: Number(updatedData.amount || 0),
     totalTurnover: Number(updatedData.totalTurnover || 0),
     rank: Number(updatedData.amount || 0) > 0 ? normalizeHiveRank(updatedData.rank) : DEFAULT_HIVE_RANK,
-    parentInviteId: node === hiveData[0] ? normalizeParentInviteId(updatedData.parentInviteId) : node.parentInviteId
+    parentInviteId: node === hiveData[0] ? normalizeParentInviteId(updatedData.parentInviteId) : node.parentInviteId,
+    needsSetup: stillNeedsSetup
   });
   if (previousInviteId !== nextInviteId) {
     updateChildParentIds(node, previousInviteId, nextInviteId);
@@ -2495,7 +2582,7 @@ async function submitHiveForm() {
   }
   if (added) rememberInviteId(findTopLocalNode(formData.inviteId)?.inviteId || formData.inviteId);
   const successMessage = autoSubResult.created
-    ? `Main account added with ${autoSubResult.created} linked subaccounts.`
+    ? `Main account added with ${autoSubResult.created} linked placeholder subaccounts. Update each ? node with a real name and Referral ID.`
     : addingUnsupportedSub
       ? 'Sub account added as an unsupported extra sub and shown in grey.'
     : `${childType === 'main' ? 'Main' : 'Sub'} account added.`;

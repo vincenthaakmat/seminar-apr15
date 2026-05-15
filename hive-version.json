@@ -1,7 +1,8 @@
 {
-  "version": "2026.05.14.36",
+  "version": "2026.05.14.37",
   "name": "Aurum Hive",
   "updates": [
+    "Hive update reload now uses a cache-busted refresh and returns to the Hive without repeatedly showing the same update loop.",
     "Hive Summary and Hive actions rollups now stand out visually as expandable sections.",
     "Hive legend now explains the white question-mark placeholder subaccount marker.",
     "Auto-created subaccounts now appear as white placeholder nodes with a question mark until their name and generated Referral ID are replaced.",

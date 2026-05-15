@@ -1865,6 +1865,15 @@ body.dark-mode .crypto-action-btn.secondary {
 .alert-row { display:flex; align-items:center; gap:8px; justify-content:space-between; border:1px solid var(--border); border-radius:16px; padding:.75rem; background:rgba(255,255,255,.76); margin-top:8px; font-size:12px; }
 .alert-row strong { color:var(--text); }
 .alert-row button { border:1px solid #fecaca; color:#dc2626; background:#fff; border-radius:10px; padding:6px 9px; cursor:pointer; font-weight:800; }
+.app-muted-note { color:var(--text-muted); }
+.hero-tool-button {
+  width:100%;
+  border:none;
+  cursor:pointer;
+  font-family:'Inter',sans-serif;
+}
+.hero-tool-chevron { font-size:18px; }
+.alerts-list { margin-top:12px; }
 .app-update-list { margin:12px 0 0; padding-left:18px; color:var(--text-mid); font-size:13px; line-height:1.55; }
 .app-update-list li { padding-left:2px; }
 .app-update-list li span:last-child { vertical-align:middle; }
@@ -1891,6 +1900,48 @@ body.dark-mode .crypto-action-btn.secondary {
   box-shadow:0 6px 14px rgba(16,185,129,.16);
 }
 .app-update-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:14px; }
+.app-toast {
+  position:fixed;
+  top:18px;
+  right:18px;
+  z-index:12000;
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+  width:min(380px, calc(100vw - 36px));
+  padding:13px 14px;
+  border:1px solid rgba(37,99,235,.24);
+  border-radius:14px;
+  background:#eff6ff;
+  color:#1e3a8a;
+  box-shadow:0 18px 42px rgba(15,23,42,.18);
+  font-size:13px;
+  font-weight:800;
+  line-height:1.45;
+  opacity:0;
+  transform:translateY(-10px);
+  pointer-events:none;
+  transition:opacity .18s ease, transform .18s ease;
+}
+.app-toast.visible { opacity:1; transform:translateY(0); pointer-events:auto; }
+.app-toast .material-symbols-rounded {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:25px;
+  height:25px;
+  border-radius:999px;
+  background:#2563eb;
+  color:#fff;
+  font-size:18px;
+  flex:0 0 auto;
+}
+.app-toast.success { border-color:rgba(22,163,74,.28); background:#f0fdf4; color:#14532d; }
+.app-toast.success .material-symbols-rounded { background:#16a34a; }
+.app-toast.warn { border-color:rgba(245,158,11,.3); background:#fffbeb; color:#92400e; }
+.app-toast.warn .material-symbols-rounded { background:#d97706; }
+.app-toast.error { border-color:rgba(220,38,38,.26); background:#fef2f2; color:#7f1d1d; }
+.app-toast.error .material-symbols-rounded { background:#dc2626; }
 #appUpdateModal .tool-card { display:flex; flex-direction:column; max-height:min(88vh,780px); overflow:hidden; }
 #appUpdateModal .tool-body { display:flex; flex-direction:column; min-height:0; }
 #appUpdateModal .app-update-list { max-height:min(44vh,360px); overflow-y:auto; padding-right:8px; }
@@ -1898,10 +1949,16 @@ body.dark-mode .crypto-action-btn.secondary {
 body.dark-mode .planner-card, body.dark-mode .planner-action, body.dark-mode .tool-card, body.dark-mode .tool-header, body.dark-mode .tool-field input, body.dark-mode .tool-field select, body.dark-mode .tool-close, body.dark-mode .compare-summary-card, body.dark-mode .alert-row, body.dark-mode .planner-inline input, body.dark-mode .planner-inline select, body.dark-mode .planner-small-btn.secondary { background:rgba(17,24,39,.78); color:var(--text-mid); border-color:rgba(148,163,184,.18); }
 body.dark-mode #appUpdateModal .app-update-actions { background:rgba(17,24,39,.97); }
 body.dark-mode .app-update-badge.new { color:#D1FAE5; background:rgba(16,185,129,.18); border-color:rgba(110,231,183,.42); }
+body.dark-mode .app-toast { box-shadow:0 18px 42px rgba(0,0,0,.42); }
 
 </style>
 </head>
 <body>
+
+  <div class="app-toast" id="appToast" role="status" aria-live="polite">
+    <span class="material-symbols-rounded" id="appToastIcon">info</span>
+    <span id="appToastText">Action completed.</span>
+  </div>
 
   <div class="tool-modal" id="appUpdateModal" role="dialog" aria-modal="true" aria-labelledby="appUpdateTitle">
     <div class="tool-card">
@@ -1913,7 +1970,7 @@ body.dark-mode .app-update-badge.new { color:#D1FAE5; background:rgba(16,185,129
         <button class="tool-close" type="button" onclick="closeToolModal('appUpdateModal')" aria-label="Close update message"><span class="material-symbols-rounded">close</span></button>
       </div>
       <div class="tool-body">
-        <div class="tool-result-note" style="color:var(--text-muted);" id="appUpdateIntro">Refresh to load the newest features and fixes.</div>
+        <div class="tool-result-note app-muted-note" id="appUpdateIntro">Refresh to load the newest features and fixes.</div>
         <ul class="app-update-list" id="appUpdateNotes"></ul>
         <div class="app-update-actions">
           <button class="crypto-action-btn" type="button" onclick="reloadForAppUpdate()">Update now</button>
@@ -1930,25 +1987,25 @@ body.dark-mode .app-update-badge.new { color:#D1FAE5; background:rgba(16,185,129
           <span class="material-symbols-rounded">settings</span>
         </button>
         <div class="hero-tools-panel" id="heroToolsPanel">
-          <button class="hero-tool-row" type="button" onclick="openSettings(); closeHeroTools();" style="width:100%; border:none; cursor:pointer; font-family:'Inter',sans-serif;">
+          <button class="hero-tool-row hero-tool-button" type="button" onclick="openSettings(); closeHeroTools();">
             <span class="hero-tool-label"><span class="material-symbols-rounded">tune</span>Package settings</span>
-            <span class="material-symbols-rounded" style="font-size:18px;">chevron_right</span>
+            <span class="material-symbols-rounded hero-tool-chevron">chevron_right</span>
           </button>
-          <button class="hero-tool-row" type="button" onclick="openCryptoConverter(); closeHeroTools();" style="width:100%; border:none; cursor:pointer; font-family:'Inter',sans-serif;">
+          <button class="hero-tool-row hero-tool-button" type="button" onclick="openCryptoConverter(); closeHeroTools();">
             <span class="hero-tool-label"><span class="material-symbols-rounded">currency_exchange</span>Crypto / metals converter</span>
-            <span class="material-symbols-rounded" style="font-size:18px;">chevron_right</span>
+            <span class="material-symbols-rounded hero-tool-chevron">chevron_right</span>
           </button>
-          <button class="hero-tool-row" type="button" onclick="openPriceAlerts(); closeHeroTools();" style="width:100%; border:none; cursor:pointer; font-family:'Inter',sans-serif;">
+          <button class="hero-tool-row hero-tool-button" type="button" onclick="openPriceAlerts(); closeHeroTools();">
             <span class="hero-tool-label"><span class="material-symbols-rounded">notifications_active</span>Price alerts</span>
-            <span class="material-symbols-rounded" style="font-size:18px;">chevron_right</span>
+            <span class="material-symbols-rounded hero-tool-chevron">chevron_right</span>
           </button>
-          <button class="hero-tool-row" type="button" onclick="openHiveManager(); closeHeroTools();" style="width:100%; border:none; cursor:pointer; font-family:'Inter',sans-serif;">
+          <button class="hero-tool-row hero-tool-button" type="button" onclick="openHiveManager(); closeHeroTools();">
             <span class="hero-tool-label"><span class="material-symbols-rounded">hub</span>The Hive</span>
-            <span class="material-symbols-rounded" style="font-size:18px;">chevron_right</span>
+            <span class="material-symbols-rounded hero-tool-chevron">chevron_right</span>
           </button>
-          <button class="hero-tool-row" type="button" onclick="openStrategyCompare(); closeHeroTools();" style="width:100%; border:none; cursor:pointer; font-family:'Inter',sans-serif;">
+          <button class="hero-tool-row hero-tool-button" type="button" onclick="openStrategyCompare(); closeHeroTools();">
             <span class="hero-tool-label"><span class="material-symbols-rounded">stacked_line_chart</span>Compare strategies</span>
-            <span class="material-symbols-rounded" style="font-size:18px;">chevron_right</span>
+            <span class="material-symbols-rounded hero-tool-chevron">chevron_right</span>
           </button>
           <div class="hero-tool-row">
             <span class="hero-tool-label"><span class="material-symbols-rounded" id="themeToggleIcon">dark_mode</span><span id="themeToggleLabel">Dark mode</span></span>
@@ -2152,7 +2209,7 @@ body.dark-mode .app-update-badge.new { color:#D1FAE5; background:rgba(16,185,129
           <div class="tool-field"><label for="alertTarget">Target price</label><input type="number" id="alertTarget" value="100000" min="0" step="any"></div>
         </div>
         <button class="crypto-action-btn" type="button" onclick="addPriceAlert()">Add price alert</button>
-        <div id="alertsList" style="margin-top:12px;"></div>
+        <div id="alertsList" class="alerts-list"></div>
         <div class="tool-result-note" id="alertsStatus">Alerts check while this page is open. For real mobile push notifications later, this would need a backend or PWA notification permission.</div>
       </div>
     </div>
@@ -2503,8 +2560,9 @@ body.dark-mode .app-update-badge.new { color:#D1FAE5; background:rgba(16,185,129
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
-<script src="calculator.js?v=2026.05.14.32"></script>
-<script type="module" src="AurumHiveModule.js?v=2026.05.14.31"></script>
+<script src="calculator-core.js?v=2026.05.14.37"></script>
+<script src="calculator.js?v=2026.05.14.37"></script>
+<script type="module" src="AurumHiveModule.js?v=2026.05.14.37"></script>
 
 
   <!-- ── Footer copyright ── -->
