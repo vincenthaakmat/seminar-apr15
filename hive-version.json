@@ -1,7 +1,13 @@
 {
-  "version": "2026.05.14.31",
+  "version": "2026.05.14.36",
   "name": "Aurum Hive",
   "updates": [
+    "Hive Summary and Hive actions rollups now stand out visually as expandable sections.",
+    "Hive legend now explains the white question-mark placeholder subaccount marker.",
+    "Auto-created subaccounts now appear as white placeholder nodes with a question mark until their name and generated Referral ID are replaced.",
+    "Supabase schema script now trims account text, rejects negative money fields, and adds an updated-at index without requiring destructive migrations.",
+    "Hive import and Supabase sync now validate structure integrity before accepting or publishing accounts.",
+    "Hive import now reports how many main and sub accounts were loaded after validation.",
     "Adding a 4th sub account now shows a rule warning without blocking the save, and unsupported extra subs are shown in grey.",
     "Selected account and referral link now stay visible outside the Hive summary rollup, and account detail fields remain enabled while Save stays gated until Edit selected or Add child.",
     "Reloading from the Hive update banner now returns directly to the Hive screen after refresh.",
