@@ -86,6 +86,7 @@ const HIVE_LOCAL_KEY = 'aurum_hive_database_v1';
 const HIVE_LAST_INVITE_KEY = 'aurum_hive_last_invite_id_v1';
 const HIVE_ZOOM_KEY = 'aurum_hive_zoom_v1';
 const HIVE_OVERLAY_POSITIONS_KEY = 'aurum_hive_overlay_positions_v1';
+const HIVE_OVERLAY_COLLAPSED_KEY = 'aurum_hive_overlay_collapsed_v1';
 const HIVE_PANEL_COLLAPSED_KEY = 'aurum_hive_panel_collapsed_v1';
 const HIVE_SYNC_LOG_KEY = 'aurum_hive_sync_log_v1';
 const HIVE_REOPEN_AFTER_RELOAD_KEY = 'aurum_hive_reopen_after_reload_v1';
@@ -94,7 +95,7 @@ const HIVE_SYNC_LOG_LIMIT = 40;
 const HIVE_AUTO_REFRESH_MS = 180000;
 const HIVE_MIN_ZOOM = 0.1;
 const HIVE_MAX_ZOOM = 1.2;
-const HIVE_APP_VERSION = '2026.05.14.37';
+const HIVE_APP_VERSION = '2026.05.15.38';
 const HIVE_VERSION_URL = 'hive-version.json';
 const HIVE_CLOUD_TABLE = 'aurum_hive_accounts';
 const HIVE_SUPPORTED_SUB_LIMIT = 3;
@@ -260,12 +261,26 @@ function ensureHiveUi() {
     .hive-tooltip-rank { color:#173fcf; font-size:14px; font-weight:900; }
     .hive-map-overlay { position:absolute; z-index:20; pointer-events:auto; border:1px solid rgba(255,255,255,.22); border-radius:12px; background:rgba(15,23,42,.76); color:#fff; box-shadow:0 14px 32px rgba(0,0,0,.24); backdrop-filter:blur(12px); cursor:grab; touch-action:none; user-select:none; }
     .hive-map-overlay.dragging { cursor:grabbing; opacity:.94; }
-    .hive-legend { display:grid; gap:6px; padding:10px; width:190px; font:800 11px 'Inter',sans-serif; }
+    .hive-overlay-header { display:flex; align-items:center; gap:6px; padding:6px 8px; border-bottom:1px solid rgba(255,255,255,.14); cursor:grab; min-width:0; }
+    .hive-overlay-header-icon { font-size:16px; color:rgba(255,255,255,.72); flex:0 0 auto; }
+    .hive-overlay-header-label { font:900 10px 'Inter',sans-serif; color:rgba(255,255,255,.78); flex:1; letter-spacing:.06em; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .hive-overlay-toggle { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border:1px solid rgba(255,255,255,.22); border-radius:6px; background:rgba(255,255,255,.08); color:rgba(255,255,255,.8); cursor:pointer; flex:0 0 auto; pointer-events:auto; }
+    .hive-overlay-toggle:hover { background:rgba(255,255,255,.20); color:#fff; }
+    .hive-overlay-toggle .material-symbols-rounded { font-size:14px; line-height:1; }
+    .hive-map-overlay.collapsed { width:auto !important; }
+    .hive-map-overlay.collapsed .hive-overlay-header { border-bottom:none; padding:4px; gap:0; cursor:pointer; }
+    .hive-map-overlay.collapsed .hive-overlay-header-label { display:none; }
+    .hive-map-overlay.collapsed .hive-overlay-header-icon { font-size:20px; color:#fff; opacity:.9; }
+    .hive-map-overlay.collapsed .hive-overlay-toggle { display:none; }
+    .hive-map-overlay.collapsed .hive-overlay-body { display:none; }
+    .hive-legend { width:190px; font:800 11px 'Inter',sans-serif; }
+    .hive-legend .hive-overlay-body { display:grid; gap:6px; padding:8px 10px 10px; }
     .hive-legend-row { display:flex; align-items:center; gap:8px; color:rgba(255,255,255,.9); }
     .hive-legend-dot { width:13px; height:13px; border-radius:50%; border:2px solid rgba(255,255,255,.8); flex:0 0 auto; }
     .hive-legend-placeholder { display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; border-radius:50%; border:2px solid #dbeafe; background:#fff; color:#173fcf; font:900 12px 'Inter',sans-serif; flex:0 0 auto; }
     .hive-legend-badge { border-radius:999px; background:rgba(255,255,255,.18); color:#fff; padding:2px 6px; font-size:10px; }
-    .hive-minimap { width:190px; height:130px; padding:8px; }
+    .hive-minimap { width:190px; }
+    .hive-minimap .hive-overlay-body { height:130px; padding:8px; }
     .hive-minimap svg { display:block; width:100%; height:100%; }
     .hive-minimap-node { opacity:.95; stroke:rgba(255,255,255,.72); stroke-width:2; }
     .hive-minimap-link { stroke:rgba(190,242,100,.55); stroke-width:1; fill:none; }
@@ -299,7 +314,18 @@ function ensureHiveUi() {
     .hive-dot-main::before { content:'M'; }
     .hive-dot-sub::before { content:'S'; }
     .hive-dot-sub.placeholder::before { content:'?'; color:#173fcf; font-size:25px; }
-    @media (max-width: 900px) { .hive-layout { grid-template-columns:1fr; } .hive-modal-card { width:calc(100vw - 18px); } }
+    .hive-mobile-back { display:none; align-items:center; gap:8px; padding:10px 12px 8px; border-bottom:1px solid var(--border); margin-bottom:4px; }
+    .hive-mobile-back-btn { display:inline-flex; align-items:center; gap:6px; border:none; background:none; color:var(--blue-mid); font:800 13px 'Inter',sans-serif; cursor:pointer; padding:4px 0; }
+    .hive-mobile-back-btn .material-symbols-rounded { font-size:20px; }
+    .hive-mobile-back-title { font:800 13px 'Inter',sans-serif; color:var(--text); margin-left:auto; }
+    @media (max-width: 900px) {
+      .hive-modal-card { width:calc(100vw - 18px); }
+      .hive-layout { grid-template-columns:1fr; position:relative; overflow:hidden; }
+      .hive-panel { position:absolute; inset:0; transform:translateX(-110%); transition:transform .3s cubic-bezier(.4,0,.2,1); overflow-y:auto; z-index:20; border-radius:0; }
+      .hive-layout.panel-collapsed .hive-panel { display:block; }
+      .hive-layout.mobile-panel-open .hive-panel { transform:translateX(0); box-shadow:6px 0 32px rgba(0,0,0,.18); }
+      .hive-mobile-back { display:flex; }
+    }
   `;
   document.head.appendChild(style);
 
@@ -335,6 +361,12 @@ function ensureHiveUi() {
         </div>
         <div class="hive-layout" id="hiveLayout">
           <section class="hive-panel">
+            <div class="hive-mobile-back">
+              <button class="hive-mobile-back-btn" type="button" id="hiveMobileBackBtn" aria-label="Back to canvas">
+                <span class="material-symbols-rounded">arrow_back</span>Back to canvas
+              </button>
+              <span class="hive-mobile-back-title" id="hiveMobileBackTitle"></span>
+            </div>
             <div class="hive-panel-title">
               <span>Account editor</span>
               <div class="hive-panel-title-actions">
@@ -434,15 +466,29 @@ function ensureHiveUi() {
             </div>
             <div class="hive-canvas">
               <div id="hiveTooltipLayer" class="hive-tooltip-layer"></div>
-              <div id="hiveMiniMap" class="hive-map-overlay hive-minimap" data-overlay-id="minimap" data-default-x="12" data-default-y="12" title="Drag to move"></div>
-              <div id="hiveLegendMap" class="hive-map-overlay hive-legend" data-overlay-id="legend" data-default-x="12" data-default-y="160" title="Drag to move">
-                <div class="hive-legend-row"><span class="hive-legend-dot" style="background:#dc2626;"></span>Funded main</div>
-                <div class="hive-legend-row"><span class="hive-legend-dot" style="background:#16a34a;"></span>Funded sub</div>
-                <div class="hive-legend-row"><span class="hive-legend-dot" style="background:#2563eb;"></span>Unfunded main</div>
-                <div class="hive-legend-row"><span class="hive-legend-dot" style="background:#facc15;"></span>Unfunded sub</div>
-                <div class="hive-legend-row"><span class="hive-legend-placeholder">?</span>Placeholder sub</div>
-                <div class="hive-legend-row"><span class="hive-legend-dot" style="background:#9ca3af;"></span>Unsupported extra sub</div>
-                <div class="hive-legend-row"><span class="hive-legend-badge">RANK</span>Rank badge</div>
+              <div id="hiveMiniMap" class="hive-map-overlay hive-minimap" data-overlay-id="minimap" data-default-x="12" data-default-y="12">
+                <div class="hive-overlay-header">
+                  <span class="hive-overlay-header-icon material-symbols-rounded">map</span>
+                  <span class="hive-overlay-header-label">Minimap</span>
+                  <button class="hive-overlay-toggle" type="button" id="hiveMinimapToggleBtn" title="Collapse minimap" aria-label="Toggle minimap"><span class="material-symbols-rounded">unfold_less</span></button>
+                </div>
+                <div class="hive-overlay-body" id="hiveMiniMapBody"></div>
+              </div>
+              <div id="hiveLegendMap" class="hive-map-overlay hive-legend" data-overlay-id="legend" data-default-x="12" data-default-y="170">
+                <div class="hive-overlay-header">
+                  <span class="hive-overlay-header-icon material-symbols-rounded">info</span>
+                  <span class="hive-overlay-header-label">Legend</span>
+                  <button class="hive-overlay-toggle" type="button" id="hiveLegendToggleBtn" title="Collapse legend" aria-label="Toggle legend"><span class="material-symbols-rounded">unfold_less</span></button>
+                </div>
+                <div class="hive-overlay-body">
+                  <div class="hive-legend-row"><span class="hive-legend-dot" style="background:#dc2626;"></span>Funded main</div>
+                  <div class="hive-legend-row"><span class="hive-legend-dot" style="background:#16a34a;"></span>Funded sub</div>
+                  <div class="hive-legend-row"><span class="hive-legend-dot" style="background:#2563eb;"></span>Unfunded main</div>
+                  <div class="hive-legend-row"><span class="hive-legend-dot" style="background:#facc15;"></span>Unfunded sub</div>
+                  <div class="hive-legend-row"><span class="hive-legend-placeholder">?</span>Placeholder sub</div>
+                  <div class="hive-legend-row"><span class="hive-legend-dot" style="background:#9ca3af;"></span>Unsupported extra sub</div>
+                  <div class="hive-legend-row"><span class="hive-legend-badge">RANK</span>Rank badge</div>
+                </div>
               </div>
               <div id="hiveContainer" class="hive-tree"></div>
             </div>
@@ -490,6 +536,7 @@ function ensureHiveUi() {
   });
   initHiveCanvasPan(hiveCanvas);
   initFloatingHiveOverlays();
+  initHiveOverlayCollapseToggles();
   document.getElementById('hiveExportPdfBtn').addEventListener('click', exportSelectedHivePdf);
   document.getElementById('hiveExportJsonBtn').addEventListener('click', exportHiveJson);
   document.getElementById('hiveImportJsonBtn').addEventListener('click', () => document.getElementById('hiveImportJsonInput')?.click());
@@ -514,6 +561,7 @@ function ensureHiveUi() {
   document.getElementById('hiveClearSampleBtn').addEventListener('click', clearSampleHive);
   document.getElementById('hiveDeleteUnfundedSubsBtn').addEventListener('click', deleteUnfundedSubAccounts);
   document.getElementById('hiveClearSyncLogBtn').addEventListener('click', clearHiveSyncLog);
+  document.getElementById('hiveMobileBackBtn').addEventListener('click', closeMobileHivePanel);
   renderHiveSyncLog();
 }
 
@@ -604,12 +652,31 @@ function initHiveCanvasPan(canvas) {
   });
 }
 
+function isMobileHive() {
+  return window.innerWidth <= 900;
+}
+
+function openMobileHivePanel(node) {
+  const layout = document.getElementById('hiveLayout');
+  if (!layout) return;
+  layout.classList.remove('panel-collapsed');
+  layout.classList.add('mobile-panel-open');
+  hivePanelCollapsed = false;
+  const titleEl = document.getElementById('hiveMobileBackTitle');
+  if (titleEl && node) titleEl.textContent = node.name || node.inviteId || '';
+}
+
+function closeMobileHivePanel() {
+  document.getElementById('hiveLayout')?.classList.remove('mobile-panel-open');
+}
+
 function initFloatingHiveOverlays() {
   const overlays = document.querySelectorAll('#hiveModal .hive-map-overlay');
   overlays.forEach((overlay) => {
     applyHiveOverlayPosition(overlay);
     overlay.addEventListener('pointerdown', (event) => {
       if (event.button !== 0) return;
+      if (event.target.closest('button')) return;
       const canvas = overlay.closest('.hive-canvas');
       if (!canvas) return;
 
@@ -652,6 +719,49 @@ function initFloatingHiveOverlays() {
   });
 
   window.addEventListener('resize', syncFloatingHiveOverlays);
+}
+
+function getHiveOverlayCollapsed() {
+  try { return JSON.parse(localStorage.getItem(HIVE_OVERLAY_COLLAPSED_KEY) || '{}'); } catch { return {}; }
+}
+
+function saveHiveOverlayCollapsed(id, collapsed) {
+  const state = getHiveOverlayCollapsed();
+  state[id] = collapsed;
+  try { localStorage.setItem(HIVE_OVERLAY_COLLAPSED_KEY, JSON.stringify(state)); } catch { /* ignore */ }
+}
+
+function applyHiveOverlayCollapsed(overlay, collapsed) {
+  const btn = overlay.querySelector('.hive-overlay-toggle .material-symbols-rounded');
+  overlay.classList.toggle('collapsed', collapsed);
+  if (btn) btn.textContent = collapsed ? 'unfold_more' : 'unfold_less';
+  overlay.title = collapsed ? 'Click icon to expand' : '';
+  applyHiveOverlayPosition(overlay);
+}
+
+function initHiveOverlayCollapseToggles() {
+  const collapsed = getHiveOverlayCollapsed();
+  const pairs = [
+    { overlayId: 'hiveMiniMap', btnId: 'hiveMinimapToggleBtn', key: 'minimap' },
+    { overlayId: 'hiveLegendMap', btnId: 'hiveLegendToggleBtn', key: 'legend' }
+  ];
+  pairs.forEach(({ overlayId, btnId, key }) => {
+    const overlay = document.getElementById(overlayId);
+    const btn = document.getElementById(btnId);
+    if (!overlay || !btn) return;
+    applyHiveOverlayCollapsed(overlay, !!collapsed[key]);
+    btn.addEventListener('click', (event) => {
+      event.stopPropagation();
+      applyHiveOverlayCollapsed(overlay, true);
+      saveHiveOverlayCollapsed(key, true);
+    });
+    overlay.querySelector('.hive-overlay-header').addEventListener('click', (event) => {
+      if (!overlay.classList.contains('collapsed')) return;
+      event.stopPropagation();
+      applyHiveOverlayCollapsed(overlay, false);
+      saveHiveOverlayCollapsed(key, false);
+    });
+  });
 }
 
 function createDefaultHive() {
@@ -1867,6 +1977,7 @@ function createHiveNode(node, x, y, selectedBranchIds) {
     if (highlightedInviteId !== node.inviteId) highlightedInviteId = '';
     hiveMode = 'edit';
     renderHive();
+    if (isMobileHive()) openMobileHivePanel(node);
   });
   dot.addEventListener('dblclick', (event) => {
     event.preventDefault();
@@ -1888,6 +1999,7 @@ function createHiveNode(node, x, y, selectedBranchIds) {
       if (highlightedInviteId !== node.inviteId) highlightedInviteId = '';
       hiveMode = 'edit';
       renderHive();
+      if (isMobileHive()) openMobileHivePanel(node);
     }
   });
 
@@ -2020,9 +2132,9 @@ function getLoadedHiveAmount() {
 }
 
 function renderMiniMap(layout) {
-  const mini = document.getElementById('hiveMiniMap');
+  const miniBody = document.getElementById('hiveMiniMapBody');
   const canvas = document.querySelector('#hiveModal .hive-canvas');
-  if (!mini || !canvas || !layout) return;
+  if (!miniBody || !canvas || !layout) return;
 
   const zoom = Math.max(HIVE_MIN_ZOOM, hiveZoom);
   const viewLeft = canvas.scrollLeft / zoom;
@@ -2031,7 +2143,7 @@ function renderMiniMap(layout) {
   const viewHeight = canvas.clientHeight / zoom;
   const selectedBranchIds = getDescendantIds(findNode(hiveData[0], selectedInviteId));
 
-  mini.innerHTML = `
+  miniBody.innerHTML = `
     <svg viewBox="0 0 ${layout.width} ${layout.height}" preserveAspectRatio="xMidYMid meet">
       ${layout.links.map((link) => `<path class="hive-minimap-link" d="M ${link.parent.x} ${link.parent.y} L ${link.child.x} ${link.child.y}" />`).join('')}
       ${layout.nodes.map((item) => `<circle class="hive-minimap-node" cx="${item.x}" cy="${item.y}" r="${selectedBranchIds.has(item.node.inviteId) ? 8 : 6}" fill="${getMiniMapColor(item.node)}" />`).join('')}

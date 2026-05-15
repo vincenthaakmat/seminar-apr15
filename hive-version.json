@@ -1,7 +1,8 @@
 {
-  "version": "2026.05.14.37",
+  "version": "2026.05.15.38",
   "name": "Aurum Hive",
   "updates": [
+    "Minimap and Legend overlays are now collapsible to a single icon on the canvas, saving screen space on mobile. Click the icon to restore the full overlay.",
     "Hive update reload now uses a cache-busted refresh and returns to the Hive without repeatedly showing the same update loop.",
     "Hive Summary and Hive actions rollups now stand out visually as expandable sections.",
     "Hive legend now explains the white question-mark placeholder subaccount marker.",
