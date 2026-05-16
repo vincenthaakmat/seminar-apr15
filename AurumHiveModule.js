@@ -95,7 +95,7 @@ const HIVE_SYNC_LOG_LIMIT = 40;
 const HIVE_AUTO_REFRESH_MS = 180000;
 const HIVE_MIN_ZOOM = 0.1;
 const HIVE_MAX_ZOOM = 1.2;
-const HIVE_APP_VERSION = '2026.05.16.53';
+const HIVE_APP_VERSION = '2026.05.16.54';
 const HIVE_VERSION_URL = 'hive-version.json';
 const HIVE_CLOUD_TABLE = 'aurum_hive_accounts';
 const HIVE_SUPPORTED_SUB_LIMIT = 3;
@@ -658,8 +658,14 @@ function ensureHiveUi() {
   }));
   document.getElementById('hiveSaveBtn').addEventListener('click', submitHiveForm);
   document.getElementById('hiveCancelAddBtn').addEventListener('click', cancelHiveFormMode);
-  document.getElementById('hiveCollapsePanelBtn').addEventListener('click', () => setHivePanelCollapsed(true));
-  document.getElementById('hiveShowPanelBtn').addEventListener('click', () => setHivePanelCollapsed(false));
+  document.getElementById('hiveCollapsePanelBtn').addEventListener('click', () => {
+    if (isMobileHive()) closeMobileHivePanel();
+    else setHivePanelCollapsed(true);
+  });
+  document.getElementById('hiveShowPanelBtn').addEventListener('click', () => {
+    if (isMobileHive()) openMobileHivePanel(getSelectedHiveNode());
+    else setHivePanelCollapsed(false);
+  });
   document.getElementById('hiveUpdateReloadBtn').addEventListener('click', reloadHiveApp);
   document.getElementById('hiveZoomRange').addEventListener('input', (event) => setHiveZoom(Number(event.target.value) / 100));
   document.getElementById('hiveZoomOutBtn').addEventListener('click', () => setHiveZoom(hiveZoom - 0.1));
@@ -837,11 +843,12 @@ function isMobileHive() {
 function openMobileHivePanel(node) {
   const layout = document.getElementById('hiveLayout');
   if (!layout) return;
+  const selectedNode = node || getSelectedHiveNode();
   layout.classList.remove('panel-collapsed');
   layout.classList.add('mobile-panel-open');
   hivePanelCollapsed = false;
   const titleEl = document.getElementById('hiveMobileBackTitle');
-  if (titleEl && node) titleEl.textContent = node.name || node.inviteId || '';
+  if (titleEl && selectedNode) titleEl.textContent = selectedNode.name || selectedNode.inviteId || '';
 }
 
 function closeMobileHivePanel() {
@@ -2992,6 +2999,14 @@ function isHiveEditorLocked() {
   return hiveMode === 'add' || hiveEditLocked;
 }
 
+function getSelectedHiveNode() {
+  for (const root of hiveData) {
+    const found = findNode(root, selectedInviteId);
+    if (found) return found;
+  }
+  return hiveData[0] || null;
+}
+
 async function unlockHiveAccountForChange(node, actionLabel) {
   if (!node) return false;
   if (node === hiveData[0]) return true;
@@ -3630,6 +3645,7 @@ export function openHiveManager() {
   if (lookupInput && rememberedInviteId) lookupInput.value = rememberedInviteId;
   renderHiveSyncLog();
   renderHive();
+  if (isMobileHive()) openMobileHivePanel(getSelectedHiveNode());
   setHiveZoom(hiveZoom);
   checkHiveAppVersion();
   subscribeToHiveRealtime().catch((error) => {

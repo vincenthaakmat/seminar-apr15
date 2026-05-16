@@ -1,7 +1,9 @@
 {
-  "version": "2026.05.16.53",
+  "version": "2026.05.16.54",
   "name": "Aurum Hive",
   "updates": [
+    "On mobile, the account panel now opens by default so fresh installs can immediately load or create a Hive account.",
+    "The mobile Panel button now slides the account panel back into view instead of only changing its collapsed state.",
     "On mobile, the minimap and legend overlays now hide while the account detail panel is fully open.",
     "On mobile, the Back to canvas account strip now stays pinned under the Hive header while the detail panel scrolls.",
     "PIN changes now require confirmation and show a keep-your-PIN-safe warning.",
