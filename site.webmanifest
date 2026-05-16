@@ -1,0 +1,19 @@
+{
+  "name": "Aurum ROI Calculator",
+  "short_name": "Aurum ROI",
+  "description": "ROI planning, Hive referral tools, converters, alerts, and export utilities.",
+  "start_url": "./aurum-calc.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#eef3ff",
+  "theme_color": "#2752e7",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "./aurum-app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

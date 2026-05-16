@@ -95,7 +95,7 @@ const HIVE_SYNC_LOG_LIMIT = 40;
 const HIVE_AUTO_REFRESH_MS = 180000;
 const HIVE_MIN_ZOOM = 0.1;
 const HIVE_MAX_ZOOM = 1.2;
-const HIVE_APP_VERSION = '2026.05.16.47';
+const HIVE_APP_VERSION = '2026.05.16.53';
 const HIVE_VERSION_URL = 'hive-version.json';
 const HIVE_CLOUD_TABLE = 'aurum_hive_accounts';
 const HIVE_SUPPORTED_SUB_LIMIT = 3;
@@ -122,6 +122,7 @@ let realtimeReloadTimer = null;
 let hiveAutoRefreshTimer = null;
 let hiveSyncToastTimer = null;
 let hiveUpdatePromptedVersion = '';
+let hivePendingCloudSync = false;
 const hiveAccessPins = new Map();
 const copyFeedbackTimers = new WeakMap();
 
@@ -177,6 +178,7 @@ function ensureHiveUi() {
     .hive-pin-cancel { border:1px solid var(--border); background:#fff; color:var(--text-mid); }
     .hive-pin-unlock { border:1px solid #173fcf; background:#173fcf; color:#fff; box-shadow:0 10px 24px rgba(37,82,231,.22); }
     .hive-pin-unlock:disabled { opacity:.58; cursor:not-allowed; }
+    .hive-pin-warning { margin:0 0 12px; padding:9px 10px; border:1px solid rgba(245,158,11,.28); border-radius:11px; background:#fffbeb; color:#92400e; font:800 11px/1.4 'Inter',sans-serif; }
     .hive-layout { display:grid; grid-template-columns:360px minmax(0,1fr); gap:18px; }
     .hive-layout.panel-collapsed { grid-template-columns:minmax(0,1fr); }
     .hive-panel { border:1px solid var(--border); border-radius:16px; background:#fff; padding:14px; }
@@ -205,7 +207,7 @@ function ensureHiveUi() {
     .hive-leg-name { min-width:0; font-size:12px; font-weight:800; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .hive-leg-volume { font-size:12px; font-weight:900; color:#173fcf; white-space:nowrap; }
     .hive-leg-empty .hive-leg-name, .hive-leg-empty .hive-leg-volume { color:var(--text-muted); }
-    .hive-copy-row { display:grid; grid-template-columns:1fr auto auto; gap:8px; align-items:center; }
+    .hive-copy-row { display:grid; grid-template-columns:1fr repeat(3, auto); gap:8px; align-items:center; }
     .hive-copy-link { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px; color:var(--blue-mid); }
     .hive-copy-btn { border:1px solid var(--border); border-radius:8px; background:var(--blue-light); color:var(--blue-mid); padding:7px 9px; font:800 11px 'Inter',sans-serif; cursor:pointer; }
     .hive-copy-btn:hover { border-color:var(--blue); background:#fff; }
@@ -214,6 +216,8 @@ function ensureHiveUi() {
     .hive-qr-panel.visible { display:grid; }
     .hive-qr-panel img { width:168px; height:168px; border:1px solid var(--border); border-radius:10px; background:#fff; padding:7px; box-shadow:0 8px 18px rgba(25,45,110,.08); }
     .hive-qr-note { max-width:230px; text-align:center; font:800 10px/1.35 'Inter',sans-serif; color:var(--text-muted); overflow-wrap:anywhere; }
+    .hive-qr-fallback { display:none; color:#b45309; }
+    .hive-qr-panel.qr-error .hive-qr-fallback { display:block; }
     .hive-health-card { border-color:rgba(37,82,231,.28); background:linear-gradient(135deg,#edf3ff 0%,#ffffff 100%); }
     .hive-health-score { color:#173fcf; font-size:20px; }
     .hive-action-rollup { margin-top:12px; border:1px solid rgba(37,82,231,.30); border-radius:12px; background:linear-gradient(180deg,#eef4ff 0%,#ffffff 100%); overflow:hidden; box-shadow:0 10px 24px rgba(25,45,110,.10); }
@@ -253,6 +257,8 @@ function ensureHiveUi() {
     .hive-search-result-meta { margin-top:2px; font:800 10px 'Inter',sans-serif; color:var(--text-muted); text-transform:uppercase; letter-spacing:.04em; }
     .hive-search-result-btn { border:1px solid rgba(37,82,231,.22); border-radius:9px; background:#fff; color:#173fcf; padding:7px 9px; font:900 11px 'Inter',sans-serif; cursor:pointer; }
     .hive-search-result-btn:hover { background:#eff6ff; border-color:#2752e7; }
+    .hive-search-more { margin:0 10px 10px; border:1px solid rgba(37,82,231,.18); border-radius:9px; background:#fff; color:#173fcf; padding:8px 9px; font:900 11px 'Inter',sans-serif; cursor:pointer; }
+    .hive-search-more:hover { border-color:#2752e7; background:#eff6ff; }
     .hive-status { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text-muted); border:1px solid rgba(103,123,185,.18); border-radius:11px; background:#f8fbff; padding:8px 9px; }
     .hive-status-dot { width:8px; height:8px; border-radius:50%; background:var(--text-dim); flex:0 0 auto; }
     .hive-status.cloud .hive-status-dot { background:var(--green); }
@@ -373,7 +379,7 @@ function ensureHiveUi() {
     .hive-dot-main::before { content:'M'; }
     .hive-dot-sub::before { content:'S'; }
     .hive-dot-sub.placeholder::before { content:'?'; color:#173fcf; font-size:25px; }
-    .hive-mobile-back { display:none; align-items:center; gap:8px; padding:10px 12px 8px; border-bottom:1px solid var(--border); margin-bottom:4px; }
+    .hive-mobile-back { display:none; align-items:center; gap:8px; padding:10px 12px 8px; border-bottom:1px solid var(--border); margin-bottom:4px; background:#fff; }
     .hive-mobile-back-btn { display:inline-flex; align-items:center; gap:6px; border:none; background:none; color:var(--blue-mid); font:800 13px 'Inter',sans-serif; cursor:pointer; padding:4px 0; }
     .hive-mobile-back-btn .material-symbols-rounded { font-size:20px; }
     .hive-mobile-back-title { font:800 13px 'Inter',sans-serif; color:var(--text); margin-left:auto; }
@@ -384,7 +390,8 @@ function ensureHiveUi() {
       .hive-panel { position:absolute; inset:0; transform:translateX(-110%); transition:transform .3s cubic-bezier(.4,0,.2,1); overflow-y:auto; z-index:20; border-radius:0; padding:10px; }
       .hive-layout.panel-collapsed .hive-panel { display:block; }
       .hive-layout.mobile-panel-open .hive-panel { transform:translateX(0); box-shadow:6px 0 32px rgba(0,0,0,.18); }
-      .hive-mobile-back { display:flex; }
+      .hive-layout.mobile-panel-open .hive-map-overlay { display:none; }
+      .hive-mobile-back { position:sticky; top:0; z-index:30; display:flex; box-shadow:0 8px 18px rgba(15,23,42,.08); }
       .hive-view-toolbar { align-items:flex-start; flex-direction:column; gap:10px; padding:10px; }
       .hive-view-actions { width:100%; display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:7px; }
       .hive-icon-btn, .hive-mini-action { width:100%; min-width:0; height:40px; }
@@ -453,6 +460,7 @@ function ensureHiveUi() {
               <span class="hive-pin-slot"></span>
               <span class="hive-pin-slot"></span>
             </div>
+            <div class="hive-pin-warning" id="hivePinWarning"></div>
             <div class="hive-pin-error" id="hivePinError"></div>
             <div class="hive-pin-keypad" id="hivePinKeypad">
               <button class="hive-pin-key" type="button" data-pin-key="1">1</button>
@@ -563,6 +571,7 @@ function ensureHiveUi() {
                 <button class="planner-small-btn secondary" type="button" id="hiveExportJsonBtn">Export JSON</button>
                 <button class="planner-small-btn secondary" type="button" id="hiveImportJsonBtn">Import JSON</button>
                 <button class="planner-small-btn secondary" type="button" id="hiveRefreshBtn">Sync now</button>
+                <button class="planner-small-btn secondary" type="button" id="hiveStarterSetupBtn">Starter setup</button>
                 <button class="planner-small-btn secondary" type="button" id="hiveResetBtn">Reset sample</button>
                 <button class="planner-small-btn secondary" type="button" id="hiveClearSampleBtn">Clear sample</button>
                 <button class="planner-small-btn secondary hive-danger-btn" type="button" id="hiveDeleteUnfundedSubsBtn">Delete selected unfunded sub</button>
@@ -674,6 +683,12 @@ function ensureHiveUi() {
       clearHiveSearchResults();
       return;
     }
+    if (event.target.closest('[data-show-all-search-results]')) {
+      const query = document.getElementById('hiveNameSearch')?.value || '';
+      const matches = getHiveSearchMatches(query);
+      renderHiveSearchResults(matches, { showAll: true });
+      return;
+    }
     const button = event.target.closest('[data-search-invite-id]');
     if (button) selectHiveSearchResult(button.dataset.searchInviteId);
   });
@@ -693,10 +708,17 @@ function ensureHiveUi() {
   initHiveCanvasPan(hiveCanvas);
   initFloatingHiveOverlays();
   initHiveOverlayCollapseToggles();
-  document.getElementById('hiveExportPdfBtn').addEventListener('click', exportSelectedHivePdf);
+  document.getElementById('hiveExportPdfBtn').addEventListener('click', () => exportSelectedHivePdf().catch((error) => {
+    console.warn('Hive PDF export failed.', error);
+    setMessage('PDF export failed. Try again after refreshing.', 'error');
+  }));
   document.getElementById('hiveExportJsonBtn').addEventListener('click', exportHiveJson);
   document.getElementById('hiveImportJsonBtn').addEventListener('click', () => document.getElementById('hiveImportJsonInput')?.click());
   document.getElementById('hiveImportJsonInput').addEventListener('change', importHiveJson);
+  document.getElementById('hiveStarterSetupBtn').addEventListener('click', () => runHiveStarterSetup().catch((error) => {
+    console.warn('Hive starter setup failed.', error);
+    setMessage('Starter setup could not be completed.', 'error');
+  }));
   document.getElementById('hiveRefreshBtn').addEventListener('click', () => syncLoadedHiveWithCloud().catch((error) => {
     console.warn('Manual Hive sync failed.', error);
     const message = getHiveErrorMessage(error);
@@ -1042,11 +1064,16 @@ function rememberPanelCollapsed() {
 
 function persistHive() {
   saveLocalHive();
-  saveHiveToCloud().catch((error) => {
+  hivePendingCloudSync = true;
+  updateSyncStatus('Local changes saved. Cloud sync pending...', 'local');
+  saveHiveToCloud().then(() => {
+    hivePendingCloudSync = false;
+  }).catch((error) => {
+    hivePendingCloudSync = true;
     console.warn('Aurum Hive cloud sync failed.', error);
     setMessage(getHiveErrorMessage(error), 'error');
     showHiveStatusToast(getHiveErrorMessage(error), 'error');
-    updateSyncStatus('Local saved. Cloud sync failed.', 'local');
+    updateSyncStatus('Local changes saved. Cloud sync still pending.', 'local');
   });
 }
 
@@ -1321,6 +1348,7 @@ function promptForHiveAccessPin(inviteId, options = {}) {
     const overlay = document.getElementById('hivePinOverlay');
     const title = document.getElementById('hivePinTitle');
     const subtitle = document.getElementById('hivePinSubtitle');
+    const warning = document.getElementById('hivePinWarning');
     const slots = [...(document.getElementById('hivePinSlots')?.querySelectorAll('.hive-pin-slot') || [])];
     const keypad = document.getElementById('hivePinKeypad');
     const cancelBtn = document.getElementById('hivePinCancelBtn');
@@ -1336,6 +1364,10 @@ function promptForHiveAccessPin(inviteId, options = {}) {
     let settled = false;
     if (title) title.textContent = options.title || 'Enter PIN';
     if (subtitle) subtitle.textContent = options.subtitle || `Referral ID ${inviteId} is protected.`;
+    if (warning) {
+      warning.textContent = options.warning || '';
+      warning.style.display = options.warning ? '' : 'none';
+    }
     if (error) error.textContent = '';
 
     function renderPin() {
@@ -1473,10 +1505,24 @@ async function changeSelectedHivePin() {
 
   const nextPin = await promptForHiveAccessPin(selected.inviteId, {
     title: selected.accessPin ? 'Change PIN' : 'Set PIN',
-    subtitle: `Enter a new 4-digit PIN for ${selected.inviteId}.`
+    subtitle: `Enter a new 4-digit PIN for ${selected.inviteId}.`,
+    warning: 'Keep this PIN safe. It cannot be recovered from this screen.'
   });
   if (nextPin === null) {
     setMessage('PIN change cancelled.', 'warning');
+    return;
+  }
+  const confirmedPin = await promptForHiveAccessPin(selected.inviteId, {
+    title: 'Confirm PIN',
+    subtitle: `Re-enter the new PIN for ${selected.inviteId}.`
+  });
+  if (confirmedPin === null) {
+    setMessage('PIN change cancelled.', 'warning');
+    return;
+  }
+  if (confirmedPin !== nextPin) {
+    setMessage('PINs did not match. The account PIN was not changed.', 'error');
+    showHiveStatusToast('PINs did not match.', 'error');
     return;
   }
 
@@ -1518,11 +1564,7 @@ function searchHiveByName() {
     return;
   }
 
-  const matches = flattenNodes(hiveData).filter((node) => {
-    const name = String(node.name || '').toLowerCase();
-    const inviteId = String(node.inviteId || '').toLowerCase();
-    return name.includes(query) || inviteId.includes(query);
-  });
+  const matches = getHiveSearchMatches(query);
   if (!matches.length) {
     setMessage('No account matched that name or Referral ID in the loaded Hive.', 'error');
     renderHiveSearchResults([]);
@@ -1534,7 +1576,17 @@ function searchHiveByName() {
   setMessage(matches.length === 1 ? 'Found 1 account.' : `Found ${matches.length} accounts. Showing the first match.`, 'ok');
 }
 
-function renderHiveSearchResults(matches) {
+function getHiveSearchMatches(query) {
+  const normalizedQuery = String(query || '').trim().toLowerCase();
+  if (!normalizedQuery) return [];
+  return flattenNodes(hiveData).filter((node) => {
+    const name = String(node.name || '').toLowerCase();
+    const inviteId = String(node.inviteId || '').toLowerCase();
+    return name.includes(normalizedQuery) || inviteId.includes(normalizedQuery);
+  });
+}
+
+function renderHiveSearchResults(matches, options = {}) {
   const list = document.getElementById('hiveSearchResults');
   if (!list) return;
   if (!matches?.length) {
@@ -1544,12 +1596,13 @@ function renderHiveSearchResults(matches) {
   }
 
   list.classList.add('visible');
+  const visibleMatches = options.showAll ? matches : matches.slice(0, 8);
   list.innerHTML = `
     <div class="hive-search-results-head">
       <span>${matches.length === 1 ? '1 result' : `${matches.length} results`}</span>
       <button class="hive-search-clear-btn" type="button" data-clear-search-results>Clear</button>
     </div>
-  ` + matches.slice(0, 8).map((node) => `
+  ` + visibleMatches.map((node) => `
     <div class="hive-search-result">
       <div>
         <div class="hive-search-result-title">${escapeHtml(node.name || 'Unnamed account')}</div>
@@ -1557,7 +1610,9 @@ function renderHiveSearchResults(matches) {
       </div>
       <button class="hive-search-result-btn" type="button" data-search-invite-id="${escapeHtml(node.inviteId)}">Go to</button>
     </div>
-  `).join('');
+  `).join('') + (!options.showAll && matches.length > 8
+    ? `<button class="hive-search-more" type="button" data-show-all-search-results>Show all ${matches.length} results</button>`
+    : '');
 }
 
 function clearHiveSearchResults() {
@@ -1687,7 +1742,7 @@ function normalizeImportedHiveRoots(roots) {
   return roots.map((root) => normalizeNode(root));
 }
 
-function exportSelectedHivePdf() {
+async function exportSelectedHivePdf() {
   const selected = findNode(hiveData[0], selectedInviteId);
   if (!selected) {
     setMessage('Select an account before exporting.', 'error');
@@ -1717,6 +1772,16 @@ function exportSelectedHivePdf() {
   y += 18;
   doc.text(`Selected root: ${selected.name || selected.inviteId} (${selected.inviteId})`, margin, y);
   y += 24;
+
+  const referralLink = getReferralLink(selected.inviteId);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.text(`Referral link: ${referralLink}`, margin, y);
+  const qrDataUrl = await loadReferralQrDataUrl(selected.inviteId);
+  if (qrDataUrl) {
+    doc.addImage(qrDataUrl, 'PNG', pageWidth - margin - 72, margin, 72, 72);
+  }
+  y += 18;
 
   const stats = getHiveStats(selected);
   doc.setFont('helvetica', 'bold');
@@ -1770,6 +1835,28 @@ function getHiveStats(root) {
     amount: rows.reduce((sum, node) => sum + Number(node.amount || 0), 0),
     totalTurnover: rows.reduce((sum, node) => sum + Number(node.totalTurnover || 0), 0)
   };
+}
+
+function loadReferralQrDataUrl(referralId) {
+  return new Promise((resolve) => {
+    const image = new Image();
+    image.crossOrigin = 'anonymous';
+    image.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = image.naturalWidth || 180;
+        canvas.height = image.naturalHeight || 180;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(image, 0, 0);
+        resolve(canvas.toDataURL('image/png'));
+      } catch (error) {
+        console.warn('Referral QR could not be embedded in PDF.', error);
+        resolve('');
+      }
+    };
+    image.onerror = () => resolve('');
+    image.src = getReferralQrUrl(referralId);
+  });
 }
 
 async function loadHiveFromCloud(inviteId, options = {}) {
@@ -2305,6 +2392,11 @@ function getReferralQrUrl(referralId) {
   return `https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=10&data=${encodeURIComponent(link)}`;
 }
 
+function handleReferralQrError(image) {
+  const panel = image?.closest('.hive-qr-panel');
+  panel?.classList.add('qr-error');
+}
+
 function showCopyFeedback(button) {
   if (!button) return;
 
@@ -2331,6 +2423,29 @@ async function copyReferralLink(referralId, button) {
     await navigator.clipboard.writeText(link);
     showCopyFeedback(button);
     setMessage('Referral link copied.', 'ok');
+  } catch (error) {
+    setMessage(link, 'ok');
+  }
+}
+
+async function shareReferralLink(referralId) {
+  const link = getReferralLink(referralId);
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: 'Aurum referral link',
+        text: `Open this Aurum referral link: ${referralId}`,
+        url: link
+      });
+      setMessage('Referral link shared.', 'ok');
+      return;
+    } catch (error) {
+      if (error?.name === 'AbortError') return;
+    }
+  }
+  try {
+    await navigator.clipboard.writeText(link);
+    setMessage('Sharing is not available here, so the referral link was copied.', 'ok');
   } catch (error) {
     setMessage(link, 'ok');
   }
@@ -3128,6 +3243,84 @@ function clearSampleHive() {
   updateSyncStatus('Local starter Hive ready. Save edits to sync it to the cloud database.', 'local');
 }
 
+async function runHiveStarterSetup() {
+  const root = hiveData[0];
+  if (!root || root.type !== 'main') {
+    setMessage('Starter setup needs a loaded main root account.', 'error');
+    return;
+  }
+  if (isHiveEditorLocked()) {
+    setMessage('Save or cancel the current account changes before starter setup.', 'error');
+    return;
+  }
+  if ((root.children || []).length && !window.confirm('Starter setup can replace the current root child accounts with three placeholders. Continue?')) return;
+
+  const nextInviteId = String(window.prompt('Enter the root Referral ID for this Hive.', root.inviteId || '') || '').trim();
+  if (!nextInviteId) {
+    setMessage('Starter setup cancelled. Root Referral ID is required.', 'error');
+    return;
+  }
+  const duplicate = flattenNodes(hiveData).some((node) => node !== root && node.inviteId === nextInviteId);
+  if (duplicate || (nextInviteId !== root.inviteId && await cloudInviteExists(nextInviteId))) {
+    setMessage('That root Referral ID already exists. Choose a different ID or load it instead.', 'error');
+    return;
+  }
+
+  const nextName = String(window.prompt('Enter the root account name.', root.name || '') || '').trim();
+  if (!nextName) {
+    setMessage('Starter setup cancelled. Account name is required.', 'error');
+    return;
+  }
+
+  let nextPin = '';
+  if (window.confirm('Add a 4-digit PIN to protect this root account?')) {
+    nextPin = await promptForHiveAccessPin(nextInviteId, {
+      title: 'Set Root PIN',
+      subtitle: `Enter a 4-digit PIN for ${nextInviteId}.`,
+      warning: 'Keep this PIN safe. It cannot be recovered from this screen.'
+    });
+    if (nextPin === null) {
+      setMessage('Starter setup cancelled before PIN was set.', 'warning');
+      return;
+    }
+    const confirmedPin = await promptForHiveAccessPin(nextInviteId, {
+      title: 'Confirm Root PIN',
+      subtitle: `Re-enter the new PIN for ${nextInviteId}.`
+    });
+    if (confirmedPin !== nextPin) {
+      setMessage('PINs did not match. Starter setup was not applied.', 'error');
+      return;
+    }
+  }
+
+  const previousInviteId = root.inviteId;
+  Object.assign(root, {
+    inviteId: nextInviteId,
+    name: nextName,
+    country: normalizeHiveCountry(root.country),
+    type: 'main',
+    parentInviteId: null,
+    accessPin: nextPin,
+    needsSetup: false,
+    children: []
+  });
+  if (previousInviteId !== nextInviteId) {
+    deleteCloudInvite(previousInviteId).catch((error) => {
+      console.warn('Old cloud Referral ID could not be removed during starter setup.', error);
+    });
+  }
+  createAutoSubAccounts(root);
+  selectedInviteId = root.inviteId;
+  rememberInviteId(root.inviteId);
+  rememberHiveAccessPin(root.inviteId, nextPin);
+  hiveMode = 'edit';
+  hiveEditLocked = false;
+  persistHive();
+  renderHive();
+  setMessage('Starter Hive setup complete with three placeholder subaccounts.', 'ok');
+  showHiveStatusToast('Starter Hive ready.', 'ok');
+}
+
 async function submitHiveForm() {
   if (!isHiveEditorLocked()) {
     setMessage('Click Edit selected or Add child before changing account details.', 'error');
@@ -3317,10 +3510,12 @@ function renderHiveSummary() {
               <div class="hive-copy-link" title="${escapeHtml(getReferralLink(selected.inviteId))}">${escapeHtml(getReferralLink(selected.inviteId))}</div>
               <button class="hive-copy-btn" type="button" data-copy-referral="${escapeHtml(selected.inviteId)}">Copy</button>
               <button class="hive-copy-btn" type="button" data-toggle-referral-qr="${escapeHtml(selected.inviteId)}">QR</button>
+              <button class="hive-copy-btn" type="button" data-share-referral="${escapeHtml(selected.inviteId)}">Share</button>
             </div>
             <div class="hive-qr-panel" id="hiveReferralQrPanel">
-              <img src="${escapeHtml(getReferralQrUrl(selected.inviteId))}" alt="QR code for referral link ${escapeHtml(selected.inviteId)}">
+              <img src="${escapeHtml(getReferralQrUrl(selected.inviteId))}" alt="QR code for referral link ${escapeHtml(selected.inviteId)}" data-referral-qr-img>
               <div class="hive-qr-note">Scan to open ${escapeHtml(getReferralLink(selected.inviteId))}</div>
+              <div class="hive-qr-note hive-qr-fallback">QR code could not be loaded. Use Copy or Share instead.</div>
             </div>
           </div>
         ` : ''}
@@ -3387,6 +3582,12 @@ function renderHiveSummary() {
   });
   document.querySelectorAll('#hiveSummaryStatic [data-toggle-referral-qr], #hiveSummary [data-toggle-referral-qr]').forEach((button) => {
     button.addEventListener('click', () => toggleReferralQr(button));
+  });
+  document.querySelectorAll('#hiveSummaryStatic [data-share-referral], #hiveSummary [data-share-referral]').forEach((button) => {
+    button.addEventListener('click', () => shareReferralLink(button.dataset.shareReferral));
+  });
+  document.querySelectorAll('#hiveSummaryStatic [data-referral-qr-img], #hiveSummary [data-referral-qr-img]').forEach((image) => {
+    image.addEventListener('error', () => handleReferralQrError(image), { once: true });
   });
 }
 

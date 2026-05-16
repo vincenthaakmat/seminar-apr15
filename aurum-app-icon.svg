@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Aurum ROI app icon">
+  <rect width="512" height="512" rx="104" fill="#2752e7"/>
+  <path d="M94 338 204 112h104l110 226h-77l-22-51H193l-22 51H94Z" fill="#fff"/>
+  <path d="M216 231h80l-40-92-40 92Z" fill="#38bdf8"/>
+  <path d="M150 388c56-48 106-58 151-31 31 18 58 16 88-8" fill="none" stroke="#b8f7d4" stroke-width="28" stroke-linecap="round"/>
+</svg>

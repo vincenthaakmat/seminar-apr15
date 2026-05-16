@@ -1905,7 +1905,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 /* ── Planning tools: scenarios, comparisons, reverse calculator, price alerts ── */
-const AURUM_APP_VERSION = '2026.05.16.48';
+const AURUM_APP_VERSION = '2026.05.16.54';
 const AURUM_VERSION_URL = 'app-version.json';
 const AURUM_VERSION_CHECK_MS = 60000;
 const AURUM_UPDATE_REQUESTED_KEY = 'aurum_update_requested_version';
@@ -1916,6 +1916,7 @@ let reverseLastAmount = null;
 let incomeLastAmount = null;
 let appUpdatePromptedVersion = '';
 let appToastTimer = null;
+let deferredInstallPrompt = null;
 
 function closeToolModal(id) {
   const el = document.getElementById(id);
@@ -1940,6 +1941,65 @@ function showAppToast(message, type = 'info', timeout = 4200) {
 }
 
 window.showAurumToast = showAppToast;
+
+function isAurumInstalledApp() {
+  return window.matchMedia?.('(display-mode: standalone)')?.matches || window.navigator.standalone === true;
+}
+
+function updateInstallAppButtons() {
+  const buttons = [
+    document.getElementById('installAppBtn'),
+    document.getElementById('footerInstallAppBtn')
+  ].filter(Boolean);
+  buttons.forEach(button => {
+    button.style.display = isAurumInstalledApp() ? 'none' : '';
+  });
+}
+
+async function openInstallAppPrompt() {
+  if (isAurumInstalledApp()) {
+    showAppToast('Aurum is already installed on this device.', 'success');
+    return;
+  }
+  if (deferredInstallPrompt) {
+    const promptEvent = deferredInstallPrompt;
+    deferredInstallPrompt = null;
+    promptEvent.prompt();
+    try {
+      const choice = await promptEvent.userChoice;
+      if (choice?.outcome === 'accepted') {
+        showAppToast('Aurum is being installed on your device.', 'success');
+      } else {
+        document.getElementById('installAppModal')?.classList.add('open');
+      }
+    } catch (error) {
+      document.getElementById('installAppModal')?.classList.add('open');
+    }
+    updateInstallAppButtons();
+    return;
+  }
+  document.getElementById('installAppModal')?.classList.add('open');
+}
+
+function registerAurumServiceWorker() {
+  if (!('serviceWorker' in navigator) || window.location.protocol === 'file:') return;
+  navigator.serviceWorker.register(`./aurum-sw.js?v=${encodeURIComponent(AURUM_APP_VERSION)}`)
+    .catch(error => console.warn('Aurum app install service could not be registered.', error));
+}
+
+window.openInstallAppPrompt = openInstallAppPrompt;
+
+window.addEventListener('beforeinstallprompt', event => {
+  event.preventDefault();
+  deferredInstallPrompt = event;
+  updateInstallAppButtons();
+});
+
+window.addEventListener('appinstalled', () => {
+  deferredInstallPrompt = null;
+  updateInstallAppButtons();
+  showAppToast('Aurum was added to your home screen.', 'success');
+});
 
 window.openHiveManager = window.openHiveManager || async function openHiveManagerFallback() {
   try {
@@ -2443,5 +2503,7 @@ setInterval(() => { checkPriceAlerts(false); }, 60000);
 document.addEventListener('DOMContentLoaded', () => {
   renderScenarioSelect();
   renderAlertsList();
+  updateInstallAppButtons();
+  registerAurumServiceWorker();
   startAppVersionWatcher();
 });

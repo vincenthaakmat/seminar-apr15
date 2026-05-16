@@ -1,7 +1,16 @@
 {
-  "version": "2026.05.16.47",
+  "version": "2026.05.16.53",
   "name": "Aurum Hive",
   "updates": [
+    "On mobile, the minimap and legend overlays now hide while the account detail panel is fully open.",
+    "On mobile, the Back to canvas account strip now stays pinned under the Hive header while the detail panel scrolls.",
+    "PIN changes now require confirmation and show a keep-your-PIN-safe warning.",
+    "Referral links now support native sharing when available, with copy fallback.",
+    "PDF exports now include the selected account referral link and QR code when available.",
+    "QR display now shows a fallback note if the QR image cannot load.",
+    "Search results now offer Show all when more than eight accounts match.",
+    "Cloud sync status now clearly shows when local changes are saved but cloud sync is still pending.",
+    "[NEW] Starter setup can configure a root account, optional PIN, and three placeholder subaccounts in one guided flow.",
     "On mobile, the account card now starts collapsed when the Hive first opens.",
     "[NEW] Referral links can now reveal a scannable QR code from the selected account summary card.",
     "Search results now include a Clear button to reset matches and remove the pulse highlight.",
