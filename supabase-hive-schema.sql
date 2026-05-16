@@ -7,11 +7,15 @@ create table if not exists public.aurum_hive_accounts (
   rank text not null default '',
   type text not null check (type in ('main', 'sub')),
   parent_invite_id text,
+  access_pin text not null default '',
   updated_at timestamptz not null default now()
 );
 
 create index if not exists aurum_hive_accounts_parent_invite_id_idx
   on public.aurum_hive_accounts(parent_invite_id);
+
+create index if not exists aurum_hive_accounts_updated_at_idx
+  on public.aurum_hive_accounts(updated_at desc);
 
 alter table public.aurum_hive_accounts
   add column if not exists country text not null default 'Not specified';
@@ -20,7 +24,34 @@ alter table public.aurum_hive_accounts
   add column if not exists total_turnover numeric not null default 0;
 
 alter table public.aurum_hive_accounts
+  add column if not exists access_pin text not null default '';
+
+alter table public.aurum_hive_accounts
   drop constraint if exists aurum_hive_accounts_parent_invite_id_fkey;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'aurum_hive_accounts_amount_nonnegative'
+      and conrelid = 'public.aurum_hive_accounts'::regclass
+  ) then
+    alter table public.aurum_hive_accounts
+      add constraint aurum_hive_accounts_amount_nonnegative
+      check (amount >= 0) not valid;
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'aurum_hive_accounts_total_turnover_nonnegative'
+      and conrelid = 'public.aurum_hive_accounts'::regclass
+  ) then
+    alter table public.aurum_hive_accounts
+      add constraint aurum_hive_accounts_total_turnover_nonnegative
+      check (total_turnover >= 0) not valid;
+  end if;
+end;
+$$;
 
 create or replace function public.validate_aurum_hive_account()
 returns trigger
@@ -29,7 +60,30 @@ as $$
 declare
   parent_type text;
 begin
+  new.invite_id = trim(coalesce(new.invite_id, ''));
+  new.name = trim(coalesce(new.name, ''));
+  new.country = coalesce(nullif(trim(new.country), ''), 'Not specified');
+  new.parent_invite_id = nullif(trim(coalesce(new.parent_invite_id, '')), '');
+  new.amount = coalesce(new.amount, 0);
+  new.total_turnover = coalesce(new.total_turnover, 0);
   new.rank = upper(coalesce(nullif(trim(new.rank), ''), 'NOVA'));
+  new.access_pin = trim(coalesce(new.access_pin, ''));
+
+  if new.invite_id = '' then
+    raise exception 'Referral ID is required.';
+  end if;
+
+  if new.amount < 0 then
+    raise exception 'Personal investment cannot be negative.';
+  end if;
+
+  if new.total_turnover < 0 then
+    raise exception 'Total turnover cannot be negative.';
+  end if;
+
+  if new.access_pin <> '' and new.access_pin !~ '^[0-9]{4}$' then
+    raise exception 'Optional PIN must be exactly 4 digits.';
+  end if;
 
   if new.rank not in ('NOVA', 'VOYAGER', 'VANGUARD', 'VANGUARD PRO', 'NEXUS', 'ORACLE', 'PRIME', 'ELITE', 'MAGNAT', 'MYTHOS', 'LEGEND') then
     raise exception 'Invalid rank %. Use a supported Aurum rank.', new.rank;

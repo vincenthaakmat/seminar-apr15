@@ -1905,7 +1905,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 /* ── Planning tools: scenarios, comparisons, reverse calculator, price alerts ── */
-const AURUM_APP_VERSION = '2026.05.14.37';
+const AURUM_APP_VERSION = '2026.05.16.48';
 const AURUM_VERSION_URL = 'app-version.json';
 const AURUM_VERSION_CHECK_MS = 60000;
 const AURUM_UPDATE_REQUESTED_KEY = 'aurum_update_requested_version';
@@ -2445,4 +2445,3 @@ document.addEventListener('DOMContentLoaded', () => {
   renderAlertsList();
   startAppVersionWatcher();
 });
-

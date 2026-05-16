@@ -95,10 +95,11 @@ const HIVE_SYNC_LOG_LIMIT = 40;
 const HIVE_AUTO_REFRESH_MS = 180000;
 const HIVE_MIN_ZOOM = 0.1;
 const HIVE_MAX_ZOOM = 1.2;
-const HIVE_APP_VERSION = '2026.05.15.38';
+const HIVE_APP_VERSION = '2026.05.16.47';
 const HIVE_VERSION_URL = 'hive-version.json';
 const HIVE_CLOUD_TABLE = 'aurum_hive_accounts';
 const HIVE_SUPPORTED_SUB_LIMIT = 3;
+const HIVE_PIN_PATTERN = /^\d{4}$/;
 const AURUM_REFERRAL_BASE_URL = 'https://backoffice.aurum.foundation/u/';
 const HIVE_RANKS = ['NOVA', 'VOYAGER', 'VANGUARD', 'VANGUARD PRO', 'NEXUS', 'ORACLE', 'PRIME', 'ELITE', 'MAGNAT', 'MYTHOS', 'LEGEND'];
 const DEFAULT_HIVE_RANK = 'NOVA';
@@ -121,12 +122,13 @@ let realtimeReloadTimer = null;
 let hiveAutoRefreshTimer = null;
 let hiveSyncToastTimer = null;
 let hiveUpdatePromptedVersion = '';
+const hiveAccessPins = new Map();
 const copyFeedbackTimers = new WeakMap();
 
 export function configureHiveSupabase(config) {
   Object.assign(supabaseConfig, config || {});
   supabaseClientPromise = null;
-  updateSyncStatus(isCloudConfigured() ? 'Supabase configured. Local cache active.' : 'Local database active. Supabase not configured.', isCloudConfigured() ? 'cloud' : 'local');
+  updateSyncStatus(isCloudConfigured() ? 'Cloud sync configured. Local cache active.' : 'Local database active. Cloud sync not configured.', isCloudConfigured() ? 'cloud' : 'local');
 }
 
 export const configureHiveCloud = configureHiveSupabase;
@@ -153,6 +155,28 @@ function ensureHiveUi() {
     .hive-sync-toast .material-symbols-rounded { display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:999px; background:#16a34a; color:#fff; font-size:18px; flex:0 0 auto; }
     .hive-sync-toast.error { border-color:rgba(220,38,38,.26); background:#fef2f2; color:#7f1d1d; }
     .hive-sync-toast.error .material-symbols-rounded { background:#dc2626; }
+    .hive-pin-overlay { position:fixed; inset:0; z-index:10060; display:none; align-items:center; justify-content:center; padding:20px; background:rgba(15,23,42,.46); backdrop-filter:blur(10px); }
+    .hive-pin-overlay.visible { display:flex; }
+    .hive-pin-card { width:min(360px, calc(100vw - 34px)); border:1px solid rgba(255,255,255,.64); border-radius:18px; background:linear-gradient(180deg,#ffffff 0%,#eef4ff 100%); box-shadow:0 26px 70px rgba(15,23,42,.30); padding:18px; color:var(--text); }
+    .hive-pin-head { display:flex; align-items:center; gap:12px; margin-bottom:14px; }
+    .hive-pin-icon { display:inline-flex; align-items:center; justify-content:center; width:46px; height:46px; border-radius:14px; background:#173fcf; color:#fff; box-shadow:0 12px 28px rgba(37,82,231,.28); flex:0 0 auto; }
+    .hive-pin-icon .material-symbols-rounded { font-size:27px; }
+    .hive-pin-title { margin:0; font:900 18px 'Inter',sans-serif; color:var(--text); line-height:1.15; }
+    .hive-pin-subtitle { margin:3px 0 0; font:700 12px 'Inter',sans-serif; color:var(--text-muted); line-height:1.35; overflow-wrap:anywhere; }
+    .hive-pin-slots { display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; margin:16px 0 14px; }
+    .hive-pin-slot { height:52px; border:1px solid rgba(37,82,231,.22); border-radius:12px; background:#fff; box-shadow:inset 0 1px 0 rgba(255,255,255,.8), 0 8px 18px rgba(25,45,110,.08); display:flex; align-items:center; justify-content:center; }
+    .hive-pin-slot.filled::before { content:''; width:13px; height:13px; border-radius:999px; background:#173fcf; box-shadow:0 0 0 5px rgba(37,82,231,.12); }
+    .hive-pin-error { min-height:17px; margin-bottom:10px; color:#b91c1c; font:800 12px 'Inter',sans-serif; text-align:center; }
+    .hive-pin-keypad { display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; }
+    .hive-pin-key { height:54px; border:1px solid rgba(37,82,231,.18); border-radius:14px; background:#fff; color:var(--text); font:900 20px 'Inter',sans-serif; cursor:pointer; box-shadow:0 9px 18px rgba(25,45,110,.08); }
+    .hive-pin-key:hover { border-color:#2752e7; background:#eff6ff; color:#173fcf; }
+    .hive-pin-key:active { transform:translateY(1px); }
+    .hive-pin-key.action { font-size:18px; color:var(--text-mid); background:#f8fbff; }
+    .hive-pin-actions { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:13px; }
+    .hive-pin-actions button { height:42px; border-radius:11px; font:900 12px 'Inter',sans-serif; cursor:pointer; }
+    .hive-pin-cancel { border:1px solid var(--border); background:#fff; color:var(--text-mid); }
+    .hive-pin-unlock { border:1px solid #173fcf; background:#173fcf; color:#fff; box-shadow:0 10px 24px rgba(37,82,231,.22); }
+    .hive-pin-unlock:disabled { opacity:.58; cursor:not-allowed; }
     .hive-layout { display:grid; grid-template-columns:360px minmax(0,1fr); gap:18px; }
     .hive-layout.panel-collapsed { grid-template-columns:minmax(0,1fr); }
     .hive-panel { border:1px solid var(--border); border-radius:16px; background:#fff; padding:14px; }
@@ -181,11 +205,15 @@ function ensureHiveUi() {
     .hive-leg-name { min-width:0; font-size:12px; font-weight:800; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .hive-leg-volume { font-size:12px; font-weight:900; color:#173fcf; white-space:nowrap; }
     .hive-leg-empty .hive-leg-name, .hive-leg-empty .hive-leg-volume { color:var(--text-muted); }
-    .hive-copy-row { display:grid; grid-template-columns:1fr auto; gap:8px; align-items:center; }
+    .hive-copy-row { display:grid; grid-template-columns:1fr auto auto; gap:8px; align-items:center; }
     .hive-copy-link { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px; color:var(--blue-mid); }
     .hive-copy-btn { border:1px solid var(--border); border-radius:8px; background:var(--blue-light); color:var(--blue-mid); padding:7px 9px; font:800 11px 'Inter',sans-serif; cursor:pointer; }
     .hive-copy-btn:hover { border-color:var(--blue); background:#fff; }
     .hive-copy-btn.copied { border-color:rgba(22,163,74,.34); background:#dcfce7; color:#15803d; }
+    .hive-qr-panel { display:none; margin-top:10px; justify-items:center; gap:8px; padding:12px; border:1px solid rgba(37,82,231,.16); border-radius:12px; background:#fff; }
+    .hive-qr-panel.visible { display:grid; }
+    .hive-qr-panel img { width:168px; height:168px; border:1px solid var(--border); border-radius:10px; background:#fff; padding:7px; box-shadow:0 8px 18px rgba(25,45,110,.08); }
+    .hive-qr-note { max-width:230px; text-align:center; font:800 10px/1.35 'Inter',sans-serif; color:var(--text-muted); overflow-wrap:anywhere; }
     .hive-health-card { border-color:rgba(37,82,231,.28); background:linear-gradient(135deg,#edf3ff 0%,#ffffff 100%); }
     .hive-health-score { color:#173fcf; font-size:20px; }
     .hive-action-rollup { margin-top:12px; border:1px solid rgba(37,82,231,.30); border-radius:12px; background:linear-gradient(180deg,#eef4ff 0%,#ffffff 100%); overflow:hidden; box-shadow:0 10px 24px rgba(25,45,110,.10); }
@@ -211,11 +239,26 @@ function ensureHiveUi() {
     .hive-lookup-row { display:grid; grid-template-columns:1fr auto; gap:8px; }
     .hive-lookup input { width:100%; border:1px solid var(--border); border-radius:10px; padding:10px 11px; color:var(--text); background:#fff; font-family:'Inter',sans-serif; font-size:13px; outline:none; }
     .hive-lookup input:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(37,82,231,.12); }
+    .hive-lookup-loading { display:inline-flex; align-items:center; justify-content:center; gap:5px; }
+    .hive-lookup-loading .material-symbols-rounded { font-size:16px; line-height:1; }
     .hive-search-row { display:grid; grid-template-columns:1fr auto; gap:8px; }
-    .hive-status { display:flex; align-items:center; gap:7px; font-size:12px; color:var(--text-muted); }
+    .hive-search-results { display:none; border:1px solid rgba(37,82,231,.18); border-radius:12px; background:#f8fbff; overflow:hidden; }
+    .hive-search-results.visible { display:grid; }
+    .hive-search-results-head { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 10px; border-bottom:1px solid rgba(37,82,231,.10); color:var(--text-muted); font:900 10px 'Inter',sans-serif; letter-spacing:.08em; text-transform:uppercase; }
+    .hive-search-clear-btn { border:1px solid rgba(37,82,231,.18); border-radius:8px; background:#fff; color:var(--text-mid); padding:5px 7px; font:900 10px 'Inter',sans-serif; cursor:pointer; }
+    .hive-search-clear-btn:hover { border-color:#2752e7; color:#173fcf; background:#eff6ff; }
+    .hive-search-result { display:grid; grid-template-columns:1fr auto; gap:8px; align-items:center; padding:9px 10px; border-top:1px solid rgba(37,82,231,.10); }
+    .hive-search-results-head + .hive-search-result { border-top:none; }
+    .hive-search-result-title { font:900 12px 'Inter',sans-serif; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .hive-search-result-meta { margin-top:2px; font:800 10px 'Inter',sans-serif; color:var(--text-muted); text-transform:uppercase; letter-spacing:.04em; }
+    .hive-search-result-btn { border:1px solid rgba(37,82,231,.22); border-radius:9px; background:#fff; color:#173fcf; padding:7px 9px; font:900 11px 'Inter',sans-serif; cursor:pointer; }
+    .hive-search-result-btn:hover { background:#eff6ff; border-color:#2752e7; }
+    .hive-status { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text-muted); border:1px solid rgba(103,123,185,.18); border-radius:11px; background:#f8fbff; padding:8px 9px; }
     .hive-status-dot { width:8px; height:8px; border-radius:50%; background:var(--text-dim); flex:0 0 auto; }
     .hive-status.cloud .hive-status-dot { background:var(--green); }
     .hive-status.local .hive-status-dot { background:#f59e0b; }
+    .hive-status-label { color:var(--text); font-weight:900; white-space:nowrap; }
+    .hive-status-text { min-width:0; overflow-wrap:anywhere; }
     .hive-form { display:grid; gap:10px; margin-top:14px; }
     .hive-form-actions { display:grid; grid-template-columns:1fr auto; gap:8px; align-items:center; }
     .hive-form-actions .crypto-action-btn { margin:0; }
@@ -227,12 +270,28 @@ function ensureHiveUi() {
     .hive-field input:disabled { background:var(--surface-3); color:var(--text-muted); cursor:not-allowed; }
     .hive-field input[readonly] { background:#fff; color:var(--text); cursor:text; }
     .hive-form-actions button:disabled { opacity:.62; cursor:not-allowed; }
+    .hive-pin-control { display:grid; gap:8px; border:1px solid rgba(37,82,231,.16); border-radius:12px; background:rgba(248,251,255,.78); padding:10px; }
+    .hive-pin-control-head { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .hive-pin-control-label { font-size:10px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; color:var(--text-muted); }
+    .hive-pin-status { display:inline-flex; align-items:center; gap:5px; border-radius:999px; padding:4px 7px; background:#e5e7eb; color:#475569; font:900 10px 'Inter',sans-serif; white-space:nowrap; }
+    .hive-pin-status.protected { background:#dcfce7; color:#15803d; }
+    .hive-pin-control-actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .hive-pin-control-actions button { border:1px solid var(--border); border-radius:9px; background:#fff; color:var(--text-mid); padding:8px 9px; font:900 11px 'Inter',sans-serif; cursor:pointer; }
+    .hive-pin-control-actions button:hover { border-color:#2752e7; color:#173fcf; background:#eff6ff; }
+    .hive-pin-control-actions button.danger:hover { border-color:#dc2626; color:#b91c1c; background:#fef2f2; }
     .hive-checkbox-row { display:none; align-items:center; gap:8px; border:1px solid rgba(37,82,231,.16); border-radius:10px; background:rgba(237,243,255,.72); padding:9px 10px; color:var(--text-mid); font-size:12px; font-weight:800; line-height:1.35; }
     .hive-checkbox-row.visible { display:flex; }
     .hive-checkbox-row input { width:16px; height:16px; accent-color:var(--blue); flex:0 0 auto; }
     .hive-mode-tabs { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
     .hive-mode-tab { border:1px solid var(--border); border-radius:10px; background:var(--surface-2); color:var(--text-mid); padding:9px 10px; font:800 12px 'Inter',sans-serif; cursor:pointer; }
     .hive-mode-tab.active { border-color:var(--blue); background:var(--blue-light); color:var(--blue-mid); }
+    .hive-account-card-rollup { margin-top:12px; border:1px solid rgba(37,82,231,.30); border-radius:12px; background:linear-gradient(180deg,#eef4ff 0%,#ffffff 100%); overflow:hidden; box-shadow:0 10px 24px rgba(25,45,110,.10); }
+    .hive-account-card-rollup summary { list-style:none; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 13px; color:#173fcf; background:linear-gradient(135deg,#dbeafe 0%,#eff6ff 58%,#ffffff 100%); border-bottom:1px solid rgba(37,82,231,.12); font:900 12px 'Inter',sans-serif; cursor:pointer; user-select:none; }
+    .hive-account-card-rollup summary::-webkit-details-marker { display:none; }
+    .hive-account-card-rollup summary::after { content:'expand_more'; display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:999px; background:#fff; border:1px solid rgba(37,82,231,.18); font-family:'Material Symbols Rounded'; font-size:20px; color:#173fcf; transition:transform .15s; box-shadow:0 4px 10px rgba(25,45,110,.08); }
+    .hive-account-card-rollup[open] summary::after { transform:rotate(180deg); }
+    .hive-account-card-hint { margin-left:auto; min-width:0; max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#2752e7; font-size:10px; font-weight:900; letter-spacing:.04em; text-transform:uppercase; }
+    .hive-account-card-body { padding:12px; }
     .hive-message { min-height:18px; margin-top:10px; font-size:12px; color:var(--text-muted); }
     .hive-message.error { color:var(--red); }
     .hive-message.warning { color:#b45309; }
@@ -296,10 +355,10 @@ function ensureHiveUi() {
     .hive-dot-main, .hive-dot-sub { position:relative; display:flex; align-items:center; justify-content:center; width:58px; height:58px; border-radius:50%; border:4px solid rgba(255,255,255,.86); box-shadow:0 14px 28px rgba(0,0,0,.24); cursor:pointer; }
     .hive-dot-main.selected, .hive-dot-sub.selected { outline:4px solid rgba(250,204,21,.95); outline-offset:4px; }
     .hive-dot-main.in-selected-branch, .hive-dot-sub.in-selected-branch { box-shadow:0 14px 28px rgba(0,0,0,.24), 0 0 0 7px rgba(239,68,68,.20), 0 0 22px rgba(239,68,68,.70); }
-    .hive-dot-main.search-hit, .hive-dot-sub.search-hit { animation:hiveSearchPulse 1.05s ease-in-out infinite; }
+    .hive-dot-main.search-hit, .hive-dot-sub.search-hit { z-index:6; animation:hiveSearchPulse .88s ease-in-out infinite; }
     @keyframes hiveSearchPulse {
-      0%, 100% { box-shadow:0 14px 28px rgba(0,0,0,.24), 0 0 0 0 rgba(250,204,21,.95); }
-      50% { box-shadow:0 14px 28px rgba(0,0,0,.24), 0 0 0 16px rgba(250,204,21,.08), 0 0 34px rgba(250,204,21,.95); }
+      0%, 100% { transform:scale(1.16); box-shadow:0 18px 34px rgba(0,0,0,.30), 0 0 0 7px rgba(250,204,21,.65), 0 0 28px rgba(250,204,21,.92); }
+      50% { transform:scale(1.34); box-shadow:0 22px 42px rgba(0,0,0,.34), 0 0 0 22px rgba(250,204,21,.18), 0 0 48px rgba(250,204,21,1); }
     }
     .hive-dot-main { background:#dc2626; }
     .hive-dot-sub { background:#16a34a; }
@@ -320,11 +379,31 @@ function ensureHiveUi() {
     .hive-mobile-back-title { font:800 13px 'Inter',sans-serif; color:var(--text); margin-left:auto; }
     @media (max-width: 900px) {
       .hive-modal-card { width:calc(100vw - 18px); }
+      .hive-modal-card.fullscreen .tool-body { min-height:calc(100vh - 82px); }
       .hive-layout { grid-template-columns:1fr; position:relative; overflow:hidden; }
-      .hive-panel { position:absolute; inset:0; transform:translateX(-110%); transition:transform .3s cubic-bezier(.4,0,.2,1); overflow-y:auto; z-index:20; border-radius:0; }
+      .hive-panel { position:absolute; inset:0; transform:translateX(-110%); transition:transform .3s cubic-bezier(.4,0,.2,1); overflow-y:auto; z-index:20; border-radius:0; padding:10px; }
       .hive-layout.panel-collapsed .hive-panel { display:block; }
       .hive-layout.mobile-panel-open .hive-panel { transform:translateX(0); box-shadow:6px 0 32px rgba(0,0,0,.18); }
       .hive-mobile-back { display:flex; }
+      .hive-view-toolbar { align-items:flex-start; flex-direction:column; gap:10px; padding:10px; }
+      .hive-view-actions { width:100%; display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:7px; }
+      .hive-icon-btn, .hive-mini-action { width:100%; min-width:0; height:40px; }
+      .hive-show-panel-btn { grid-column:span 2; min-width:0; }
+      .hive-zoom-wrap { grid-column:1 / -1; width:100%; min-width:0; justify-content:space-between; }
+      .hive-zoom-wrap input { flex:1; width:auto; }
+      .hive-modal-card.fullscreen .hive-canvas { height:calc(100vh - 238px); padding:16px; }
+      .hive-search-result { grid-template-columns:1fr; }
+      .hive-search-result-btn { width:100%; min-height:38px; }
+      .hive-pin-control-actions, .hive-form-actions { grid-template-columns:1fr; }
+    }
+    @media (max-width: 560px) {
+      .hive-header-actions { gap:6px; }
+      .hive-version-badge { display:none; }
+      .hive-view-actions { grid-template-columns:repeat(4, minmax(0, 1fr)); }
+      .hive-actions { grid-template-columns:1fr; }
+      .hive-summary-grid { grid-template-columns:1fr; }
+      .hive-pin-card { padding:14px; }
+      .hive-pin-key { height:50px; }
     }
   `;
   document.head.appendChild(style);
@@ -359,6 +438,42 @@ function ensureHiveUi() {
           <span class="material-symbols-rounded">check</span>
           <span id="hiveSyncToastText">Hive action completed.</span>
         </div>
+        <div class="hive-pin-overlay" id="hivePinOverlay" role="dialog" aria-modal="true" aria-labelledby="hivePinTitle">
+          <div class="hive-pin-card">
+            <div class="hive-pin-head">
+              <span class="hive-pin-icon"><span class="material-symbols-rounded">lock</span></span>
+              <div>
+                <h3 class="hive-pin-title" id="hivePinTitle">Enter PIN</h3>
+                <p class="hive-pin-subtitle" id="hivePinSubtitle">This Referral ID is protected.</p>
+              </div>
+            </div>
+            <div class="hive-pin-slots" id="hivePinSlots" aria-label="4 digit PIN">
+              <span class="hive-pin-slot"></span>
+              <span class="hive-pin-slot"></span>
+              <span class="hive-pin-slot"></span>
+              <span class="hive-pin-slot"></span>
+            </div>
+            <div class="hive-pin-error" id="hivePinError"></div>
+            <div class="hive-pin-keypad" id="hivePinKeypad">
+              <button class="hive-pin-key" type="button" data-pin-key="1">1</button>
+              <button class="hive-pin-key" type="button" data-pin-key="2">2</button>
+              <button class="hive-pin-key" type="button" data-pin-key="3">3</button>
+              <button class="hive-pin-key" type="button" data-pin-key="4">4</button>
+              <button class="hive-pin-key" type="button" data-pin-key="5">5</button>
+              <button class="hive-pin-key" type="button" data-pin-key="6">6</button>
+              <button class="hive-pin-key" type="button" data-pin-key="7">7</button>
+              <button class="hive-pin-key" type="button" data-pin-key="8">8</button>
+              <button class="hive-pin-key" type="button" data-pin-key="9">9</button>
+              <button class="hive-pin-key action" type="button" data-pin-action="clear">Clear</button>
+              <button class="hive-pin-key" type="button" data-pin-key="0">0</button>
+              <button class="hive-pin-key action" type="button" data-pin-action="backspace" aria-label="Backspace"><span class="material-symbols-rounded">backspace</span></button>
+            </div>
+            <div class="hive-pin-actions">
+              <button class="hive-pin-cancel" type="button" id="hivePinCancelBtn">Cancel</button>
+              <button class="hive-pin-unlock" type="button" id="hivePinUnlockBtn" disabled>Unlock</button>
+            </div>
+          </div>
+        </div>
         <div class="hive-layout" id="hiveLayout">
           <section class="hive-panel">
             <div class="hive-mobile-back">
@@ -384,7 +499,8 @@ function ensureHiveUi() {
                 <input id="hiveNameSearch" autocomplete="off" placeholder="Enter name or Referral ID">
                 <button class="planner-small-btn secondary" type="button" id="hiveNameSearchBtn">Find</button>
               </div>
-              <div class="hive-status" id="hiveSyncStatus"><span class="hive-status-dot"></span><span>Local database active. Supabase not configured.</span></div>
+              <div class="hive-search-results" id="hiveSearchResults"></div>
+              <div class="hive-status" id="hiveSyncStatus"><span class="hive-status-dot"></span><span class="hive-status-label">Cloud sync</span><span class="hive-status-text">Local database active. Cloud sync not configured.</span></div>
             </div>
             <div class="hive-summary hive-summary-static" id="hiveSummaryStatic"></div>
             <details class="hive-summary-rollup">
@@ -394,30 +510,48 @@ function ensureHiveUi() {
               </summary>
               <div class="hive-summary" id="hiveSummary"></div>
             </details>
-            <div class="hive-mode-tabs">
-              <button class="hive-mode-tab active" type="button" id="hiveEditTab">Edit selected</button>
-              <button class="hive-mode-tab" type="button" id="hiveAddTab">Add child</button>
-            </div>
-            <div class="hive-editor-panel">
-              <div class="hive-form">
-                <div class="hive-field"><label for="hiveInviteId">Referral ID</label><input id="hiveInviteId" autocomplete="off"></div>
-                <div class="hive-field"><label for="hiveName">Name</label><input id="hiveName" autocomplete="off"></div>
-                <div class="hive-field"><label for="hiveCountry">Country</label><select id="hiveCountry"></select></div>
-                <div class="hive-field"><label for="hiveAmount">Personal investment</label><input id="hiveAmount" type="number" min="0" step="any"></div>
-                <div class="hive-field"><label for="hiveTotalTurnover">Total turnover</label><input id="hiveTotalTurnover" type="number" min="0" step="any"></div>
-                <div class="hive-field"><label for="hiveRank">Rank</label><select id="hiveRank"></select></div>
-                <div class="hive-field"><label for="hiveType">Type</label><input id="hiveType" disabled></div>
-                <div class="hive-field"><label for="hiveParent">Invited By ID</label><input id="hiveParent" autocomplete="off"></div>
-                <label class="hive-checkbox-row" id="hiveAutoSubWrap" for="hiveAutoSubAccounts">
-                  <input id="hiveAutoSubAccounts" type="checkbox">
-                  Auto-create 3 linked subaccounts
-                </label>
-                <div class="hive-form-actions">
-                  <button class="crypto-action-btn" type="button" id="hiveSaveBtn">Save edit</button>
-                  <button class="planner-small-btn secondary" type="button" id="hiveCancelAddBtn">Cancel</button>
+            <details class="hive-account-card-rollup" id="hiveAccountCardRollup" open>
+              <summary>
+                Account card
+                <span class="hive-account-card-hint" id="hiveAccountCardHint">Selected account</span>
+              </summary>
+              <div class="hive-account-card-body">
+                <div class="hive-mode-tabs">
+                  <button class="hive-mode-tab active" type="button" id="hiveEditTab">Edit selected</button>
+                  <button class="hive-mode-tab" type="button" id="hiveAddTab">Add child</button>
+                </div>
+                <div class="hive-editor-panel">
+                  <div class="hive-form">
+                    <div class="hive-field"><label for="hiveInviteId">Referral ID</label><input id="hiveInviteId" autocomplete="off"></div>
+                    <div class="hive-field"><label for="hiveName">Name</label><input id="hiveName" autocomplete="off"></div>
+                    <div class="hive-field"><label for="hiveCountry">Country</label><select id="hiveCountry"></select></div>
+                    <div class="hive-field"><label for="hiveAmount">Personal investment</label><input id="hiveAmount" type="number" min="0" step="any"></div>
+                    <div class="hive-field"><label for="hiveTotalTurnover">Total turnover</label><input id="hiveTotalTurnover" type="number" min="0" step="any"></div>
+                    <div class="hive-field"><label for="hiveRank">Rank</label><select id="hiveRank"></select></div>
+                    <div class="hive-field"><label for="hiveType">Type</label><input id="hiveType" disabled></div>
+                    <div class="hive-field"><label for="hiveParent">Invited By ID</label><input id="hiveParent" autocomplete="off"></div>
+                    <div class="hive-pin-control" id="hivePinControl">
+                      <div class="hive-pin-control-head">
+                        <span class="hive-pin-control-label">Account PIN</span>
+                        <span class="hive-pin-status" id="hivePinStatus">No PIN</span>
+                      </div>
+                      <div class="hive-pin-control-actions">
+                        <button type="button" id="hiveChangePinBtn">Change PIN</button>
+                        <button type="button" class="danger" id="hiveRemovePinBtn">Remove PIN</button>
+                      </div>
+                    </div>
+                    <label class="hive-checkbox-row" id="hiveAutoSubWrap" for="hiveAutoSubAccounts">
+                      <input id="hiveAutoSubAccounts" type="checkbox">
+                      Auto-create 3 linked subaccounts
+                    </label>
+                    <div class="hive-form-actions">
+                      <button class="crypto-action-btn" type="button" id="hiveSaveBtn">Save edit</button>
+                      <button class="planner-small-btn secondary" type="button" id="hiveCancelAddBtn">Cancel</button>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
+            </details>
             <div class="hive-message" id="hiveMessage"></div>
             <details class="hive-action-rollup">
               <summary>
@@ -505,8 +639,14 @@ function ensureHiveUi() {
     if (event.target === modal) event.stopPropagation();
   });
 
-  document.getElementById('hiveEditTab').addEventListener('click', handleHiveEditTabClick);
-  document.getElementById('hiveAddTab').addEventListener('click', handleHiveAddTabClick);
+  document.getElementById('hiveEditTab').addEventListener('click', () => handleHiveEditTabClick().catch((error) => {
+    console.warn('Hive edit unlock failed.', error);
+    setMessage('Could not unlock this account for editing.', 'error');
+  }));
+  document.getElementById('hiveAddTab').addEventListener('click', () => handleHiveAddTabClick().catch((error) => {
+    console.warn('Hive add unlock failed.', error);
+    setMessage('Could not unlock this account for adding.', 'error');
+  }));
   document.getElementById('hiveSaveBtn').addEventListener('click', submitHiveForm);
   document.getElementById('hiveCancelAddBtn').addEventListener('click', cancelHiveFormMode);
   document.getElementById('hiveCollapsePanelBtn').addEventListener('click', () => setHivePanelCollapsed(true));
@@ -529,6 +669,22 @@ function ensureHiveUi() {
   document.getElementById('hiveNameSearch').addEventListener('keydown', (event) => {
     if (event.key === 'Enter') searchHiveByName();
   });
+  document.getElementById('hiveSearchResults').addEventListener('click', (event) => {
+    if (event.target.closest('[data-clear-search-results]')) {
+      clearHiveSearchResults();
+      return;
+    }
+    const button = event.target.closest('[data-search-invite-id]');
+    if (button) selectHiveSearchResult(button.dataset.searchInviteId);
+  });
+  document.getElementById('hiveChangePinBtn').addEventListener('click', () => changeSelectedHivePin().catch((error) => {
+    console.warn('Hive PIN change failed.', error);
+    setMessage('Could not change the account PIN.', 'error');
+  }));
+  document.getElementById('hiveRemovePinBtn').addEventListener('click', () => removeSelectedHivePin().catch((error) => {
+    console.warn('Hive PIN removal failed.', error);
+    setMessage('Could not remove the account PIN.', 'error');
+  }));
   const hiveCanvas = document.querySelector('#hiveModal .hive-canvas');
   hiveCanvas?.addEventListener('scroll', () => {
     syncFloatingHiveOverlays();
@@ -546,7 +702,7 @@ function ensureHiveUi() {
     const message = getHiveErrorMessage(error);
     setMessage(message, 'error');
     showHiveStatusToast(message, 'error');
-    updateSyncStatus('Manual Supabase sync failed.', 'local');
+    updateSyncStatus('Manual cloud sync failed.', 'local');
   }));
   document.getElementById('hiveResetBtn').addEventListener('click', () => {
     hiveData.splice(0, hiveData.length, createDefaultHive()[0]);
@@ -668,6 +824,13 @@ function openMobileHivePanel(node) {
 
 function closeMobileHivePanel() {
   document.getElementById('hiveLayout')?.classList.remove('mobile-panel-open');
+}
+
+function setDefaultMobileAccountCardState() {
+  const accountCard = document.getElementById('hiveAccountCardRollup');
+  if (!accountCard) return;
+  if (isMobileHive()) accountCard.removeAttribute('open');
+  else accountCard.setAttribute('open', '');
 }
 
 function initFloatingHiveOverlays() {
@@ -883,7 +1046,7 @@ function persistHive() {
     console.warn('Aurum Hive cloud sync failed.', error);
     setMessage(getHiveErrorMessage(error), 'error');
     showHiveStatusToast(getHiveErrorMessage(error), 'error');
-    updateSyncStatus('Local saved. Supabase sync failed.', 'local');
+    updateSyncStatus('Local saved. Cloud sync failed.', 'local');
   });
 }
 
@@ -975,7 +1138,7 @@ async function subscribeToHiveRealtime() {
       }, 450);
     })
     .subscribe((status) => {
-      if (status === 'SUBSCRIBED') updateSyncStatus('Supabase realtime connected.', 'cloud');
+      if (status === 'SUBSCRIBED') updateSyncStatus('Live cloud sync connected.', 'cloud');
     });
 }
 
@@ -1001,9 +1164,9 @@ function runHiveAutoRefresh() {
     updateSyncStatus('Auto-sync paused while editing an account.', 'local');
     return;
   }
-  refreshLoadedHiveFromCloud('Hive refreshed from Supabase.', { silent: true, quietMissing: true, auto: true }).catch((error) => {
+  refreshLoadedHiveFromCloud('Hive refreshed from the cloud database.', { silent: true, quietMissing: true, auto: true }).catch((error) => {
     console.warn('Aurum Hive scheduled refresh failed.', error);
-    updateSyncStatus('Scheduled Supabase refresh failed. Local cache active.', 'local');
+    updateSyncStatus('Scheduled cloud refresh failed. Local cache active.', 'local');
   });
 }
 
@@ -1011,7 +1174,7 @@ async function saveHiveToCloud() {
   const validation = validateHiveStructureForSync(hiveData);
   const supabase = await getSupabaseClient();
   if (!supabase) {
-    updateSyncStatus('Local database active. Supabase not configured.', 'local');
+    updateSyncStatus('Local database active. Cloud sync not configured.', 'local');
     return;
   }
 
@@ -1020,17 +1183,17 @@ async function saveHiveToCloud() {
   const { error } = await supabase
     .from(HIVE_CLOUD_TABLE)
     .upsert(rows.map(toSupabaseRow), { onConflict: 'invite_id' });
-  if (error && String(error.message || '').includes('total_turnover')) {
-    const fallbackRows = rows.map(toSupabaseRow).map(({ total_turnover, ...row }) => row);
+  if (error && (String(error.message || '').includes('total_turnover') || String(error.message || '').includes('access_pin'))) {
+    const fallbackRows = rows.map(toSupabaseRow).map(({ total_turnover, access_pin, ...row }) => row);
     const { error: fallbackError } = await supabase
       .from(HIVE_CLOUD_TABLE)
       .upsert(fallbackRows, { onConflict: 'invite_id' });
     if (fallbackError) throw fallbackError;
-    updateSyncStatus('Saved locally. Supabase synced without Total turnover column.', 'cloud');
+    updateSyncStatus('Saved locally. Cloud database synced without one optional schema column.', 'cloud');
     return;
   }
   if (error) throw error;
-  updateSyncStatus(`Saved ${validation.total} account${validation.total !== 1 ? 's' : ''} locally and synced to Supabase.`, 'cloud');
+  updateSyncStatus(`Saved ${validation.total} account${validation.total !== 1 ? 's' : ''} locally and synced to the cloud database.`, 'cloud');
 }
 
 async function validateExternalCloudParents(supabase, rows) {
@@ -1069,40 +1232,281 @@ async function loadHiveFromLookup() {
     return;
   }
 
-  rememberInviteId(inviteId);
-  setMessage('Looking up Referral ID...', '');
-  const cloudNode = await loadHiveFromCloud(inviteId);
-  if (cloudNode) {
-    hiveData.splice(0, hiveData.length, cloudNode);
-    selectedInviteId = inviteId;
-    isolatedRootInviteId = '';
-    collapsedInviteIds.clear();
-    hiveMode = 'edit';
-    saveLocalHive();
-    renderHive();
-    setMessage('Loaded from Supabase database.', 'ok');
-    showHiveStatusToast('Hive loaded from Supabase.', 'ok');
-    updateSyncStatus('Loaded from Supabase and cached locally.', 'cloud');
+  setHiveLookupLoading(true);
+  try {
+    rememberInviteId(inviteId);
+    setMessage('Looking up Referral ID...', '');
+    const accessPin = await requestHiveAccessPinIfNeeded(inviteId);
+    if (accessPin === null) {
+      forgetInviteId();
+      setMessage('PIN required to load this Referral ID.', 'error');
+      return;
+    }
+
+    const cloudNode = await loadHiveFromCloud(inviteId, { accessPin });
+    if (cloudNode) {
+      hiveData.splice(0, hiveData.length, cloudNode);
+      selectedInviteId = inviteId;
+      isolatedRootInviteId = '';
+      collapsedInviteIds.clear();
+      hiveMode = 'edit';
+      saveLocalHive();
+      renderHive();
+      setMessage('Loaded from the cloud database.', 'ok');
+      showHiveStatusToast('Hive loaded from the cloud database.', 'ok');
+      updateSyncStatus('Loaded from the cloud database and cached locally.', 'cloud');
+      return;
+    }
+
+    const localNode = findNode(hiveData[0], inviteId);
+    if (localNode) {
+      const localAccessPin = await requestLocalHiveAccessPinIfNeeded(localNode);
+      if (localAccessPin === null) {
+        forgetInviteId();
+        setMessage('PIN required to load this local Referral ID.', 'error');
+        return;
+      }
+      const topLocalNode = findTopLocalNode(inviteId) || localNode;
+      hiveData.splice(0, hiveData.length, cloneNode(topLocalNode));
+      selectedInviteId = inviteId;
+      isolatedRootInviteId = '';
+      collapsedInviteIds.clear();
+      hiveMode = 'edit';
+      renderHive();
+      setMessage('Loaded from local database.', 'ok');
+      showHiveStatusToast('Hive loaded from local cache.', 'ok');
+      updateSyncStatus(isCloudConfigured() ? 'Local match loaded. Cloud database did not return this Referral ID.' : 'Loaded locally. Cloud sync not configured.', isCloudConfigured() ? 'local' : 'local');
+      return;
+    }
+
+    setMessage('Referral ID was not found locally or in the configured cloud database.', 'error');
+    showHiveStatusToast('Referral ID was not found.', 'error');
+  } finally {
+    setHiveLookupLoading(false);
+  }
+}
+
+function setHiveLookupLoading(isLoading) {
+  const button = document.getElementById('hiveLookupBtn');
+  const input = document.getElementById('hiveLookupInviteId');
+  if (!button) return;
+  button.disabled = Boolean(isLoading);
+  if (input) input.disabled = Boolean(isLoading);
+  button.innerHTML = isLoading
+    ? '<span class="hive-lookup-loading"><span class="material-symbols-rounded">hourglass_top</span>Loading</span>'
+    : 'Load';
+}
+
+function normalizeHiveAccessPin(value) {
+  return String(value || '').replace(/\D/g, '').slice(0, 4);
+}
+
+function isValidHiveAccessPin(value) {
+  return value === '' || HIVE_PIN_PATTERN.test(value);
+}
+
+function getRememberedHiveAccessPin(inviteId) {
+  return hiveAccessPins.get(String(inviteId || '').trim()) || '';
+}
+
+function rememberHiveAccessPin(inviteId, pin) {
+  const key = String(inviteId || '').trim();
+  if (!key) return;
+  if (pin) hiveAccessPins.set(key, pin);
+  else hiveAccessPins.delete(key);
+}
+
+function promptForHiveAccessPin(inviteId, options = {}) {
+  return new Promise((resolve) => {
+    const overlay = document.getElementById('hivePinOverlay');
+    const title = document.getElementById('hivePinTitle');
+    const subtitle = document.getElementById('hivePinSubtitle');
+    const slots = [...(document.getElementById('hivePinSlots')?.querySelectorAll('.hive-pin-slot') || [])];
+    const keypad = document.getElementById('hivePinKeypad');
+    const cancelBtn = document.getElementById('hivePinCancelBtn');
+    const unlockBtn = document.getElementById('hivePinUnlockBtn');
+    const error = document.getElementById('hivePinError');
+    if (!overlay || !keypad || !cancelBtn || !unlockBtn || !slots.length) {
+      const fallback = window.prompt(`Enter the 4-digit PIN for Referral ID ${inviteId}.`);
+      resolve(fallback === null ? null : String(fallback || '').trim());
+      return;
+    }
+
+    let pin = '';
+    let settled = false;
+    if (title) title.textContent = options.title || 'Enter PIN';
+    if (subtitle) subtitle.textContent = options.subtitle || `Referral ID ${inviteId} is protected.`;
+    if (error) error.textContent = '';
+
+    function renderPin() {
+      slots.forEach((slot, index) => slot.classList.toggle('filled', index < pin.length));
+      unlockBtn.disabled = pin.length !== 4;
+      if (error && pin.length) error.textContent = '';
+    }
+
+    function cleanup(value) {
+      if (settled) return;
+      settled = true;
+      overlay.classList.remove('visible');
+      keypad.removeEventListener('click', onKeypadClick);
+      cancelBtn.removeEventListener('click', onCancel);
+      unlockBtn.removeEventListener('click', onUnlock);
+      document.removeEventListener('keydown', onKeydown);
+      resolve(value);
+    }
+
+    function onCancel() {
+      cleanup(null);
+    }
+
+    function onUnlock() {
+      if (!HIVE_PIN_PATTERN.test(pin)) {
+        if (error) error.textContent = 'Enter all 4 digits.';
+        return;
+      }
+      cleanup(pin);
+    }
+
+    function onKeypadClick(event) {
+      const button = event.target.closest('button');
+      if (!button) return;
+      const digit = button.dataset.pinKey;
+      const action = button.dataset.pinAction;
+      if (digit && pin.length < 4) pin += digit;
+      if (action === 'clear') pin = '';
+      if (action === 'backspace') pin = pin.slice(0, -1);
+      renderPin();
+      if (pin.length === 4) onUnlock();
+    }
+
+    function onKeydown(event) {
+      if (/^\d$/.test(event.key) && pin.length < 4) {
+        event.preventDefault();
+        pin += event.key;
+        renderPin();
+        if (pin.length === 4) onUnlock();
+      } else if (event.key === 'Backspace') {
+        event.preventDefault();
+        pin = pin.slice(0, -1);
+        renderPin();
+      } else if (event.key === 'Escape') {
+        event.preventDefault();
+        cleanup(null);
+      } else if (event.key === 'Enter') {
+        event.preventDefault();
+        onUnlock();
+      }
+    }
+
+    renderPin();
+    overlay.classList.add('visible');
+    keypad.addEventListener('click', onKeypadClick);
+    cancelBtn.addEventListener('click', onCancel);
+    unlockBtn.addEventListener('click', onUnlock);
+    document.addEventListener('keydown', onKeydown);
+    requestAnimationFrame(() => keypad.querySelector('[data-pin-key="1"]')?.focus());
+  });
+}
+
+async function requestHiveAccessPinIfNeeded(inviteId) {
+  const supabase = await getSupabaseClient();
+  if (!supabase) return '';
+
+  const requestedInviteId = String(inviteId || '').trim();
+  if (!requestedInviteId) return '';
+
+  const { data, error } = await supabase
+    .from(HIVE_CLOUD_TABLE)
+    .select('invite_id,access_pin')
+    .eq('invite_id', requestedInviteId)
+    .maybeSingle();
+  if (error && !String(error.message || '').includes('access_pin')) throw error;
+  if (error || !data) return '';
+
+  const storedPin = normalizeHiveAccessPin(data.access_pin);
+  if (!storedPin) return '';
+
+  const rememberedPin = getRememberedHiveAccessPin(requestedInviteId);
+  if (rememberedPin === storedPin) return rememberedPin;
+
+  const enteredPin = await promptForHiveAccessPin(requestedInviteId);
+  if (enteredPin === storedPin) {
+    rememberHiveAccessPin(requestedInviteId, enteredPin);
+    return enteredPin;
+  }
+
+  if (enteredPin !== null) {
+    setMessage('Incorrect PIN for this Referral ID.', 'error');
+    showHiveStatusToast('Incorrect PIN for this Referral ID.', 'error');
+  }
+  return null;
+}
+
+async function requestLocalHiveAccessPinIfNeeded(node) {
+  const storedPin = normalizeHiveAccessPin(node?.accessPin);
+  if (!storedPin) return '';
+
+  const inviteId = String(node?.inviteId || '').trim();
+  const rememberedPin = getRememberedHiveAccessPin(inviteId);
+  if (rememberedPin === storedPin) return rememberedPin;
+
+  const enteredPin = await promptForHiveAccessPin(inviteId);
+  if (enteredPin === storedPin) {
+    rememberHiveAccessPin(inviteId, enteredPin);
+    return enteredPin;
+  }
+
+  if (enteredPin !== null) {
+    setMessage('Incorrect PIN for this local Referral ID.', 'error');
+    showHiveStatusToast('Incorrect PIN for this local Referral ID.', 'error');
+  }
+  return null;
+}
+
+async function changeSelectedHivePin() {
+  const selected = findNode(hiveData[0], selectedInviteId);
+  if (!selected) {
+    setMessage('Select an account before changing its PIN.', 'error');
+    return;
+  }
+  if (!await unlockHiveAccountForChange(selected, 'change the PIN for')) return;
+
+  const nextPin = await promptForHiveAccessPin(selected.inviteId, {
+    title: selected.accessPin ? 'Change PIN' : 'Set PIN',
+    subtitle: `Enter a new 4-digit PIN for ${selected.inviteId}.`
+  });
+  if (nextPin === null) {
+    setMessage('PIN change cancelled.', 'warning');
     return;
   }
 
-  const localNode = findNode(hiveData[0], inviteId);
-  if (localNode) {
-    const topLocalNode = findTopLocalNode(inviteId) || localNode;
-    hiveData.splice(0, hiveData.length, cloneNode(topLocalNode));
-    selectedInviteId = inviteId;
-    isolatedRootInviteId = '';
-    collapsedInviteIds.clear();
-    hiveMode = 'edit';
-    renderHive();
-    setMessage('Loaded from local database.', 'ok');
-    showHiveStatusToast('Hive loaded from local cache.', 'ok');
-    updateSyncStatus(isCloudConfigured() ? 'Local match loaded. Supabase did not return this Referral ID.' : 'Loaded locally. Supabase not configured.', isCloudConfigured() ? 'local' : 'local');
+  selected.accessPin = nextPin;
+  rememberHiveAccessPin(selected.inviteId, nextPin);
+  persistHive();
+  renderHive();
+  setMessage('Account PIN updated.', 'ok');
+  showHiveStatusToast('Account PIN updated.', 'ok');
+}
+
+async function removeSelectedHivePin() {
+  const selected = findNode(hiveData[0], selectedInviteId);
+  if (!selected) {
+    setMessage('Select an account before removing its PIN.', 'error');
     return;
   }
+  if (!selected.accessPin) {
+    setMessage('This account does not have a PIN.', 'warning');
+    return;
+  }
+  if (!await unlockHiveAccountForChange(selected, 'remove the PIN for')) return;
+  if (!window.confirm(`Remove the PIN from ${selected.inviteId}?`)) return;
 
-  setMessage('Referral ID was not found locally or in the configured Supabase database.', 'error');
-  showHiveStatusToast('Referral ID was not found.', 'error');
+  selected.accessPin = '';
+  rememberHiveAccessPin(selected.inviteId, '');
+  persistHive();
+  renderHive();
+  setMessage('Account PIN removed.', 'ok');
+  showHiveStatusToast('Account PIN removed.', 'ok');
 }
 
 function searchHiveByName() {
@@ -1110,6 +1514,7 @@ function searchHiveByName() {
   const query = String(input?.value || '').trim().toLowerCase();
   if (!query) {
     setMessage('Enter a name or Referral ID to search.', 'error');
+    renderHiveSearchResults([]);
     return;
   }
 
@@ -1120,15 +1525,64 @@ function searchHiveByName() {
   });
   if (!matches.length) {
     setMessage('No account matched that name or Referral ID in the loaded Hive.', 'error');
+    renderHiveSearchResults([]);
     return;
   }
 
-  selectedInviteId = matches[0].inviteId;
-  highlightedInviteId = matches[0].inviteId;
-  hiveMode = 'edit';
-  renderHive();
-  scrollSelectedNodeIntoView();
+  renderHiveSearchResults(matches);
+  selectHiveSearchResult(matches[0].inviteId, { keepResults: true });
   setMessage(matches.length === 1 ? 'Found 1 account.' : `Found ${matches.length} accounts. Showing the first match.`, 'ok');
+}
+
+function renderHiveSearchResults(matches) {
+  const list = document.getElementById('hiveSearchResults');
+  if (!list) return;
+  if (!matches?.length) {
+    list.classList.remove('visible');
+    list.innerHTML = '';
+    return;
+  }
+
+  list.classList.add('visible');
+  list.innerHTML = `
+    <div class="hive-search-results-head">
+      <span>${matches.length === 1 ? '1 result' : `${matches.length} results`}</span>
+      <button class="hive-search-clear-btn" type="button" data-clear-search-results>Clear</button>
+    </div>
+  ` + matches.slice(0, 8).map((node) => `
+    <div class="hive-search-result">
+      <div>
+        <div class="hive-search-result-title">${escapeHtml(node.name || 'Unnamed account')}</div>
+        <div class="hive-search-result-meta">${escapeHtml(node.inviteId)} · ${escapeHtml(node.type === 'sub' ? 'Sub' : 'Main')} · ${escapeHtml(normalizeHiveCountry(node.country))}</div>
+      </div>
+      <button class="hive-search-result-btn" type="button" data-search-invite-id="${escapeHtml(node.inviteId)}">Go to</button>
+    </div>
+  `).join('');
+}
+
+function clearHiveSearchResults() {
+  highlightedInviteId = '';
+  renderHiveSearchResults([]);
+  const input = document.getElementById('hiveNameSearch');
+  if (input) input.value = '';
+  renderHive();
+  setMessage('Search results cleared.', 'ok');
+}
+
+function selectHiveSearchResult(inviteId, options = {}) {
+  const node = findNode(hiveData[0], inviteId);
+  if (!node) return;
+  selectedInviteId = node.inviteId;
+  highlightedInviteId = node.inviteId;
+  hiveMode = 'edit';
+  hiveEditLocked = false;
+  renderHive();
+  if (!options.keepResults) {
+    const results = document.getElementById('hiveSearchResults');
+    results?.classList.add('visible');
+  }
+  scrollSelectedNodeIntoView();
+  if (isMobileHive()) openMobileHivePanel(node);
 }
 
 function exportHiveJson() {
@@ -1144,7 +1598,7 @@ function exportHiveJson() {
     appVersion: HIVE_APP_VERSION,
     exportedAt: new Date().toISOString(),
     activeReferralId: selectedInviteId || rootId,
-    hiveData: cloneNode(hiveData)
+    hiveData: cloneHiveForExport(hiveData)
   };
   const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
   const link = document.createElement('a');
@@ -1177,7 +1631,7 @@ async function importHiveJson(event) {
     rememberInviteId(selectedInviteId);
     saveLocalHive();
     renderHive();
-    setMessage(`Hive structure imported: ${validation.total} account${validation.total !== 1 ? 's' : ''} (${validation.main} main, ${validation.sub} sub). Review it, then use Sync now to publish changes to Supabase.`, 'ok');
+    setMessage(`Hive structure imported: ${validation.total} account${validation.total !== 1 ? 's' : ''} (${validation.main} main, ${validation.sub} sub). Review it, then use Sync now to publish changes to the cloud database.`, 'ok');
     showHiveStatusToast('Hive import validated and loaded.', 'ok');
     updateSyncStatus('Imported offline Hive structure into local cache.', 'local');
   } catch (error) {
@@ -1224,6 +1678,7 @@ function normalizeImportedHiveRoots(roots) {
       rank: amount > 0 ? normalizeHiveRank(node.rank) : DEFAULT_HIVE_RANK,
       type,
       parentInviteId: parentInviteId || normalizeParentInviteId(node.parentInviteId ?? node.parent_invite_id),
+      accessPin: normalizeHiveAccessPin(node.accessPin ?? node.access_pin),
       needsSetup: node.needsSetup === true,
       children: children.map((child) => normalizeNode(child, inviteId, childExpectedType))
     };
@@ -1317,12 +1772,13 @@ function getHiveStats(root) {
   };
 }
 
-async function loadHiveFromCloud(inviteId) {
+async function loadHiveFromCloud(inviteId, options = {}) {
   const supabase = await getSupabaseClient();
   if (!supabase) return null;
 
   const requestedInviteId = String(inviteId || '').trim();
   if (!requestedInviteId) return null;
+  const enteredAccessPin = options.accessPin || getRememberedHiveAccessPin(requestedInviteId);
 
   async function buildSubtree(nodeId) {
     const { data, error } = await supabase
@@ -1332,6 +1788,8 @@ async function loadHiveFromCloud(inviteId) {
       .maybeSingle();
     if (error) throw error;
     if (!data) return null;
+    const storedAccessPin = normalizeHiveAccessPin(data.access_pin);
+    if (nodeId === requestedInviteId && storedAccessPin && enteredAccessPin !== storedAccessPin) return null;
 
     const node = fromSupabaseRow(data);
     const { data: childRows, error: childError } = await supabase
@@ -1371,26 +1829,26 @@ async function syncLoadedHiveWithCloud() {
     return false;
   }
 
-  setMessage('Syncing with Supabase...', '');
-  const pulled = await refreshLoadedHiveFromCloud('Hive refreshed from Supabase.', { manual: true, quietMissing: true });
+  setMessage('Syncing with the cloud database...', '');
+  const pulled = await refreshLoadedHiveFromCloud('Hive refreshed from the cloud database.', { manual: true, quietMissing: true });
   if (pulled) {
-    showHiveStatusToast('Hive synced. Latest Supabase structure loaded.', 'ok');
+    showHiveStatusToast('Hive synced. Latest cloud structure loaded.', 'ok');
     return true;
   }
 
   if (!isCloudConfigured()) {
-    setMessage('Supabase is not configured, so this Hive is only saved locally.', 'error');
-    updateSyncStatus('Local database active. Supabase not configured.', 'local');
+    setMessage('Cloud sync is not configured, so this Hive is only saved locally.', 'error');
+    updateSyncStatus('Local database active. Cloud sync not configured.', 'local');
     return false;
   }
 
   saveLocalHive();
   rememberInviteId(hiveData[0]?.inviteId || refreshInviteId);
   await saveHiveToCloud();
-  appendHiveSyncLog('Pushed local Hive to Supabase', diffHiveTrees([], hiveData), 'manual push');
-  setMessage('No cloud copy existed yet, so the loaded Hive was saved to Supabase.', 'ok');
-  showHiveStatusToast('Hive synced. Local structure saved to Supabase.', 'ok');
-  updateSyncStatus('Saved loaded Hive to Supabase.', 'cloud');
+  appendHiveSyncLog('Pushed local Hive to cloud database', diffHiveTrees([], hiveData), 'manual push');
+  setMessage('No cloud copy existed yet, so the loaded Hive was saved to the cloud database.', 'ok');
+  showHiveStatusToast('Hive synced. Local structure saved to the cloud database.', 'ok');
+  updateSyncStatus('Saved loaded Hive to the cloud database.', 'cloud');
   return true;
 }
 
@@ -1408,8 +1866,8 @@ async function refreshLoadedHiveFromCloud(statusMessage, options = {}) {
 
   const cloudNode = await loadHiveFromCloud(refreshInviteId);
   if (!cloudNode) {
-    if (options.manual && !options.quietMissing) setMessage('No Supabase structure found for this loaded Referral ID.', 'error');
-    if (!options.quietMissing) updateSyncStatus(isCloudConfigured() ? 'No Supabase structure found for the loaded Referral ID.' : 'Local database active. Supabase not configured.', 'local');
+    if (options.manual && !options.quietMissing) setMessage('No cloud structure found for this loaded Referral ID.', 'error');
+    if (!options.quietMissing) updateSyncStatus(isCloudConfigured() ? 'No cloud structure found for the loaded Referral ID.' : 'Local database active. Cloud sync not configured.', 'local');
     return false;
   }
 
@@ -1422,10 +1880,10 @@ async function refreshLoadedHiveFromCloud(statusMessage, options = {}) {
   rememberInviteId(refreshInviteId);
   saveLocalHive();
   renderHive();
-  appendHiveSyncLog(options.silent ? 'Auto-refreshed from Supabase' : 'Pulled latest Hive from Supabase', diffHiveTrees(previousHive, hiveData), options.auto ? 'auto' : (options.manual ? 'manual pull' : 'realtime'));
-  if (!options.silent) setMessage(statusMessage || 'Hive refreshed from Supabase.', 'ok');
+  appendHiveSyncLog(options.silent ? 'Auto-refreshed from cloud database' : 'Pulled latest Hive from cloud database', diffHiveTrees(previousHive, hiveData), options.auto ? 'auto' : (options.manual ? 'manual pull' : 'realtime'));
+  if (!options.silent) setMessage(statusMessage || 'Hive refreshed from the cloud database.', 'ok');
   const syncTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  updateSyncStatus(options.silent ? `Auto-synced from Supabase at ${syncTime}.` : 'Synced from Supabase.', 'cloud');
+  updateSyncStatus(options.silent ? `Auto-synced from the cloud database at ${syncTime}.` : 'Synced from the cloud database.', 'cloud');
   return true;
 }
 
@@ -1479,6 +1937,7 @@ function toSupabaseRow(node) {
     rank: amount > 0 ? normalizeHiveRank(node.rank) : DEFAULT_HIVE_RANK,
     type: node.type === 'sub' ? 'sub' : 'main',
     parent_invite_id: node.parentInviteId || null,
+    access_pin: normalizeHiveAccessPin(node.accessPin),
     updated_at: new Date().toISOString()
   };
 }
@@ -1494,6 +1953,7 @@ function fromSupabaseRow(row) {
     rank: amount > 0 ? normalizeHiveRank(row.rank) : DEFAULT_HIVE_RANK,
     type: row.type === 'sub' ? 'sub' : 'main',
     parentInviteId: row.parent_invite_id || null,
+    accessPin: normalizeHiveAccessPin(row.access_pin),
     children: []
   };
 }
@@ -1502,7 +1962,7 @@ function updateSyncStatus(text, mode) {
   const status = document.getElementById('hiveSyncStatus');
   if (!status) return;
   status.className = `hive-status ${mode || 'local'}`;
-  status.innerHTML = `<span class="hive-status-dot"></span><span>${escapeHtml(text)}</span>`;
+  status.innerHTML = `<span class="hive-status-dot"></span><span class="hive-status-label">Cloud sync</span><span class="hive-status-text">${escapeHtml(text)}</span>`;
 }
 
 function readHiveSyncLog() {
@@ -1630,6 +2090,17 @@ function cloneNode(node) {
   return JSON.parse(JSON.stringify(node));
 }
 
+function cloneHiveForExport(nodes) {
+  return cloneNode(nodes).map(stripHiveAccessPins);
+}
+
+function stripHiveAccessPins(node) {
+  if (!node || typeof node !== 'object') return node;
+  delete node.accessPin;
+  node.children = (node.children || []).map(stripHiveAccessPins);
+  return node;
+}
+
 function normalizeHiveRank(rank) {
   const value = String(rank || DEFAULT_HIVE_RANK).trim().toUpperCase();
   return HIVE_RANKS.includes(value) ? value : DEFAULT_HIVE_RANK;
@@ -1684,6 +2155,9 @@ function validateHiveStructureForSync(roots) {
 
     normalizeHiveMoney(node.amount, 'Personal investment', inviteId);
     normalizeHiveMoney(node.totalTurnover, 'Total turnover', inviteId);
+    if (!isValidHiveAccessPin(normalizeHiveAccessPin(node.accessPin))) {
+      throw new Error(`Optional PIN for ${inviteId} must be exactly 4 digits, or blank.`);
+    }
 
     total += 1;
     if (type === 'main') main += 1;
@@ -1826,6 +2300,11 @@ function getReferralLink(referralId) {
   return `${AURUM_REFERRAL_BASE_URL}${encodeURIComponent(String(referralId || '').trim())}`;
 }
 
+function getReferralQrUrl(referralId) {
+  const link = getReferralLink(referralId);
+  return `https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=10&data=${encodeURIComponent(link)}`;
+}
+
 function showCopyFeedback(button) {
   if (!button) return;
 
@@ -1855,6 +2334,13 @@ async function copyReferralLink(referralId, button) {
   } catch (error) {
     setMessage(link, 'ok');
   }
+}
+
+function toggleReferralQr(button) {
+  const panel = document.getElementById('hiveReferralQrPanel');
+  if (!panel) return;
+  const isVisible = panel.classList.toggle('visible');
+  if (button) button.textContent = isVisible ? 'Hide QR' : 'QR';
 }
 
 export function renderHive(containerId = 'hiveContainer') {
@@ -2270,8 +2756,10 @@ export function editHiveItem(inviteId, updatedData) {
     totalTurnover: Number(updatedData.totalTurnover || 0),
     rank: Number(updatedData.amount || 0) > 0 ? normalizeHiveRank(updatedData.rank) : DEFAULT_HIVE_RANK,
     parentInviteId: node === hiveData[0] ? normalizeParentInviteId(updatedData.parentInviteId) : node.parentInviteId,
+    accessPin: normalizeHiveAccessPin(updatedData.accessPin ?? node.accessPin),
     needsSetup: stillNeedsSetup
   });
+  rememberHiveAccessPin(nextInviteId, node.accessPin);
   if (previousInviteId !== nextInviteId) {
     updateChildParentIds(node, previousInviteId, nextInviteId);
     selectedInviteId = nextInviteId;
@@ -2389,20 +2877,42 @@ function isHiveEditorLocked() {
   return hiveMode === 'add' || hiveEditLocked;
 }
 
-function handleHiveEditTabClick() {
+async function unlockHiveAccountForChange(node, actionLabel) {
+  if (!node) return false;
+  if (node === hiveData[0]) return true;
+  const accessPin = await requestLocalHiveAccessPinIfNeeded(node);
+  if (accessPin === null) {
+    setMessage(`PIN required to ${actionLabel} this account.`, 'error');
+    return false;
+  }
+  return true;
+}
+
+async function handleHiveEditTabClick() {
   if (hiveMode === 'add') {
     setMessage('Save or cancel the new account before editing another account.', 'error');
     return;
   }
+  const selected = findNode(hiveData[0], selectedInviteId);
+  if (!selected) {
+    setMessage('Select an account before editing.', 'error');
+    return;
+  }
+  if (!await unlockHiveAccountForChange(selected, 'edit')) return;
   setHiveMode('edit', { lock: true });
 }
 
-function handleHiveAddTabClick() {
+async function handleHiveAddTabClick() {
   if (hiveEditLocked) {
     setMessage('Save or cancel the current edit before adding a new account.', 'error');
     return;
   }
   const selected = findNode(hiveData[0], selectedInviteId);
+  if (!selected) {
+    setMessage('Select an account before adding a child account.', 'error');
+    return;
+  }
+  if (!await unlockHiveAccountForChange(selected, 'add under')) return;
   setHiveMode('add');
   const warning = getUnsupportedSubWarning(selected);
   if (warning && getAllowedChildType(selected) === 'sub') setMessage(warning, 'warning');
@@ -2446,6 +2956,9 @@ function populateHiveForm() {
   const rankInput = document.getElementById('hiveRank');
   const typeInput = document.getElementById('hiveType');
   const parentInput = document.getElementById('hiveParent');
+  const pinStatus = document.getElementById('hivePinStatus');
+  const removePinBtn = document.getElementById('hiveRemovePinBtn');
+  const accountCardHint = document.getElementById('hiveAccountCardHint');
   const autoSubWrap = document.getElementById('hiveAutoSubWrap');
   const autoSubInput = document.getElementById('hiveAutoSubAccounts');
   if (!selected || !inviteInput || !nameInput || !countryInput || !amountInput || !totalTurnoverInput || !rankInput || !typeInput || !parentInput || !saveBtn) return;
@@ -2508,6 +3021,13 @@ function populateHiveForm() {
   totalTurnoverInput.readOnly = !editorActive;
   typeInput.disabled = true;
   saveBtn.disabled = !editorActive;
+  if (pinStatus) {
+    const protectedAccount = Boolean(selected.accessPin);
+    pinStatus.textContent = protectedAccount ? 'PIN protected' : 'No PIN';
+    pinStatus.classList.toggle('protected', protectedAccount);
+  }
+  if (removePinBtn) removePinBtn.disabled = !selected.accessPin;
+  if (accountCardHint) accountCardHint.textContent = selected.name || selected.inviteId || 'Selected account';
 }
 
 function applyHiveTransform() {
@@ -2605,7 +3125,7 @@ function clearSampleHive() {
   saveLocalHive();
   renderHive();
   setMessage('Sample cleared. Edit the root account, then add your own child accounts.', 'ok');
-  updateSyncStatus('Local starter Hive ready. Save edits to sync it to Supabase.', 'local');
+  updateSyncStatus('Local starter Hive ready. Save edits to sync it to the cloud database.', 'local');
 }
 
 async function submitHiveForm() {
@@ -2676,7 +3196,7 @@ async function submitHiveForm() {
   const cloudDuplicates = await getExistingCloudInviteIds(idsToCreate);
   if (cloudDuplicates.size) {
     const duplicateId = [...cloudDuplicates][0];
-    setMessage(`Could not add account because ${duplicateId} already exists in Supabase. Load it instead of creating a duplicate.`, 'error');
+    setMessage(`Could not add account because ${duplicateId} already exists in the cloud database. Load it instead of creating a duplicate.`, 'error');
     return;
   }
 
@@ -2745,14 +3265,14 @@ function showHiveStatusToast(text, type = 'ok') {
 
 function getHiveErrorMessage(error) {
   const raw = String(error?.message || error?.details || error?.hint || error || '').trim();
-  if (!raw) return 'Supabase sync failed. Check the Invited By ID and database connection.';
+  if (!raw) return 'Cloud sync failed. Check the Invited By ID and database connection.';
   if (raw.includes('violates foreign key constraint')) {
-    return 'Supabase sync failed because the Invited By ID parent was not found in the database.';
+    return 'Cloud sync failed because the Invited By ID parent was not found in the database.';
   }
   if (raw.includes('Parent InviteID')) return raw.replace('InviteID', 'Invited By ID');
   if (raw.includes('Main accounts can only add sub accounts') || raw.includes('Sub accounts can only add main accounts')) return raw;
-  if (raw.includes('total_turnover')) return 'Supabase needs the latest SQL schema update for Total turnover before syncing.';
-  return `Supabase sync failed: ${raw}`;
+  if (raw.includes('total_turnover')) return 'The cloud database needs the latest schema update for Total turnover before syncing.';
+  return `Cloud sync failed: ${raw}`;
 }
 
 function updateChildParentIds(node, previousInviteId, nextInviteId) {
@@ -2796,6 +3316,11 @@ function renderHiveSummary() {
             <div class="hive-copy-row">
               <div class="hive-copy-link" title="${escapeHtml(getReferralLink(selected.inviteId))}">${escapeHtml(getReferralLink(selected.inviteId))}</div>
               <button class="hive-copy-btn" type="button" data-copy-referral="${escapeHtml(selected.inviteId)}">Copy</button>
+              <button class="hive-copy-btn" type="button" data-toggle-referral-qr="${escapeHtml(selected.inviteId)}">QR</button>
+            </div>
+            <div class="hive-qr-panel" id="hiveReferralQrPanel">
+              <img src="${escapeHtml(getReferralQrUrl(selected.inviteId))}" alt="QR code for referral link ${escapeHtml(selected.inviteId)}">
+              <div class="hive-qr-note">Scan to open ${escapeHtml(getReferralLink(selected.inviteId))}</div>
             </div>
           </div>
         ` : ''}
@@ -2860,6 +3385,9 @@ function renderHiveSummary() {
   document.querySelectorAll('#hiveSummaryStatic [data-copy-referral], #hiveSummary [data-copy-referral]').forEach((button) => {
     button.addEventListener('click', () => copyReferralLink(button.dataset.copyReferral, button));
   });
+  document.querySelectorAll('#hiveSummaryStatic [data-toggle-referral-qr], #hiveSummary [data-toggle-referral-qr]').forEach((button) => {
+    button.addEventListener('click', () => toggleReferralQr(button));
+  });
 }
 
 function flattenNodes(nodes) {
@@ -2894,7 +3422,8 @@ export function openHiveManager() {
   document.getElementById('hiveModal').classList.add('open');
   setHiveFullscreen(true);
   setHivePanelCollapsed(hivePanelCollapsed);
-  updateSyncStatus(isCloudConfigured() ? 'Supabase configured. Local cache active.' : 'Local database active. Supabase not configured.', isCloudConfigured() ? 'cloud' : 'local');
+  setDefaultMobileAccountCardState();
+  updateSyncStatus(isCloudConfigured() ? 'Cloud sync configured. Local cache active.' : 'Local database active. Cloud sync not configured.', isCloudConfigured() ? 'cloud' : 'local');
   const rememberedInviteId = readLastInviteId();
   const lookupInput = document.getElementById('hiveLookupInviteId');
   if (lookupInput && rememberedInviteId) lookupInput.value = rememberedInviteId;
@@ -2904,7 +3433,7 @@ export function openHiveManager() {
   checkHiveAppVersion();
   subscribeToHiveRealtime().catch((error) => {
     console.warn('Aurum Hive realtime could not be started.', error);
-    updateSyncStatus('Supabase configured. Realtime could not connect.', 'local');
+    updateSyncStatus('Cloud sync configured. Live updates could not connect.', 'local');
   });
   startHiveAutoRefresh();
   if (rememberedInviteId) {
