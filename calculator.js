@@ -805,6 +805,13 @@ function buildDepositMap(source = deposits) {
 }
 
 function calculate() {
+  try { _calculateInner(); } catch (err) {
+    console.error('Calculate failed:', err);
+    showAppToast('Calculator error: ' + (err.message || err), 'error', 7000);
+  }
+}
+
+function _calculateInner() {
   const initial  = parseFloat(document.getElementById('amount').value);
   const years    = Math.min(10, Math.max(0.0833, parseFloat(document.getElementById('years').value) || 1));
   const numDays  = Math.round(years * 365);
@@ -893,6 +900,7 @@ function calculate() {
   setView(curView);
   setTimeout(() => document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
 }
+
 
 function buildChart(randomMode) {
   const canvas = document.getElementById('growthChart');
