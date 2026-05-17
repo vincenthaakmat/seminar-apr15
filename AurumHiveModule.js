@@ -95,7 +95,8 @@ const HIVE_SYNC_LOG_LIMIT = 40;
 const HIVE_AUTO_REFRESH_MS = 180000;
 const HIVE_MIN_ZOOM = 0.1;
 const HIVE_MAX_ZOOM = 1.2;
-const HIVE_APP_VERSION = '2026.05.16.54';
+const HIVE_APP_VERSION = '2026.05.16.56';
+const HIVE_MOBILE_PANEL_MAX_WIDTH = 1180;
 const HIVE_VERSION_URL = 'hive-version.json';
 const HIVE_CLOUD_TABLE = 'aurum_hive_accounts';
 const HIVE_SUPPORTED_SUB_LIMIT = 3;
@@ -383,7 +384,7 @@ function ensureHiveUi() {
     .hive-mobile-back-btn { display:inline-flex; align-items:center; gap:6px; border:none; background:none; color:var(--blue-mid); font:800 13px 'Inter',sans-serif; cursor:pointer; padding:4px 0; }
     .hive-mobile-back-btn .material-symbols-rounded { font-size:20px; }
     .hive-mobile-back-title { font:800 13px 'Inter',sans-serif; color:var(--text); margin-left:auto; }
-    @media (max-width: 900px) {
+    @media (max-width: 1180px) {
       .hive-modal-card { width:calc(100vw - 18px); }
       .hive-modal-card.fullscreen .tool-body { min-height:calc(100vh - 82px); }
       .hive-layout { grid-template-columns:1fr; position:relative; overflow:hidden; }
@@ -837,15 +838,17 @@ function initHiveCanvasPan(canvas) {
 }
 
 function isMobileHive() {
-  return window.innerWidth <= 900;
+  return window.innerWidth <= HIVE_MOBILE_PANEL_MAX_WIDTH;
 }
 
 function openMobileHivePanel(node) {
   const layout = document.getElementById('hiveLayout');
   if (!layout) return;
   const selectedNode = node || getSelectedHiveNode();
+  const showBtn = document.getElementById('hiveShowPanelBtn');
   layout.classList.remove('panel-collapsed');
   layout.classList.add('mobile-panel-open');
+  showBtn?.classList.remove('visible');
   hivePanelCollapsed = false;
   const titleEl = document.getElementById('hiveMobileBackTitle');
   if (titleEl && selectedNode) titleEl.textContent = selectedNode.name || selectedNode.inviteId || '';
@@ -853,6 +856,7 @@ function openMobileHivePanel(node) {
 
 function closeMobileHivePanel() {
   document.getElementById('hiveLayout')?.classList.remove('mobile-panel-open');
+  setHivePanelCollapsed(true);
 }
 
 function setDefaultMobileAccountCardState() {
@@ -1268,7 +1272,6 @@ async function loadHiveFromLookup() {
 
   setHiveLookupLoading(true);
   try {
-    rememberInviteId(inviteId);
     setMessage('Looking up Referral ID...', '');
     const accessPin = await requestHiveAccessPinIfNeeded(inviteId);
     if (accessPin === null) {
@@ -1284,6 +1287,7 @@ async function loadHiveFromLookup() {
       isolatedRootInviteId = '';
       collapsedInviteIds.clear();
       hiveMode = 'edit';
+      rememberInviteId(inviteId);
       saveLocalHive();
       renderHive();
       setMessage('Loaded from the cloud database.', 'ok');
@@ -1306,6 +1310,7 @@ async function loadHiveFromLookup() {
       isolatedRootInviteId = '';
       collapsedInviteIds.clear();
       hiveMode = 'edit';
+      rememberInviteId(inviteId);
       renderHive();
       setMessage('Loaded from local database.', 'ok');
       showHiveStatusToast('Hive loaded from local cache.', 'ok');
@@ -3120,7 +3125,7 @@ function populateHiveForm() {
     autoSubWrap?.classList.remove('visible');
     if (autoSubInput) autoSubInput.checked = false;
     if (cancelBtn) cancelBtn.style.display = hiveEditLocked ? '' : 'none';
-    saveBtn.textContent = 'Save edit';
+    saveBtn.textContent = editorActive ? 'Save edit' : 'Save turnover';
   } else {
     inviteInput.value = '';
     nameInput.value = '';
@@ -3148,9 +3153,9 @@ function populateHiveForm() {
   inviteInput.readOnly = !editorActive;
   nameInput.readOnly = !editorActive;
   amountInput.readOnly = !editorActive;
-  totalTurnoverInput.readOnly = !editorActive;
+  totalTurnoverInput.readOnly = false;
   typeInput.disabled = true;
-  saveBtn.disabled = !editorActive;
+  saveBtn.disabled = hiveMode === 'add' ? !editorActive : false;
   if (pinStatus) {
     const protectedAccount = Boolean(selected.accessPin);
     pinStatus.textContent = protectedAccount ? 'PIN protected' : 'No PIN';
@@ -3338,7 +3343,7 @@ async function runHiveStarterSetup() {
 
 async function submitHiveForm() {
   if (!isHiveEditorLocked()) {
-    setMessage('Click Edit selected or Add child before changing account details.', 'error');
+    saveSelectedTotalTurnoverOnly();
     return;
   }
   const selected = findNode(hiveData[0], selectedInviteId);
@@ -3427,6 +3432,31 @@ async function submitHiveForm() {
       ? 'Sub account added as an unsupported extra sub and shown in grey.'
     : `${childType === 'main' ? 'Main' : 'Sub'} account added.`;
   setMessage(added ? successMessage : 'Could not add account. Check the Referral ID and account rule.', added ? (addingUnsupportedSub ? 'warning' : 'ok') : 'error');
+}
+
+function saveSelectedTotalTurnoverOnly() {
+  if (hiveMode !== 'edit') {
+    setMessage('Click Edit selected or Add child before changing account details.', 'error');
+    return;
+  }
+  const selected = findNode(hiveData[0], selectedInviteId);
+  const input = document.getElementById('hiveTotalTurnover');
+  if (!selected || !input) {
+    setMessage('Select an account before saving total turnover.', 'error');
+    return;
+  }
+  let nextTurnover;
+  try {
+    nextTurnover = normalizeHiveMoney(input.value, 'Total turnover', selected.inviteId);
+  } catch (error) {
+    setMessage(getHiveErrorMessage(error), 'error');
+    return;
+  }
+  selected.totalTurnover = nextTurnover;
+  persistHive();
+  renderHive();
+  setMessage('Total turnover saved without unlocking the account.', 'ok');
+  showHiveStatusToast('Total turnover saved.', 'ok');
 }
 
 function getAllowedChildType(parent) {

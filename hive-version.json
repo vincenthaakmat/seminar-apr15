@@ -1,7 +1,11 @@
 {
-  "version": "2026.05.16.54",
+  "version": "2026.05.16.56",
   "name": "Aurum Hive",
   "updates": [
+    "Protected Hive lookups now remember the Referral ID only after the correct PIN succeeds, preventing failed PIN attempts from loading that account.",
+    "Total turnover can now be edited and saved without unlocking the protected account, so uplines can maintain leg calculation figures.",
+    "Tablet layouts now use the slide-in Hive account panel, so tapping an account opens the details panel reliably.",
+    "The mobile and tablet Panel button state now resets correctly after returning to the canvas.",
     "On mobile, the account panel now opens by default so fresh installs can immediately load or create a Hive account.",
     "The mobile Panel button now slides the account panel back into view instead of only changing its collapsed state.",
     "On mobile, the minimap and legend overlays now hide while the account detail panel is fully open.",
