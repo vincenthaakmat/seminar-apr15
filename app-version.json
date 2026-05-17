@@ -1,8 +1,11 @@
 {
-  "version": "2026.05.16.54",
+  "version": "2026.05.17.01",
   "name": "Aurum app",
   "message": "Aurum has a fresh update ready. Refresh to load the newest calculator and Hive improvements.",
   "updates": [
+    "Update detection has been bumped with fresh app, Hive, script, and offline cache versions so users receive the newest release notification.",
+    "[NEW] Hive account profiles now include an Email field that saves locally, imports and exports with JSON, and syncs to the cloud after the latest schema is applied.",
+    "On mobile, tapping Go to from Hive search results now closes the panel and centers the requested account on the canvas.",
     "The Hive now stands out in the hero settings menu with a gold featured action style.",
     "The hero settings menu now uses a more opaque dark surface and stronger row contrast so mobile menu items stay readable over the bright hero background.",
     "[NEW] Mobile users can now install Aurum as a home-screen app, with a mobile install prompt and offline app shell caching.",

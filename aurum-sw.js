@@ -1,4 +1,4 @@
-const AURUM_CACHE = 'aurum-app-2026-05-16-54';
+const AURUM_CACHE = 'aurum-app-2026-05-17-01';
 const AURUM_SHELL = [
   './',
   './aurum-calc.html',
