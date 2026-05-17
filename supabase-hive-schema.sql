@@ -1,6 +1,7 @@
 create table if not exists public.aurum_hive_accounts (
   invite_id text primary key,
   name text not null default '',
+  email text not null default '',
   country text not null default 'Not specified',
   amount numeric not null default 0,
   total_turnover numeric not null default 0,
@@ -19,6 +20,9 @@ create index if not exists aurum_hive_accounts_updated_at_idx
 
 alter table public.aurum_hive_accounts
   add column if not exists country text not null default 'Not specified';
+
+alter table public.aurum_hive_accounts
+  add column if not exists email text not null default '';
 
 alter table public.aurum_hive_accounts
   add column if not exists total_turnover numeric not null default 0;
@@ -62,6 +66,7 @@ declare
 begin
   new.invite_id = trim(coalesce(new.invite_id, ''));
   new.name = trim(coalesce(new.name, ''));
+  new.email = trim(coalesce(new.email, ''));
   new.country = coalesce(nullif(trim(new.country), ''), 'Not specified');
   new.parent_invite_id = nullif(trim(coalesce(new.parent_invite_id, '')), '');
   new.amount = coalesce(new.amount, 0);

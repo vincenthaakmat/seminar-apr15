@@ -2,6 +2,7 @@ export const hiveData = [
   {
     inviteId: 'AUR-ROOT-001',
     name: 'Main Account',
+    email: '',
     amount: 25000,
     rank: 'VANGUARD PRO',
     type: 'main',
@@ -10,6 +11,7 @@ export const hiveData = [
       {
         inviteId: 'SUB-001',
         name: 'Sub Account 1',
+        email: '',
         amount: 5000,
         rank: 'VANGUARD',
         type: 'sub',
@@ -18,6 +20,7 @@ export const hiveData = [
           {
             inviteId: 'MAIN-001-A',
             name: 'Nested Main 1',
+            email: '',
             amount: 3000,
             rank: 'VOYAGER',
             type: 'main',
@@ -29,6 +32,7 @@ export const hiveData = [
       {
         inviteId: 'SUB-002',
         name: 'Sub Account 2',
+        email: '',
         amount: 4500,
         rank: 'VANGUARD',
         type: 'sub',
@@ -37,6 +41,7 @@ export const hiveData = [
           {
             inviteId: 'MAIN-002-A',
             name: 'Nested Main 2',
+            email: '',
             amount: 2000,
             rank: 'NOVA',
             type: 'main',
@@ -48,6 +53,7 @@ export const hiveData = [
       {
         inviteId: 'SUB-003',
         name: 'Sub Account 3',
+        email: '',
         amount: 7000,
         rank: 'VANGUARD',
         type: 'sub',
@@ -56,6 +62,7 @@ export const hiveData = [
           {
             inviteId: 'MAIN-003-A',
             name: 'Nested Main 3',
+            email: '',
             amount: 3500,
             rank: 'VOYAGER',
             type: 'main',
@@ -533,6 +540,7 @@ function ensureHiveUi() {
                   <div class="hive-form">
                     <div class="hive-field"><label for="hiveInviteId">Referral ID</label><input id="hiveInviteId" autocomplete="off"></div>
                     <div class="hive-field"><label for="hiveName">Name</label><input id="hiveName" autocomplete="off"></div>
+                    <div class="hive-field"><label for="hiveEmail">Email</label><input id="hiveEmail" type="email" autocomplete="email"></div>
                     <div class="hive-field"><label for="hiveCountry">Country</label><select id="hiveCountry"></select></div>
                     <div class="hive-field"><label for="hiveAmount">Personal investment</label><input id="hiveAmount" type="number" min="0" step="any"></div>
                     <div class="hive-field"><label for="hiveTotalTurnover">Total turnover</label><input id="hiveTotalTurnover" type="number" min="0" step="any"></div>
@@ -965,14 +973,15 @@ function createDefaultHive() {
     {
       inviteId: 'AUR-ROOT-001',
       name: 'Main Account',
+      email: '',
       amount: 25000,
       rank: 'VANGUARD PRO',
       type: 'main',
       parentInviteId: null,
       children: [
-        { inviteId: 'SUB-001', name: 'Sub Account 1', amount: 5000, rank: 'VANGUARD', type: 'sub', parentInviteId: 'AUR-ROOT-001', children: [{ inviteId: 'MAIN-001-A', name: 'Nested Main 1', amount: 3000, rank: 'VOYAGER', type: 'main', parentInviteId: 'SUB-001', children: [] }] },
-        { inviteId: 'SUB-002', name: 'Sub Account 2', amount: 4500, rank: 'VANGUARD', type: 'sub', parentInviteId: 'AUR-ROOT-001', children: [{ inviteId: 'MAIN-002-A', name: 'Nested Main 2', amount: 2000, rank: 'NOVA', type: 'main', parentInviteId: 'SUB-002', children: [] }] },
-        { inviteId: 'SUB-003', name: 'Sub Account 3', amount: 7000, rank: 'VANGUARD', type: 'sub', parentInviteId: 'AUR-ROOT-001', children: [{ inviteId: 'MAIN-003-A', name: 'Nested Main 3', amount: 3500, rank: 'VOYAGER', type: 'main', parentInviteId: 'SUB-003', children: [] }] }
+        { inviteId: 'SUB-001', name: 'Sub Account 1', email: '', amount: 5000, rank: 'VANGUARD', type: 'sub', parentInviteId: 'AUR-ROOT-001', children: [{ inviteId: 'MAIN-001-A', name: 'Nested Main 1', email: '', amount: 3000, rank: 'VOYAGER', type: 'main', parentInviteId: 'SUB-001', children: [] }] },
+        { inviteId: 'SUB-002', name: 'Sub Account 2', email: '', amount: 4500, rank: 'VANGUARD', type: 'sub', parentInviteId: 'AUR-ROOT-001', children: [{ inviteId: 'MAIN-002-A', name: 'Nested Main 2', email: '', amount: 2000, rank: 'NOVA', type: 'main', parentInviteId: 'SUB-002', children: [] }] },
+        { inviteId: 'SUB-003', name: 'Sub Account 3', email: '', amount: 7000, rank: 'VANGUARD', type: 'sub', parentInviteId: 'AUR-ROOT-001', children: [{ inviteId: 'MAIN-003-A', name: 'Nested Main 3', email: '', amount: 3500, rank: 'VOYAGER', type: 'main', parentInviteId: 'SUB-003', children: [] }] }
       ]
     }
   ]));
@@ -982,6 +991,7 @@ function createBlankHive() {
   return [{
     inviteId: 'ROOT-001',
     name: 'Main Account',
+    email: '',
     country: DEFAULT_HIVE_COUNTRY,
     amount: 0,
     totalTurnover: 0,
@@ -1221,13 +1231,13 @@ async function saveHiveToCloud() {
   const { error } = await supabase
     .from(HIVE_CLOUD_TABLE)
     .upsert(rows.map(toSupabaseRow), { onConflict: 'invite_id' });
-  if (error && (String(error.message || '').includes('total_turnover') || String(error.message || '').includes('access_pin'))) {
-    const fallbackRows = rows.map(toSupabaseRow).map(({ total_turnover, access_pin, ...row }) => row);
+  if (error && (String(error.message || '').includes('total_turnover') || String(error.message || '').includes('access_pin') || String(error.message || '').includes('email'))) {
+    const fallbackRows = rows.map(toSupabaseRow).map(({ total_turnover, access_pin, email, ...row }) => row);
     const { error: fallbackError } = await supabase
       .from(HIVE_CLOUD_TABLE)
       .upsert(fallbackRows, { onConflict: 'invite_id' });
     if (fallbackError) throw fallbackError;
-    updateSyncStatus('Saved locally. Cloud database synced without one optional schema column.', 'cloud');
+    updateSyncStatus('Saved locally. Cloud database synced without one optional schema column. Apply the latest Hive schema to sync every field.', 'cloud');
     return;
   }
   if (error) throw error;
@@ -1641,15 +1651,16 @@ function selectHiveSearchResult(inviteId, options = {}) {
   if (!node) return;
   selectedInviteId = node.inviteId;
   highlightedInviteId = node.inviteId;
+  getPathToRoot(node.inviteId).forEach((pathNode) => collapsedInviteIds.delete(pathNode.inviteId));
   hiveMode = 'edit';
   hiveEditLocked = false;
   renderHive();
   if (!options.keepResults) {
     const results = document.getElementById('hiveSearchResults');
-    results?.classList.add('visible');
+    results?.classList.remove('visible');
   }
-  scrollSelectedNodeIntoView();
-  if (isMobileHive()) openMobileHivePanel(node);
+  if (isMobileHive()) closeMobileHivePanel();
+  scrollSelectedNodeIntoView({ focusNode: true });
 }
 
 function exportHiveJson() {
@@ -1739,6 +1750,7 @@ function normalizeImportedHiveRoots(roots) {
     return {
       inviteId,
       name: String(node.name || '').trim(),
+      email: normalizeHiveEmail(node.email),
       country: normalizeHiveCountry(node.country),
       amount,
       totalTurnover,
@@ -2030,6 +2042,7 @@ function toSupabaseRow(node) {
   return {
     invite_id: String(node.inviteId || '').trim(),
     name: String(node.name || '').trim(),
+    email: normalizeHiveEmail(node.email),
     country: normalizeHiveCountry(node.country),
     amount,
     total_turnover: totalTurnover,
@@ -2046,6 +2059,7 @@ function fromSupabaseRow(row) {
   return {
     inviteId: String(row.invite_id || '').trim(),
     name: String(row.name || '').trim(),
+    email: normalizeHiveEmail(row.email),
     country: normalizeHiveCountry(row.country),
     amount,
     totalTurnover: Number(row.total_turnover || 0),
@@ -2174,6 +2188,7 @@ function mapHiveSnapshot(nodes) {
   flattenNodes(nodes || []).forEach((node) => {
     map.set(node.inviteId, {
       name: node.name || '',
+      email: normalizeHiveEmail(node.email),
       country: normalizeHiveCountry(node.country),
       amount: Number(node.amount || 0),
       totalTurnover: Number(node.totalTurnover || 0),
@@ -2208,6 +2223,10 @@ function normalizeHiveRank(rank) {
 function normalizeHiveCountry(country) {
   const value = String(country || DEFAULT_HIVE_COUNTRY).trim();
   return HIVE_COUNTRIES.includes(value) ? value : DEFAULT_HIVE_COUNTRY;
+}
+
+function normalizeHiveEmail(email) {
+  return String(email || '').trim();
 }
 
 function getMainRankBadge(node) {
@@ -2662,6 +2681,7 @@ function showHiveTooltip(node, anchorEl) {
     <div class="hive-floating-tooltip" style="left:${left}px; top:${top}px;">
       <strong>${escapeHtml(node.name)}</strong><br>
       Referral ID: ${escapeHtml(node.inviteId)}<br>
+      Email: ${escapeHtml(node.email || 'Not specified')}<br>
       Country: ${escapeHtml(normalizeHiveCountry(node.country))}<br>
       Personal investment: $${Number(node.amount || 0).toLocaleString()}<br>
       Total turnover: $${Number(node.totalTurnover || 0).toLocaleString()}<br>
@@ -2713,10 +2733,11 @@ function toggleHiveBranchHighlightMode() {
   renderHive();
 }
 
-function scrollSelectedNodeIntoView() {
+function scrollSelectedNodeIntoView(options = {}) {
   requestAnimationFrame(() => {
     const selectedDot = document.querySelector(`[data-invite-id="${cssEscape(selectedInviteId)}"]`);
     selectedDot?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+    if (options.focusNode) selectedDot?.focus({ preventScroll: true });
   });
 }
 
@@ -2816,6 +2837,7 @@ export function addHiveItem(parentInviteId, newItem) {
 
   parent.children.push({
     ...newItem,
+    email: normalizeHiveEmail(newItem.email),
     country: normalizeHiveCountry(newItem.country),
     totalTurnover: Number(newItem.totalTurnover || 0),
     rank: Number(newItem.amount || 0) > 0 ? normalizeHiveRank(newItem.rank) : DEFAULT_HIVE_RANK,
@@ -2847,6 +2869,7 @@ function createAutoSubAccounts(mainNode) {
     mainNode.children.push({
       inviteId,
       name: '',
+      email: '',
       country: normalizeHiveCountry(mainNode.country),
       amount: 0,
       totalTurnover: 0,
@@ -2878,6 +2901,7 @@ export function editHiveItem(inviteId, updatedData) {
   Object.assign(node, {
     inviteId: nextInviteId,
     name: nextName,
+    email: normalizeHiveEmail(updatedData.email),
     country: normalizeHiveCountry(updatedData.country),
     amount: Number(updatedData.amount || 0),
     totalTurnover: Number(updatedData.totalTurnover || 0),
@@ -3085,6 +3109,7 @@ function populateHiveForm() {
   const cancelBtn = document.getElementById('hiveCancelAddBtn');
   const inviteInput = document.getElementById('hiveInviteId');
   const nameInput = document.getElementById('hiveName');
+  const emailInput = document.getElementById('hiveEmail');
   const countryInput = document.getElementById('hiveCountry');
   const amountInput = document.getElementById('hiveAmount');
   const totalTurnoverInput = document.getElementById('hiveTotalTurnover');
@@ -3096,7 +3121,7 @@ function populateHiveForm() {
   const accountCardHint = document.getElementById('hiveAccountCardHint');
   const autoSubWrap = document.getElementById('hiveAutoSubWrap');
   const autoSubInput = document.getElementById('hiveAutoSubAccounts');
-  if (!selected || !inviteInput || !nameInput || !countryInput || !amountInput || !totalTurnoverInput || !rankInput || !typeInput || !parentInput || !saveBtn) return;
+  if (!selected || !inviteInput || !nameInput || !emailInput || !countryInput || !amountInput || !totalTurnoverInput || !rankInput || !typeInput || !parentInput || !saveBtn) return;
 
   const childType = getAllowedChildType(selected);
   if (hiveMode === 'add' && !childType) hiveMode = 'edit';
@@ -3113,6 +3138,7 @@ function populateHiveForm() {
     const isLoadedRoot = selected === hiveData[0];
     inviteInput.value = selected.inviteId || '';
     nameInput.value = selected.name || '';
+    emailInput.value = normalizeHiveEmail(selected.email);
     countryInput.value = normalizeHiveCountry(selected.country);
     amountInput.value = selected.amount ?? '';
     totalTurnoverInput.value = selected.totalTurnover ?? '';
@@ -3129,6 +3155,7 @@ function populateHiveForm() {
   } else {
     inviteInput.value = '';
     nameInput.value = '';
+    emailInput.value = '';
     countryInput.value = normalizeHiveCountry(selected.country);
     amountInput.value = '';
     totalTurnoverInput.value = '';
@@ -3146,12 +3173,14 @@ function populateHiveForm() {
 
   inviteInput.disabled = false;
   nameInput.disabled = false;
+  emailInput.disabled = false;
   countryInput.disabled = false;
   amountInput.disabled = false;
   totalTurnoverInput.disabled = false;
   rankInput.disabled = false;
   inviteInput.readOnly = !editorActive;
   nameInput.readOnly = !editorActive;
+  emailInput.readOnly = !editorActive;
   amountInput.readOnly = !editorActive;
   totalTurnoverInput.readOnly = false;
   typeInput.disabled = true;
@@ -3317,6 +3346,7 @@ async function runHiveStarterSetup() {
   Object.assign(root, {
     inviteId: nextInviteId,
     name: nextName,
+    email: normalizeHiveEmail(root.email),
     country: normalizeHiveCountry(root.country),
     type: 'main',
     parentInviteId: null,
@@ -3355,6 +3385,7 @@ async function submitHiveForm() {
   const formData = {
     inviteId: document.getElementById('hiveInviteId').value.trim(),
     name: document.getElementById('hiveName').value.trim(),
+    email: normalizeHiveEmail(document.getElementById('hiveEmail').value),
     country: document.getElementById('hiveCountry').value.trim(),
     amount: Number(document.getElementById('hiveAmount').value || 0),
     totalTurnover: Number(document.getElementById('hiveTotalTurnover').value || 0),
@@ -3510,6 +3541,7 @@ function getHiveErrorMessage(error) {
   if (raw.includes('Parent InviteID')) return raw.replace('InviteID', 'Invited By ID');
   if (raw.includes('Main accounts can only add sub accounts') || raw.includes('Sub accounts can only add main accounts')) return raw;
   if (raw.includes('total_turnover')) return 'The cloud database needs the latest schema update for Total turnover before syncing.';
+  if (raw.includes('email')) return 'The cloud database needs the latest schema update for Email before syncing.';
   return `Cloud sync failed: ${raw}`;
 }
 
@@ -3546,7 +3578,7 @@ function renderHiveSummary() {
         <div class="hive-summary-card wide">
           <div class="hive-summary-label">Selected</div>
           <div class="hive-summary-value">${escapeHtml(selected?.name || 'None')}</div>
-          <div class="hive-summary-note">${escapeHtml(selected?.inviteId || '')}</div>
+          <div class="hive-summary-note">${escapeHtml([selected?.inviteId, selected?.email].filter(Boolean).join(' · '))}</div>
         </div>
         ${selected ? `
           <div class="hive-summary-card wide">
