@@ -1522,6 +1522,18 @@ body.dark-mode .switch-row select.switch-months {
   cursor: help;
   border: 1px solid rgba(39,82,231,0.18);
 }
+.variance-range-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--blue-light);
+  color: var(--blue-mid);
+  border: 1px solid var(--blue-soft);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.2;
+}
 .preset-wrap {
   display: flex;
   flex-wrap: wrap;
@@ -2653,7 +2665,7 @@ body.dark-mode .app-toast { box-shadow:0 18px 42px rgba(0,0,0,.42); }
 
         <div class="field">
           <label for="years" class="helper-inline">Projection period (years) <span class="helper-tip" title="You can use decimals. Example: 0.5 means 6 months and 2 means 730 days.">?</span></label>
-          <input type="number" id="years" value="1" min="0.25" max="10" step="0.25">
+          <input type="number" id="years" value="1" min="0.0027" max="10" step="0.0027">
           <div class="preset-wrap">
             <button class="preset-btn" onclick="applyYearPreset(0.5)">6 months</button>
             <button class="preset-btn" onclick="applyYearPreset(1)">1 year</button>
@@ -2664,8 +2676,8 @@ body.dark-mode .app-toast { box-shadow:0 18px 42px rgba(0,0,0,.42); }
         </div>
 
         <div class="field">
-          <label for="variance" class="helper-inline">Daily variance / offset (%) <span class="helper-tip" title="Downward-only variance lowers the base daily rate by a random amount up to the selected percentage. It never increases above the package rate.">?</span></label>
-          <input type="number" id="variance" value="30" min="0" max="60" step="1">
+          <label for="variance" class="helper-inline">Daily variance / offset (%) <span id="varianceRangeLabel" class="variance-range-pill">--</span> <span class="helper-tip" title="Downward-only variance lowers the base daily rate by a random amount up to the selected percentage. It never increases above the package rate.">?</span></label>
+          <input type="number" id="variance" value="30" min="0" max="60" step="1" oninput="updateVarianceRangeLabel()">
           <p class="hint">Applies a downward-only random offset to the daily rate. Set to 0 for a flat projection.</p>
         </div>
       </div>
@@ -2917,8 +2929,8 @@ body.dark-mode .app-toast { box-shadow:0 18px 42px rgba(0,0,0,.42); }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
-<script src="calculator.js?v=2026.05.17.01"></script>
-<script type="module" src="AurumHiveModule.js?v=2026.05.17.01"></script>
+<script src="calculator.js?v=2026.05.18.05"></script>
+<script type="module" src="AurumHiveModule.js?v=2026.05.18.02"></script>
 
 
   <!-- ── Footer copyright ── -->

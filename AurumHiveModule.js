@@ -102,7 +102,7 @@ const HIVE_SYNC_LOG_LIMIT = 40;
 const HIVE_AUTO_REFRESH_MS = 180000;
 const HIVE_MIN_ZOOM = 0.1;
 const HIVE_MAX_ZOOM = 1.2;
-const HIVE_APP_VERSION = '2026.05.17.01';
+const HIVE_APP_VERSION = '2026.05.18.02';
 const HIVE_MOBILE_PANEL_MAX_WIDTH = 1180;
 const HIVE_VERSION_URL = 'hive-version.json';
 const HIVE_CLOUD_TABLE = 'aurum_hive_accounts';
@@ -881,6 +881,13 @@ function initFloatingHiveOverlays() {
     overlay.addEventListener('pointerdown', (event) => {
       if (event.button !== 0) return;
       if (event.target.closest('button')) return;
+      if (overlay.classList.contains('collapsed')) {
+        event.preventDefault();
+        event.stopPropagation();
+        applyHiveOverlayCollapsed(overlay, false);
+        saveHiveOverlayCollapsed(overlay.dataset.overlayId, false);
+        return;
+      }
       const canvas = overlay.closest('.hive-canvas');
       if (!canvas) return;
 
@@ -2812,6 +2819,14 @@ function getDirectSubCount(node) {
   return (node.children || []).filter((child) => child.type === 'sub').length;
 }
 
+function canAutoCreateSubsForEditedMain(node) {
+  return Boolean(node && node.type === 'main' && getDirectSubCount(node) === 0);
+}
+
+function getAutoSubInviteIds(parentInviteId) {
+  return [1, 2, 3].map((index) => getAutoPlaceholderInviteId(parentInviteId, index));
+}
+
 function isUnsupportedSubAccount(node) {
   if (!node || node.type !== 'sub' || !node.parentInviteId) return false;
   const parent = findNode(hiveData[0], node.parentInviteId);
@@ -3136,6 +3151,7 @@ function populateHiveForm() {
 
   if (hiveMode === 'edit') {
     const isLoadedRoot = selected === hiveData[0];
+    const showAutoSubOption = editorActive && canAutoCreateSubsForEditedMain(selected);
     inviteInput.value = selected.inviteId || '';
     nameInput.value = selected.name || '';
     emailInput.value = normalizeHiveEmail(selected.email);
@@ -3148,8 +3164,8 @@ function populateHiveForm() {
     parentInput.disabled = false;
     parentInput.readOnly = !editorActive || !isLoadedRoot;
     parentInput.placeholder = isLoadedRoot ? 'Optional inviter Referral ID' : 'Managed by parent account';
-    autoSubWrap?.classList.remove('visible');
-    if (autoSubInput) autoSubInput.checked = false;
+    autoSubWrap?.classList.toggle('visible', showAutoSubOption);
+    if (autoSubInput && !showAutoSubOption) autoSubInput.checked = false;
     if (cancelBtn) cancelBtn.style.display = hiveEditLocked ? '' : 'none';
     saveBtn.textContent = editorActive ? 'Save edit' : 'Save turnover';
   } else {
@@ -3404,17 +3420,44 @@ async function submitHiveForm() {
   }
 
   if (hiveMode === 'edit') {
+    const autoCreateSubs = canAutoCreateSubsForEditedMain(selected) && document.getElementById('hiveAutoSubAccounts')?.checked;
+    const idsToCheck = [formData.inviteId];
+    if (autoCreateSubs) idsToCheck.push(...getAutoSubInviteIds(formData.inviteId));
+    const localIds = new Set(flattenNodes(hiveData).filter((node) => node !== selected).map((node) => node.inviteId));
+    const localDuplicate = idsToCheck.find((inviteId) => localIds.has(inviteId));
+    if (localDuplicate) {
+      setMessage(`Could not update account because ${localDuplicate} already exists locally.`, 'error');
+      return;
+    }
     if (formData.inviteId !== selected.inviteId && await cloudInviteExists(formData.inviteId)) {
       setMessage('That Referral ID already exists in the cloud database.', 'error');
       return;
     }
+    if (autoCreateSubs) {
+      const cloudDuplicates = await getExistingCloudInviteIds(getAutoSubInviteIds(formData.inviteId));
+      if (cloudDuplicates.size) {
+        const duplicateId = [...cloudDuplicates][0];
+        setMessage(`Could not add linked subaccounts because ${duplicateId} already exists in the cloud database.`, 'error');
+        return;
+      }
+    }
     const saved = editHiveItem(selected.inviteId, formData);
+    let autoSubResult = { created: 0, duplicates: [] };
+    if (saved && autoCreateSubs) {
+      const mainNode = findNode(hiveData[0], formData.inviteId);
+      autoSubResult = createAutoSubAccounts(mainNode);
+      persistHive();
+      renderHive();
+    }
     if (saved) {
       hiveEditLocked = false;
       populateHiveForm();
       rememberInviteId(findTopLocalNode(formData.inviteId)?.inviteId || formData.inviteId);
     }
-    setMessage(saved ? 'Account updated.' : 'Could not update account. Check for duplicate Referral ID.', saved ? 'ok' : 'error');
+    const successMessage = autoSubResult.created
+      ? `Account updated with ${autoSubResult.created} linked placeholder subaccounts. Update each ? node with a real name and Referral ID.`
+      : 'Account updated.';
+    setMessage(saved ? successMessage : 'Could not update account. Check for duplicate Referral ID.', saved ? 'ok' : 'error');
     return;
   }
 
@@ -3428,8 +3471,7 @@ async function submitHiveForm() {
   const autoCreateSubs = childType === 'main' && document.getElementById('hiveAutoSubAccounts')?.checked;
   const idsToCreate = [formData.inviteId];
   if (autoCreateSubs) {
-    const subIds = [1, 2, 3].map((index) => `${formData.inviteId}-${index}`);
-    idsToCreate.push(...subIds);
+    idsToCreate.push(...getAutoSubInviteIds(formData.inviteId));
     const localIds = new Set(flattenNodes(hiveData).map((node) => node.inviteId));
     const localDuplicate = idsToCreate.find((inviteId) => localIds.has(inviteId));
     if (localDuplicate) {

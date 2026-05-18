@@ -1,8 +1,13 @@
 {
-  "version": "2026.05.17.01",
+  "version": "2026.05.18.05",
   "name": "Aurum app",
   "message": "Aurum has a fresh update ready. Refresh to load the newest calculator and Hive improvements.",
   "updates": [
+    "[NEW] Added a separate Aurum usage monitor dashboard and lightweight app usage tracking.",
+    "Using a My income result in the main calculator now sets the projection period to end on the same target date.",
+    "The Daily variance / offset label now shows the effective package rate range for the selected offset.",
+    "Collapsed Hive minimap and legend overlays now expand again when tapped or clicked.",
+    "[NEW] Hive main account edits now offer auto-create for the three linked placeholder subaccounts when none exist yet.",
     "Update detection has been bumped with fresh app, Hive, script, and offline cache versions so users receive the newest release notification.",
     "[NEW] Hive account profiles now include an Email field that saves locally, imports and exports with JSON, and syncs to the cloud after the latest schema is applied.",
     "On mobile, tapping Go to from Hive search results now closes the panel and centers the requested account on the canvas.",

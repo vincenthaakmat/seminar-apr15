@@ -259,6 +259,33 @@ function runProjectionCore(options) {
   return core.simulateProjection({ packages: PKGS, ...options });
 }
 
+function formatPercentLabel(value) {
+  if (!Number.isFinite(value)) return '--';
+  const rounded = Math.round(value * 100) / 100;
+  return `${rounded.toLocaleString('en-US', { minimumFractionDigits: rounded % 1 === 0 ? 0 : 1, maximumFractionDigits: 2 })}%`;
+}
+
+function updateVarianceRangeLabel() {
+  const label = document.getElementById('varianceRangeLabel');
+  const amountInput = document.getElementById('amount');
+  const varianceInput = document.getElementById('variance');
+  if (!label || !amountInput || !varianceInput) return;
+
+  const amount = parseFloat(amountInput.value);
+  if (!amount || amount < 100) {
+    label.textContent = '--';
+    label.title = 'Enter a starting amount to see the offset range.';
+    return;
+  }
+
+  const pkg = getPkg(amount);
+  const variance = Math.min(60, Math.max(0, parseFloat(varianceInput.value) || 0));
+  const baseRate = Number(pkg.monthly || 0) * 100;
+  const lowRate = baseRate * (1 - (variance / 100));
+  label.textContent = `${formatPercentLabel(lowRate)} - ${formatPercentLabel(baseRate)}`;
+  label.title = `Offset range for ${pkg.label}: ${formatPercentLabel(lowRate)} to ${formatPercentLabel(baseRate)} monthly`;
+}
+
 function onAmountInput() {
   const val  = parseFloat(document.getElementById('amount').value);
   const info = document.getElementById('pkg-info');
@@ -270,6 +297,7 @@ function onAmountInput() {
     document.getElementById('pkg-rates').textContent = '';
     document.getElementById('pkg-range').innerHTML   = '';
     btn.disabled = true;
+    updateVarianceRangeLabel();
     return;
   }
 
@@ -281,6 +309,7 @@ function onAmountInput() {
   const pkgIndex = PKGS.findIndex(x => x.key === p.key);
   document.getElementById('pkg-rates').innerHTML = `${(p.daily*100).toFixed(4)}%/day · ${(p.monthly*100).toFixed(2)}%/month<br><span class="pkg-rate-detail">vs previous tier: ${getRateTrendBadge(pkgIndex)}</span>`;
   document.getElementById('pkg-range').innerHTML   = `Qualifies for balances from <span>${r.lo}</span> to <span>${r.hi}</span>`;
+  updateVarianceRangeLabel();
 }
 
 function onCompoundToggle() {
@@ -874,7 +903,7 @@ function calculate() {
 
 function _calculateInner() {
   const initial  = parseFloat(document.getElementById('amount').value);
-  const years    = Math.min(10, Math.max(0.0833, parseFloat(document.getElementById('years').value) || 1));
+  const years    = Math.min(10, Math.max(1 / 365, parseFloat(document.getElementById('years').value) || 1));
   const numDays  = Math.round(years * 365);
   const variance = Math.min(60, Math.max(0, parseFloat(document.getElementById('variance').value) || 0));
   const startOn  = document.getElementById('compoundToggle').checked;
@@ -1385,6 +1414,7 @@ function saveSettings() {
   } catch(e) {}
   closeSettings();
   onAmountInput();
+  updateVarianceRangeLabel();
 }
 
 function resetDefaults() {
@@ -1396,6 +1426,7 @@ function resetDefaults() {
   try { localStorage.removeItem('aurum_pkg_rates'); } catch(e) {}
   buildSettingsRows();
   onAmountInput();
+  updateVarianceRangeLabel();
 }
 
 /* ─────────────────────────────────────────
@@ -1905,18 +1936,149 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 /* ── Planning tools: scenarios, comparisons, reverse calculator, price alerts ── */
-const AURUM_APP_VERSION = '2026.05.17.01';
+const AURUM_APP_VERSION = '2026.05.18.05';
 const AURUM_VERSION_URL = 'app-version.json';
 const AURUM_VERSION_CHECK_MS = 60000;
 const AURUM_UPDATE_REQUESTED_KEY = 'aurum_update_requested_version';
 const AURUM_SCENARIO_KEY = 'aurum_saved_scenarios_v2';
 const AURUM_ALERTS_KEY = 'aurum_price_alerts_v1';
+const AURUM_SUPABASE_URL = 'https://mwjavyzunvqylmuvsnmy.supabase.co';
+const AURUM_SUPABASE_ANON_KEY = 'sb_publishable_c5vwKhjLw-f9SQywQV3oIQ__wJiilfo';
+const AURUM_USAGE_TABLE = 'aurum_app_usage_events';
+const AURUM_USAGE_VISITOR_KEY = 'aurum_usage_visitor_id';
+const AURUM_USAGE_SESSION_KEY = 'aurum_usage_session_id';
+const AURUM_USAGE_SESSION_STARTED_KEY = 'aurum_usage_session_started_at';
 let strategyCompareChart = null;
 let reverseLastAmount = null;
 let incomeLastAmount = null;
 let appUpdatePromptedVersion = '';
 let appToastTimer = null;
 let deferredInstallPrompt = null;
+
+function createUsageId(prefix) {
+  if (globalThis.crypto?.randomUUID) return `${prefix}_${globalThis.crypto.randomUUID()}`;
+  return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function getUsageVisitorId() {
+  try {
+    let visitorId = localStorage.getItem(AURUM_USAGE_VISITOR_KEY);
+    if (!visitorId) {
+      visitorId = createUsageId('visitor');
+      localStorage.setItem(AURUM_USAGE_VISITOR_KEY, visitorId);
+    }
+    return visitorId;
+  } catch (error) {
+    return createUsageId('visitor');
+  }
+}
+
+function getUsageSessionId() {
+  try {
+    const startedAt = Number(sessionStorage.getItem(AURUM_USAGE_SESSION_STARTED_KEY) || 0);
+    let sessionId = sessionStorage.getItem(AURUM_USAGE_SESSION_KEY);
+    if (!sessionId || Date.now() - startedAt > 30 * 60 * 1000) {
+      sessionId = createUsageId('session');
+      sessionStorage.setItem(AURUM_USAGE_SESSION_KEY, sessionId);
+      sessionStorage.setItem(AURUM_USAGE_SESSION_STARTED_KEY, String(Date.now()));
+    }
+    return sessionId;
+  } catch (error) {
+    return createUsageId('session');
+  }
+}
+
+function getDeviceType() {
+  const ua = navigator.userAgent || '';
+  if (/ipad|tablet|playbook|silk/i.test(ua)) return 'Tablet';
+  if (/mobile|iphone|ipod|android.*mobile|blackberry|phone/i.test(ua)) return 'Mobile';
+  return 'Desktop';
+}
+
+function getBrowserName() {
+  const ua = navigator.userAgent || '';
+  if (/Edg\//.test(ua)) return 'Edge';
+  if (/OPR\//.test(ua)) return 'Opera';
+  if (/Chrome\//.test(ua) && !/Chromium/.test(ua)) return 'Chrome';
+  if (/Safari\//.test(ua) && !/Chrome\//.test(ua)) return 'Safari';
+  if (/Firefox\//.test(ua)) return 'Firefox';
+  return 'Unknown';
+}
+
+function getOsName() {
+  const ua = navigator.userAgent || '';
+  if (/Windows/i.test(ua)) return 'Windows';
+  if (/iPhone|iPad|iPod/i.test(ua)) return 'iOS';
+  if (/Android/i.test(ua)) return 'Android';
+  if (/Mac OS X|Macintosh/i.test(ua)) return 'macOS';
+  if (/Linux/i.test(ua)) return 'Linux';
+  return 'Unknown';
+}
+
+async function getUsageCountry() {
+  try {
+    const cached = JSON.parse(sessionStorage.getItem('aurum_usage_country') || 'null');
+    if (cached?.country && Date.now() - Number(cached.savedAt || 0) < 12 * 60 * 60 * 1000) return cached;
+  } catch (error) {}
+  try {
+    const res = await fetch('https://ipapi.co/json/', { cache: 'no-store' });
+    if (!res.ok) throw new Error('Country lookup failed');
+    const data = await res.json();
+    const country = {
+      country: data.country_name || '',
+      country_code: data.country_code || '',
+      country_source: 'ipapi',
+      savedAt: Date.now()
+    };
+    try { sessionStorage.setItem('aurum_usage_country', JSON.stringify(country)); } catch (error) {}
+    return country;
+  } catch (error) {
+    const fallback = {
+      country: '',
+      country_code: '',
+      country_source: Intl.DateTimeFormat().resolvedOptions().timeZone || 'browser'
+    };
+    return fallback;
+  }
+}
+
+async function sendUsageEvent(eventType = 'page_view') {
+  const country = await getUsageCountry();
+  const payload = {
+    visitor_id: getUsageVisitorId(),
+    session_id: getUsageSessionId(),
+    event_type: eventType,
+    path: `${location.pathname}${location.search || ''}`,
+    app_version: AURUM_APP_VERSION,
+    device_type: getDeviceType(),
+    os: getOsName(),
+    browser: getBrowserName(),
+    user_agent: navigator.userAgent || '',
+    locale: navigator.language || '',
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || '',
+    screen_width: window.screen?.width || null,
+    screen_height: window.screen?.height || null,
+    country: country.country || '',
+    country_code: country.country_code || '',
+    country_source: country.country_source || '',
+    referrer: document.referrer || ''
+  };
+  try {
+    await fetch(`${AURUM_SUPABASE_URL}/rest/v1/${AURUM_USAGE_TABLE}`, {
+      method: 'POST',
+      headers: {
+        apikey: AURUM_SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${AURUM_SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+        Prefer: 'return=minimal'
+      },
+      body: JSON.stringify(payload),
+      keepalive: eventType !== 'page_view'
+    });
+  } catch (error) {
+    console.warn('Aurum usage event could not be recorded.', error);
+  }
+}
 
 function closeToolModal(id) {
   const el = document.getElementById(id);
@@ -2333,6 +2495,12 @@ function getDayBetweenDates(startDateValue, targetDateValue) {
   return diff + 1;
 }
 
+function setProjectionPeriodFromDays(days) {
+  const yearsInput = document.getElementById('years');
+  const safeDays = Math.min(3650, Math.max(1, Math.round(Number(days) || 1)));
+  if (yearsInput) yearsInput.value = (safeDays / 365).toFixed(6).replace(/0+$/, '').replace(/\.$/, '');
+}
+
 function openIncomeCalculator() {
   const startDate = document.getElementById('incomeStartDate');
   const targetDate = document.getElementById('incomeTargetDate');
@@ -2424,6 +2592,7 @@ function applyIncomeAmount() {
 
   document.getElementById('amount').value = Math.ceil(incomeLastAmount);
   document.getElementById('startDate').value = startDate;
+  if (targetDate && targetDay >= 1) setProjectionPeriodFromDays(targetDay);
   const compoundToggle = document.getElementById('compoundToggle');
   if (compoundToggle) compoundToggle.checked = true;
   switches = targetDate && targetDay >= 1 ? [{ day: targetDay, mode: 'off' }] : [];
@@ -2501,6 +2670,11 @@ async function checkPriceAlerts(showQuietStatus) {
 
 setInterval(() => { checkPriceAlerts(false); }, 60000);
 document.addEventListener('DOMContentLoaded', () => {
+  sendUsageEvent('app_open');
+  setInterval(() => {
+    if (document.visibilityState === 'visible') sendUsageEvent('heartbeat');
+  }, 5 * 60 * 1000);
+  updateVarianceRangeLabel();
   renderScenarioSelect();
   renderAlertsList();
   updateInstallAppButtons();

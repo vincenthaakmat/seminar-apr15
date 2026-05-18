@@ -1,7 +1,12 @@
 {
-  "version": "2026.05.16.56",
+  "version": "2026.05.18.02",
   "name": "Aurum Hive",
   "updates": [
+    "Collapsed Hive minimap and legend overlays now expand again when tapped or clicked.",
+    "[NEW] Editing a main account with no linked subaccounts can now auto-create the three placeholder subaccounts underneath it.",
+    "Hive update detection has been bumped with a fresh version so active users see the latest update banner.",
+    "[NEW] Account profiles now include an Email field that saves with the account, JSON import/export, and cloud sync after the latest schema is applied.",
+    "On mobile, tapping Go to from search results now closes the account panel, reveals collapsed parent branches, and centers the requested account.",
     "Protected Hive lookups now remember the Referral ID only after the correct PIN succeeds, preventing failed PIN attempts from loading that account.",
     "Total turnover can now be edited and saved without unlocking the protected account, so uplines can maintain leg calculation figures.",
     "Tablet layouts now use the slide-in Hive account panel, so tapping an account opens the details panel reliably.",
