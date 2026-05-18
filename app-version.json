@@ -1,9 +1,8 @@
 {
-  "version": "2026.05.18.05",
+  "version": "2026.05.18.04",
   "name": "Aurum app",
   "message": "Aurum has a fresh update ready. Refresh to load the newest calculator and Hive improvements.",
   "updates": [
-    "[NEW] Added a separate Aurum usage monitor dashboard and lightweight app usage tracking.",
     "Using a My income result in the main calculator now sets the projection period to end on the same target date.",
     "The Daily variance / offset label now shows the effective package rate range for the selected offset.",
     "Collapsed Hive minimap and legend overlays now expand again when tapped or clicked.",

@@ -102,10 +102,14 @@ const HIVE_SYNC_LOG_LIMIT = 40;
 const HIVE_AUTO_REFRESH_MS = 180000;
 const HIVE_MIN_ZOOM = 0.1;
 const HIVE_MAX_ZOOM = 1.2;
-const HIVE_APP_VERSION = '2026.05.18.02';
+const HIVE_APP_VERSION = '2026.05.18.08';
 const HIVE_MOBILE_PANEL_MAX_WIDTH = 1180;
 const HIVE_VERSION_URL = 'hive-version.json';
 const HIVE_CLOUD_TABLE = 'aurum_hive_accounts';
+const AURUM_USAGE_TABLE = 'aurum_app_usage_events';
+const AURUM_USAGE_VISITOR_KEY = 'aurum_usage_visitor_id';
+const AURUM_USAGE_SESSION_KEY = 'aurum_usage_session_id';
+const AURUM_USAGE_SESSION_STARTED_KEY = 'aurum_usage_session_started_at';
 const HIVE_SUPPORTED_SUB_LIMIT = 3;
 const HIVE_PIN_PATTERN = /^\d{4}$/;
 const AURUM_REFERRAL_BASE_URL = 'https://backoffice.aurum.foundation/u/';
@@ -1172,6 +1176,113 @@ async function getSupabaseClient() {
   return supabaseClientPromise;
 }
 
+function createHiveUsageId(prefix) {
+  if (globalThis.crypto?.randomUUID) return `${prefix}_${globalThis.crypto.randomUUID()}`;
+  return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function getHiveUsageVisitorId() {
+  try {
+    let visitorId = localStorage.getItem(AURUM_USAGE_VISITOR_KEY);
+    if (!visitorId) {
+      visitorId = createHiveUsageId('visitor');
+      localStorage.setItem(AURUM_USAGE_VISITOR_KEY, visitorId);
+    }
+    return visitorId;
+  } catch (error) {
+    return createHiveUsageId('visitor');
+  }
+}
+
+function getHiveUsageSessionId() {
+  try {
+    const startedAt = Number(sessionStorage.getItem(AURUM_USAGE_SESSION_STARTED_KEY) || 0);
+    let sessionId = sessionStorage.getItem(AURUM_USAGE_SESSION_KEY);
+    if (!sessionId || Date.now() - startedAt > 30 * 60 * 1000) {
+      sessionId = createHiveUsageId('session');
+      sessionStorage.setItem(AURUM_USAGE_SESSION_KEY, sessionId);
+      sessionStorage.setItem(AURUM_USAGE_SESSION_STARTED_KEY, String(Date.now()));
+    }
+    return sessionId;
+  } catch (error) {
+    return createHiveUsageId('session');
+  }
+}
+
+function getHiveDeviceType() {
+  const ua = navigator.userAgent || '';
+  if (/ipad|tablet|playbook|silk/i.test(ua)) return 'Tablet';
+  if (/mobile|iphone|ipod|android.*mobile|blackberry|phone/i.test(ua)) return 'Mobile';
+  return 'Desktop';
+}
+
+function getHiveBrowserName() {
+  const ua = navigator.userAgent || '';
+  if (/Edg\//.test(ua)) return 'Edge';
+  if (/OPR\//.test(ua)) return 'Opera';
+  if (/Chrome\//.test(ua) && !/Chromium/.test(ua)) return 'Chrome';
+  if (/Safari\//.test(ua) && !/Chrome\//.test(ua)) return 'Safari';
+  if (/Firefox\//.test(ua)) return 'Firefox';
+  return 'Unknown';
+}
+
+function getHiveOsName() {
+  const ua = navigator.userAgent || '';
+  if (/Windows/i.test(ua)) return 'Windows';
+  if (/iPhone|iPad|iPod/i.test(ua)) return 'iOS';
+  if (/Android/i.test(ua)) return 'Android';
+  if (/Mac OS X|Macintosh/i.test(ua)) return 'macOS';
+  if (/Linux/i.test(ua)) return 'Linux';
+  return 'Unknown';
+}
+
+function getHiveAnalyticsFields(eventType, metadata) {
+  const meta = metadata || {};
+  return {
+    hive_action: eventType.startsWith('hive_') ? eventType.replace(/^hive_/, '') : '',
+    hive_referral_id: meta.invite_id || meta.selected_invite_id || meta.loaded_root_invite_id || '',
+    hive_search_term: meta.search_term || meta.query || '',
+    hive_result_count: Number.isFinite(Number(meta.match_count)) ? Number(meta.match_count) : null
+  };
+}
+
+function sendHiveUsageEvent(eventType, metadata = {}) {
+  const hiveFields = getHiveAnalyticsFields(eventType, metadata);
+  const payload = {
+    visitor_id: getHiveUsageVisitorId(),
+    session_id: getHiveUsageSessionId(),
+    event_type: eventType,
+    path: `${location.pathname}${location.search || ''}`,
+    app_version: HIVE_APP_VERSION,
+    device_type: getHiveDeviceType(),
+    os: getHiveOsName(),
+    browser: getHiveBrowserName(),
+    user_agent: navigator.userAgent || '',
+    locale: navigator.language || '',
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || '',
+    screen_width: window.screen?.width || null,
+    screen_height: window.screen?.height || null,
+    referrer: document.referrer || '',
+    ...hiveFields,
+    metadata
+  };
+  fetch(`${supabaseConfig.url}/rest/v1/${AURUM_USAGE_TABLE}`, {
+    method: 'POST',
+    headers: {
+      apikey: supabaseConfig.anonKey,
+      Authorization: `Bearer ${supabaseConfig.anonKey}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=minimal'
+    },
+    body: JSON.stringify(payload),
+    keepalive: true
+  }).then(async (response) => {
+    if (!response.ok) throw new Error(await response.text());
+  }).catch((error) => {
+    console.warn('Aurum Hive usage event could not be recorded. Re-run supabase-monitoring-schema.sql if this mentions metadata, RLS, or event_type.', error);
+  });
+}
+
 async function subscribeToHiveRealtime() {
   const supabase = await getSupabaseClient();
   if (!supabase || hiveRealtimeChannel) return;
@@ -1310,6 +1421,12 @@ async function loadHiveFromLookup() {
       setMessage('Loaded from the cloud database.', 'ok');
       showHiveStatusToast('Hive loaded from the cloud database.', 'ok');
       updateSyncStatus('Loaded from the cloud database and cached locally.', 'cloud');
+      sendHiveUsageEvent('hive_load', {
+        invite_id: inviteId,
+        source: 'cloud',
+        status: 'success',
+        account_count: flattenNodes(hiveData).length
+      });
       return;
     }
 
@@ -1332,11 +1449,22 @@ async function loadHiveFromLookup() {
       setMessage('Loaded from local database.', 'ok');
       showHiveStatusToast('Hive loaded from local cache.', 'ok');
       updateSyncStatus(isCloudConfigured() ? 'Local match loaded. Cloud database did not return this Referral ID.' : 'Loaded locally. Cloud sync not configured.', isCloudConfigured() ? 'local' : 'local');
+      sendHiveUsageEvent('hive_load', {
+        invite_id: inviteId,
+        source: 'local',
+        status: 'success',
+        account_count: flattenNodes(hiveData).length
+      });
       return;
     }
 
     setMessage('Referral ID was not found locally or in the configured cloud database.', 'error');
     showHiveStatusToast('Referral ID was not found.', 'error');
+    sendHiveUsageEvent('hive_load', {
+      invite_id: inviteId,
+      source: 'lookup',
+      status: 'not_found'
+    });
   } finally {
     setHiveLookupLoading(false);
   }
@@ -1586,14 +1714,22 @@ async function removeSelectedHivePin() {
 
 function searchHiveByName() {
   const input = document.getElementById('hiveNameSearch');
-  const query = String(input?.value || '').trim().toLowerCase();
-  if (!query) {
+  const searchTerm = String(input?.value || '').trim();
+  const query = searchTerm.toLowerCase();
+  if (!searchTerm) {
     setMessage('Enter a name or Referral ID to search.', 'error');
     renderHiveSearchResults([]);
     return;
   }
 
   const matches = getHiveSearchMatches(query);
+  sendHiveUsageEvent('hive_search', {
+    query,
+    search_term: searchTerm,
+    match_count: matches.length,
+    selected_invite_id: matches[0]?.inviteId || '',
+    loaded_root_invite_id: hiveData[0]?.inviteId || ''
+  });
   if (!matches.length) {
     setMessage('No account matched that name or Referral ID in the loaded Hive.', 'error');
     renderHiveSearchResults([]);
@@ -2941,7 +3077,8 @@ export function editHiveItem(inviteId, updatedData) {
 
 export function removeHiveItem(inviteId) {
   const node = findNode(hiveData[0], inviteId);
-  const removedIds = node ? flattenNodes([node]).map((item) => item.inviteId) : [];
+  const removedNodes = node ? flattenNodes([node]) : [];
+  const removedIds = removedNodes.map((item) => item.inviteId);
   const removed = removeNodeRecursive(hiveData[0], inviteId);
   if (removed) {
     selectedInviteId = hiveData[0]?.inviteId || '';
@@ -2952,6 +3089,14 @@ export function removeHiveItem(inviteId) {
     });
     persistHive();
     renderHive();
+    sendHiveUsageEvent('hive_account_delete', {
+      invite_id: inviteId,
+      removed_ids: removedIds,
+      removed_count: removedIds.length,
+      account_type: node?.type || '',
+      account_name: node?.name || '',
+      source: 'removeHiveItem'
+    });
   }
   return removed;
 }
@@ -2988,6 +3133,15 @@ function deleteUnfundedSubAccounts() {
   appendHiveSyncLog('Deleted selected unfunded sub account', diffHiveTrees(beforeHive, hiveData), 'cleanup');
   setMessage(`Deleted unfunded sub account ${selected.inviteId} - ${accountName}.`, 'ok');
   showHiveStatusToast(`Deleted ${selected.inviteId} - ${accountName}.`, 'ok');
+  sendHiveUsageEvent('hive_account_delete', {
+    invite_id: selected.inviteId,
+    removed_ids: [selected.inviteId],
+    removed_count: 1,
+    account_type: selected.type,
+    account_name: accountName,
+    parent_invite_id: selected.parentInviteId || '',
+    source: 'delete_unfunded_sub'
+  });
 }
 
 function removeUnfundedSubsRecursive(parent, targetIds) {
@@ -3504,6 +3658,17 @@ async function submitHiveForm() {
     : addingUnsupportedSub
       ? 'Sub account added as an unsupported extra sub and shown in grey.'
     : `${childType === 'main' ? 'Main' : 'Sub'} account added.`;
+  if (added) {
+    sendHiveUsageEvent('hive_account_add', {
+      invite_id: formData.inviteId,
+      account_type: childType,
+      account_name: formData.name,
+      parent_invite_id: selected.inviteId,
+      auto_subaccounts_created: autoSubResult.created || 0,
+      unsupported_extra_sub: Boolean(addingUnsupportedSub),
+      source: 'account_card'
+    });
+  }
   setMessage(added ? successMessage : 'Could not add account. Check the Referral ID and account rule.', added ? (addingUnsupportedSub ? 'warning' : 'ok') : 'error');
 }
 
@@ -3739,6 +3904,11 @@ export function openHiveManager() {
   hivePanelCollapsed = readPanelCollapsed();
   hiveFullscreen = true;
   ensureHiveUi();
+  sendHiveUsageEvent('hive_open', {
+    selected_invite_id: selectedInviteId || '',
+    loaded_root_invite_id: hiveData[0]?.inviteId || '',
+    remembered_invite_id: readLastInviteId() || ''
+  });
   document.getElementById('hiveModal').classList.add('open');
   setHiveFullscreen(true);
   setHivePanelCollapsed(hivePanelCollapsed);

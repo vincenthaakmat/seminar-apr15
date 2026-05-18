@@ -157,7 +157,20 @@
       <div class="card metric"><div class="metric-label">Unique visitors</div><div class="metric-value" id="mVisitors">0</div><div class="metric-note">Pseudonymous browser IDs</div></div>
       <div class="card metric"><div class="metric-label">Sessions</div><div class="metric-value" id="mSessions">0</div><div class="metric-note">Distinct app sessions</div></div>
       <div class="card metric"><div class="metric-label">Active now</div><div class="metric-value" id="mActive">0</div><div class="metric-note">Seen in last 15 minutes</div></div>
-      <div class="card metric"><div class="metric-label">Countries</div><div class="metric-value" id="mCountries">0</div><div class="metric-note">Detected from IP lookup when available</div></div>
+      <div class="card metric"><div class="metric-label">Hive actions</div><div class="metric-value" id="mHiveActions">0</div><div class="metric-note">Loads, searches, adds, deletes</div></div>
+    </section>
+
+    <section class="card" style="margin-bottom:14px;">
+      <div class="card-head">
+        <div class="card-title"><span class="material-symbols-rounded">hub</span>Hive Activity</div>
+        <span class="pill" id="hiveActivityPill">0 events</span>
+      </div>
+      <div class="table-wrap" style="max-height:420px;">
+        <table>
+          <thead><tr><th>Time</th><th>Action</th><th>Referral ID</th><th>Details</th><th>Visitor</th><th>Device</th></tr></thead>
+          <tbody id="hiveActivityBody"><tr><td colspan="6" class="empty">No Hive activity yet.</td></tr></tbody>
+        </table>
+      </div>
     </section>
 
     <section class="grid cards">
@@ -194,6 +207,7 @@ const SUPABASE_URL = 'https://mwjavyzunvqylmuvsnmy.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_c5vwKhjLw-f9SQywQV3oIQ__wJiilfo';
 const USAGE_TABLE = 'aurum_app_usage_events';
 let latestEvents = [];
+let loadingUsage = false;
 
 const $ = (id) => document.getElementById(id);
 
@@ -253,6 +267,7 @@ function escapeHtml(value) {
 
 function renderDashboard(events) {
   const sessions = getLatestSessions(events);
+  const hiveEvents = events.filter((event) => String(event.event_type || '').startsWith('hive_'));
   const visitors = new Set(events.map((event) => event.visitor_id).filter(Boolean));
   const countries = countBy(sessions, (event) => event.country || event.country_code);
   const devices = countBy(sessions, (event) => event.device_type);
@@ -262,8 +277,9 @@ function renderDashboard(events) {
   $('mVisitors').textContent = visitors.size.toLocaleString();
   $('mSessions').textContent = sessions.length.toLocaleString();
   $('mActive').textContent = active.toLocaleString();
-  $('mCountries').textContent = countries.length.toLocaleString();
+  $('mHiveActions').textContent = hiveEvents.length.toLocaleString();
   $('sessionCountPill').textContent = `${sessions.length.toLocaleString()} sessions`;
+  $('hiveActivityPill').textContent = `${hiveEvents.length.toLocaleString()} events`;
 
   $('sessionsBody').innerHTML = sessions.length ? sessions.slice(0, 100).map((event) => `
     <tr>
@@ -278,23 +294,73 @@ function renderDashboard(events) {
 
   renderList('countryList', countries, sessions.length);
   renderList('deviceList', devices, sessions.length);
+  renderHiveActivity(hiveEvents);
+}
+
+function getHiveActionLabel(eventType) {
+  return {
+    hive_open: 'Hive opened',
+    hive_load: 'Loaded Hive',
+    hive_search: 'Searched Hive',
+    hive_account_add: 'Added account',
+    hive_account_delete: 'Deleted account'
+  }[eventType] || eventType;
+}
+
+function getHiveInviteId(event) {
+  const meta = event.metadata || {};
+  return event.hive_referral_id || meta.invite_id || meta.selected_invite_id || meta.loaded_root_invite_id || '';
+}
+
+function getHiveDetails(event) {
+  const meta = event.metadata || {};
+  if (event.event_type === 'hive_search') return `Search term: ${event.hive_search_term || meta.search_term || meta.query || ''} · ${event.hive_result_count ?? meta.match_count ?? 0} match${Number(event.hive_result_count ?? meta.match_count ?? 0) === 1 ? '' : 'es'}`;
+  if (event.event_type === 'hive_load') return `${meta.status || 'unknown'} · ${meta.source || 'lookup'}${meta.account_count ? ' · ' + meta.account_count + ' accounts' : ''}`;
+  if (event.event_type === 'hive_account_add') return `${meta.account_type || 'account'} under ${meta.parent_invite_id || 'unknown'}${meta.auto_subaccounts_created ? ' · +' + meta.auto_subaccounts_created + ' placeholders' : ''}`;
+  if (event.event_type === 'hive_account_delete') return `${meta.account_type || 'account'} · ${meta.removed_count || 1} removed · ${meta.source || 'delete'}`;
+  if (event.event_type === 'hive_open') return `Root: ${meta.loaded_root_invite_id || 'local'}${meta.remembered_invite_id ? ' · remembered ' + meta.remembered_invite_id : ''}`;
+  return JSON.stringify(meta || {});
+}
+
+function renderHiveActivity(events) {
+  const body = $('hiveActivityBody');
+  if (!events.length) {
+    body.innerHTML = '<tr><td colspan="6" class="empty">No Hive activity yet.</td></tr>';
+    return;
+  }
+  body.innerHTML = events.slice(0, 150).map((event) => `
+    <tr>
+      <td><strong>${fmtTime(event.created_at)}</strong><span class="muted">${escapeHtml(event.app_version || '')}</span></td>
+      <td><span class="pill">${escapeHtml(getHiveActionLabel(event.event_type))}</span></td>
+      <td><strong>${escapeHtml(getHiveInviteId(event) || 'None')}</strong></td>
+      <td>${escapeHtml(getHiveDetails(event))}</td>
+      <td><strong>${escapeHtml(shortId(event.visitor_id))}</strong><span class="muted">${escapeHtml(shortId(event.session_id))}</span></td>
+      <td>${escapeHtml(event.device_type || 'Unknown')}<br><span class="muted">${escapeHtml(event.browser || '')} ${escapeHtml(event.os || '')}</span></td>
+    </tr>
+  `).join('');
 }
 
 async function loadUsage() {
+  if (loadingUsage) return;
+  loadingUsage = true;
   const days = Number($('rangeSelect').value || 7);
   const since = new Date(Date.now() - (days * 86400000)).toISOString();
   const url = `${SUPABASE_URL}/rest/v1/${USAGE_TABLE}?select=*&created_at=gte.${encodeURIComponent(since)}&order=created_at.desc&limit=2000`;
-  setStatus('Loading usage data...');
-  const res = await fetch(url, {
-    headers: {
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`
-    }
-  });
-  if (!res.ok) throw new Error(await res.text());
-  latestEvents = await res.json();
-  renderDashboard(latestEvents);
-  setStatus(`Loaded ${latestEvents.length.toLocaleString()} events. Last refresh: ${new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })}`);
+  try {
+    setStatus('Loading usage data...');
+    const res = await fetch(url, {
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`
+      }
+    });
+    if (!res.ok) throw new Error(await res.text());
+    latestEvents = await res.json();
+    renderDashboard(latestEvents);
+    setStatus(`Live monitor on. Loaded ${latestEvents.length.toLocaleString()} events. Last refresh: ${new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })}`);
+  } finally {
+    loadingUsage = false;
+  }
 }
 
 function exportCsv() {
@@ -313,6 +379,9 @@ $('refreshBtn').addEventListener('click', () => loadUsage().catch((error) => set
 $('rangeSelect').addEventListener('change', () => loadUsage().catch((error) => setStatus(`Could not load usage data: ${error.message || error}`, 'error')));
 $('exportBtn').addEventListener('click', exportCsv);
 loadUsage().catch((error) => setStatus(`Could not load usage data: ${error.message || error}`, 'error'));
+setInterval(() => {
+  loadUsage().catch((error) => setStatus(`Could not load usage data: ${error.message || error}`, 'error'));
+}, 10000);
 </script>
 </body>
 </html>
