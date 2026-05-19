@@ -3904,17 +3904,18 @@ export function openHiveManager() {
   hivePanelCollapsed = readPanelCollapsed();
   hiveFullscreen = true;
   ensureHiveUi();
+  const rememberedInviteId = readLastInviteId();
   sendHiveUsageEvent('hive_open', {
+    invite_id: rememberedInviteId || hiveData[0]?.inviteId || selectedInviteId || '',
     selected_invite_id: selectedInviteId || '',
     loaded_root_invite_id: hiveData[0]?.inviteId || '',
-    remembered_invite_id: readLastInviteId() || ''
+    remembered_invite_id: rememberedInviteId || ''
   });
   document.getElementById('hiveModal').classList.add('open');
   setHiveFullscreen(true);
   setHivePanelCollapsed(hivePanelCollapsed);
   setDefaultMobileAccountCardState();
   updateSyncStatus(isCloudConfigured() ? 'Cloud sync configured. Local cache active.' : 'Local database active. Cloud sync not configured.', isCloudConfigured() ? 'cloud' : 'local');
-  const rememberedInviteId = readLastInviteId();
   const lookupInput = document.getElementById('hiveLookupInviteId');
   if (lookupInput && rememberedInviteId) lookupInput.value = rememberedInviteId;
   renderHiveSyncLog();

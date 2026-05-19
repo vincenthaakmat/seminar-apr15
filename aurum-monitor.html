@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Aurum Usage Monitor</title>
+<title>The Hive Usage Monitor</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,500,1,0&display=swap" rel="stylesheet">
 <style>
@@ -21,6 +21,22 @@
     --text:#13203d;
     --muted:#64748b;
     --shadow:0 18px 45px rgba(25,45,110,.13);
+    --danger-soft:#fef2f2;
+  }
+  body.dark-mode {
+    --blue:#60a5fa;
+    --blue-mid:#bfdbfe;
+    --blue-light:rgba(37,99,235,.22);
+    --green:#22c55e;
+    --red:#f87171;
+    --bg:#0f172a;
+    --surface:#111c33;
+    --surface-soft:#17223a;
+    --border:rgba(148,163,184,.24);
+    --text:#e5eefc;
+    --muted:#94a3b8;
+    --shadow:0 18px 45px rgba(0,0,0,.28);
+    --danger-soft:rgba(248,113,113,.12);
   }
   body {
     margin:0;
@@ -28,6 +44,7 @@
     background:linear-gradient(180deg,#f7f9ff 0%, var(--bg) 100%);
     color:var(--text);
   }
+  body.dark-mode { background:linear-gradient(180deg,#111827 0%, var(--bg) 100%); }
   .material-symbols-rounded { font-variation-settings:'FILL' 1,'wght' 500,'GRAD' 0,'opsz' 24; line-height:1; }
   .shell { max-width:1180px; margin:0 auto; padding:28px 18px 44px; }
   .topbar {
@@ -50,8 +67,10 @@
     min-height:38px;
     padding:0 12px;
   }
+  body.dark-mode button, body.dark-mode select { background:#0f172a; }
   button { cursor:pointer; display:inline-flex; align-items:center; gap:7px; }
   button.primary { background:var(--blue); border-color:var(--blue); color:#fff; }
+  button.danger { color:var(--red); background:var(--danger-soft); border-color:rgba(248,113,113,.38); }
   button:hover { border-color:var(--blue); }
   .status {
     display:flex;
@@ -66,7 +85,7 @@
   .dot { width:8px; height:8px; border-radius:50%; background:var(--green); box-shadow:0 0 0 4px rgba(22,163,74,.12); }
   .dot.error { background:var(--red); box-shadow:0 0 0 4px rgba(220,38,38,.12); }
   .grid { display:grid; gap:14px; }
-  .metrics { grid-template-columns:repeat(4,minmax(0,1fr)); margin-bottom:14px; }
+  .metrics { grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); margin-bottom:14px; }
   .cards { grid-template-columns:1.15fr .85fr; }
   .card {
     background:var(--surface);
@@ -94,6 +113,7 @@
   table { width:100%; border-collapse:collapse; min-width:760px; }
   th, td { padding:11px 12px; border-bottom:1px solid rgba(72,97,173,.14); text-align:left; font-size:12px; vertical-align:top; }
   th { position:sticky; top:0; background:#fff; color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.08em; z-index:1; }
+  body.dark-mode th { background:#111c33; }
   td strong { display:block; font-size:13px; }
   .muted { color:var(--muted); }
   .pill {
@@ -124,6 +144,32 @@
     font-size:12px;
     line-height:1.5;
   }
+  body.dark-mode .notice { background:rgba(245,158,11,.12); color:#fbbf24; border-color:rgba(245,158,11,.3); }
+  .tree-board { padding:16px; display:grid; gap:14px; }
+  .tree-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:14px; align-items:start; }
+  .tree-card { border:1px solid var(--border); border-radius:12px; background:var(--surface-soft); overflow:hidden; }
+  .tree-card.orphan { border-color:rgba(248,113,113,.5); box-shadow:inset 4px 0 0 var(--red); }
+  .tree-card-head { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; padding:12px; border-bottom:1px solid var(--border); }
+  .tree-root { min-width:0; }
+  .tree-root strong { display:block; font-size:14px; word-break:break-word; }
+  .tree-root span { display:block; margin-top:4px; color:var(--muted); font-size:11px; font-weight:800; }
+  .tree-actions { display:flex; gap:8px; align-items:center; flex:0 0 auto; }
+  .tree-body { padding:12px; overflow:auto; max-height:360px; }
+  .tree-node { position:relative; margin:0 0 8px 0; padding-left:18px; }
+  .tree-node::before { content:''; position:absolute; left:5px; top:0; bottom:-8px; border-left:1px solid var(--border); }
+  .tree-node:last-child::before { bottom:14px; }
+  .tree-node-row { position:relative; display:flex; align-items:center; gap:8px; min-height:28px; padding:6px 8px; border:1px solid var(--border); border-radius:8px; background:var(--surface); font-size:12px; font-weight:800; }
+  .tree-node-row::before { content:''; position:absolute; left:-14px; top:50%; width:13px; border-top:1px solid var(--border); }
+  .tree-node-root { padding-left:0; }
+  .tree-node-root::before, .tree-node-root > .tree-node-row::before { display:none; }
+  .node-dot { width:10px; height:10px; border-radius:50%; flex:0 0 auto; background:var(--green); }
+  .node-dot.main { background:#dc2626; }
+  .node-dot.sub { background:#16a34a; }
+  .node-meta { color:var(--muted); font-size:10px; font-weight:800; margin-left:auto; white-space:nowrap; }
+  .node-text { display:grid; gap:3px; min-width:0; }
+  .node-id { font-weight:900; word-break:break-word; }
+  .node-detail { color:var(--muted); font-size:10px; font-weight:800; line-height:1.25; word-break:break-word; }
+  .children { margin:8px 0 0 12px; }
   @media (max-width:900px) {
     .topbar { display:grid; }
     .actions { justify-content:flex-start; }
@@ -136,8 +182,8 @@
     <section class="topbar">
       <div>
         <div class="eyebrow">Aurum Control Panel</div>
-        <h1>Usage Monitor</h1>
-        <p class="sub">Track app opens, active sessions, device type, browser, operating system, country, and recent activity for Aurum.</p>
+        <h1>The Hive Usage Monitor</h1>
+        <p class="sub">Track Hive usage, searches, loaded Referral IDs, and the full cloud tree inventory so orphan trees are easy to spot.</p>
       </div>
       <div class="actions">
         <select id="rangeSelect" aria-label="Time range">
@@ -146,6 +192,7 @@
           <option value="30">Last 30 days</option>
           <option value="90">Last 90 days</option>
         </select>
+        <button type="button" id="themeBtn"><span class="material-symbols-rounded">dark_mode</span>Dark</button>
         <button type="button" id="exportBtn"><span class="material-symbols-rounded">download</span>CSV</button>
         <button class="primary" type="button" id="refreshBtn"><span class="material-symbols-rounded">refresh</span>Refresh</button>
       </div>
@@ -158,6 +205,10 @@
       <div class="card metric"><div class="metric-label">Sessions</div><div class="metric-value" id="mSessions">0</div><div class="metric-note">Distinct app sessions</div></div>
       <div class="card metric"><div class="metric-label">Active now</div><div class="metric-value" id="mActive">0</div><div class="metric-note">Seen in last 15 minutes</div></div>
       <div class="card metric"><div class="metric-label">Hive actions</div><div class="metric-value" id="mHiveActions">0</div><div class="metric-note">Loads, searches, adds, deletes</div></div>
+      <div class="card metric"><div class="metric-label">Hive loads</div><div class="metric-value" id="mHiveLoads">0</div><div class="metric-note">Opened or loaded trees</div></div>
+      <div class="card metric"><div class="metric-label">Hive searches</div><div class="metric-value" id="mHiveSearches">0</div><div class="metric-note">Search terms submitted</div></div>
+      <div class="card metric"><div class="metric-label">Cloud trees</div><div class="metric-value" id="mTrees">0</div><div class="metric-note">Separate root structures</div></div>
+      <div class="card metric"><div class="metric-label">Orphan trees</div><div class="metric-value" id="mOrphans">0</div><div class="metric-note">Roots with missing parent IDs</div></div>
     </section>
 
     <section class="card" style="margin-bottom:14px;">
@@ -170,6 +221,17 @@
           <thead><tr><th>Time</th><th>Action</th><th>Referral ID</th><th>Details</th><th>Visitor</th><th>Device</th></tr></thead>
           <tbody id="hiveActivityBody"><tr><td colspan="6" class="empty">No Hive activity yet.</td></tr></tbody>
         </table>
+      </div>
+    </section>
+
+    <section class="card" style="margin-bottom:14px;">
+      <div class="card-head">
+        <div class="card-title"><span class="material-symbols-rounded">account_tree</span>Hive Trees</div>
+        <span class="pill" id="treeCountPill">0 trees</span>
+      </div>
+      <div class="tree-board">
+        <div class="notice" style="margin-top:0;">Whole-tree deletion removes the selected root and every child account underneath it from the cloud Hive table. The action asks you to type the root Referral ID before deleting.</div>
+        <div class="tree-grid" id="treeGrid"><div class="empty">Loading Hive trees...</div></div>
       </div>
     </section>
 
@@ -206,8 +268,11 @@
 const SUPABASE_URL = 'https://mwjavyzunvqylmuvsnmy.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_c5vwKhjLw-f9SQywQV3oIQ__wJiilfo';
 const USAGE_TABLE = 'aurum_app_usage_events';
+const HIVE_TABLE = 'aurum_hive_accounts';
 let latestEvents = [];
+let latestHiveAccounts = [];
 let loadingUsage = false;
+let loadingHive = false;
 
 const $ = (id) => document.getElementById(id);
 
@@ -268,6 +333,8 @@ function escapeHtml(value) {
 function renderDashboard(events) {
   const sessions = getLatestSessions(events);
   const hiveEvents = events.filter((event) => String(event.event_type || '').startsWith('hive_'));
+  const hiveLoads = hiveEvents.filter((event) => event.event_type === 'hive_open' || event.event_type === 'hive_load');
+  const hiveSearches = hiveEvents.filter((event) => event.event_type === 'hive_search');
   const visitors = new Set(events.map((event) => event.visitor_id).filter(Boolean));
   const countries = countBy(sessions, (event) => event.country || event.country_code);
   const devices = countBy(sessions, (event) => event.device_type);
@@ -278,6 +345,8 @@ function renderDashboard(events) {
   $('mSessions').textContent = sessions.length.toLocaleString();
   $('mActive').textContent = active.toLocaleString();
   $('mHiveActions').textContent = hiveEvents.length.toLocaleString();
+  $('mHiveLoads').textContent = hiveLoads.length.toLocaleString();
+  $('mHiveSearches').textContent = hiveSearches.length.toLocaleString();
   $('sessionCountPill').textContent = `${sessions.length.toLocaleString()} sessions`;
   $('hiveActivityPill').textContent = `${hiveEvents.length.toLocaleString()} events`;
 
@@ -295,6 +364,135 @@ function renderDashboard(events) {
   renderList('countryList', countries, sessions.length);
   renderList('deviceList', devices, sessions.length);
   renderHiveActivity(hiveEvents);
+}
+
+function getHiveForest(accounts) {
+  const byId = new Map(accounts.map((account) => [account.invite_id, { ...account, children: [] }]));
+  const roots = [];
+  byId.forEach((node) => {
+    const parentId = node.parent_invite_id || '';
+    const parent = parentId ? byId.get(parentId) : null;
+    if (parent) parent.children.push(node);
+    else roots.push({ ...node, orphan: Boolean(parentId), missingParentId: parentId });
+  });
+  const sortTree = (node) => {
+    node.children.sort((a, b) => String(a.invite_id).localeCompare(String(b.invite_id)));
+    node.children.forEach(sortTree);
+  };
+  roots.sort((a, b) => String(a.invite_id).localeCompare(String(b.invite_id)));
+  roots.forEach(sortTree);
+  return roots;
+}
+
+function flattenTree(node) {
+  const nodes = [node];
+  (node.children || []).forEach((child) => nodes.push(...flattenTree(child)));
+  return nodes;
+}
+
+function renderTreeNode(node, isRoot = false) {
+  const type = node.type === 'sub' ? 'sub' : 'main';
+  const children = node.children || [];
+  return `
+    <div class="tree-node ${isRoot ? 'tree-node-root' : ''}">
+      <div class="tree-node-row">
+        <span class="node-dot ${type}"></span>
+        <span class="node-text">
+          <span class="node-id">${escapeHtml(node.invite_id)}</span>
+          <span class="node-detail">Name: ${escapeHtml(node.name || 'Unnamed')}</span>
+          <span class="node-detail">Invited By ID: ${escapeHtml(node.parent_invite_id || 'None')}</span>
+        </span>
+        <span class="node-meta">${escapeHtml(type)}${children.length ? ` · ${children.length}` : ''}</span>
+      </div>
+      ${children.length ? `<div class="children">${children.map((child) => renderTreeNode(child)).join('')}</div>` : ''}
+    </div>
+  `;
+}
+
+function renderHiveTrees(accounts) {
+  const roots = getHiveForest(accounts);
+  const orphanCount = roots.filter((root) => root.orphan).length;
+  $('mTrees').textContent = roots.length.toLocaleString();
+  $('mOrphans').textContent = orphanCount.toLocaleString();
+  $('treeCountPill').textContent = `${roots.length.toLocaleString()} tree${roots.length === 1 ? '' : 's'} · ${orphanCount.toLocaleString()} orphan${orphanCount === 1 ? '' : 's'}`;
+
+  const grid = $('treeGrid');
+  if (!roots.length) {
+    grid.innerHTML = '<div class="empty">No Hive accounts were found in the cloud table.</div>';
+    return;
+  }
+
+  grid.innerHTML = roots.map((root) => {
+    const treeNodes = flattenTree(root);
+    return `
+      <article class="tree-card ${root.orphan ? 'orphan' : ''}">
+        <div class="tree-card-head">
+          <div class="tree-root">
+            <strong>${escapeHtml(root.invite_id)}</strong>
+            <span>${escapeHtml(root.name || 'Unnamed root')} · ${treeNodes.length} account${treeNodes.length === 1 ? '' : 's'}${root.orphan ? ` · orphan from ${escapeHtml(root.missingParentId)}` : ''}</span>
+          </div>
+          <div class="tree-actions">
+            ${root.orphan ? '<span class="pill">Orphan</span>' : '<span class="pill">Root</span>'}
+            <button class="danger" type="button" data-delete-tree="${escapeHtml(root.invite_id)}"><span class="material-symbols-rounded">delete</span>Delete</button>
+          </div>
+        </div>
+        <div class="tree-body">${renderTreeNode(root, true)}</div>
+      </article>
+    `;
+  }).join('');
+}
+
+async function loadHiveAccounts() {
+  if (loadingHive) return;
+  loadingHive = true;
+  try {
+    const url = `${SUPABASE_URL}/rest/v1/${HIVE_TABLE}?select=invite_id,name,type,parent_invite_id,amount,country,rank,updated_at&order=invite_id.asc&limit=10000`;
+    const res = await fetch(url, {
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`
+      }
+    });
+    if (!res.ok) throw new Error(await res.text());
+    latestHiveAccounts = await res.json();
+    renderHiveTrees(latestHiveAccounts);
+  } finally {
+    loadingHive = false;
+  }
+}
+
+function getTreeDeleteIds(rootId) {
+  const root = getHiveForest(latestHiveAccounts).find((node) => node.invite_id === rootId);
+  return root ? flattenTree(root).map((node) => node.invite_id) : [];
+}
+
+function toPostgrestInList(ids) {
+  return `(${ids.map((id) => `"${String(id).replace(/"/g, '\\"')}"`).join(',')})`;
+}
+
+async function deleteHiveTree(rootId) {
+  const ids = getTreeDeleteIds(rootId);
+  if (!ids.length) {
+    setStatus(`Could not find tree ${rootId}. Refresh and try again.`, 'error');
+    return;
+  }
+  const typed = window.prompt(`Delete the whole Hive tree rooted at ${rootId}?\n\nThis removes ${ids.length} account${ids.length === 1 ? '' : 's'} from the cloud database.\n\nType the root Referral ID to confirm.`);
+  if (typed !== rootId) {
+    setStatus('Tree delete cancelled. Confirmation did not match.', 'error');
+    return;
+  }
+  const url = `${SUPABASE_URL}/rest/v1/${HIVE_TABLE}?invite_id=in.${encodeURIComponent(toPostgrestInList(ids))}`;
+  const res = await fetch(url, {
+    method: 'DELETE',
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      Prefer: 'return=minimal'
+    }
+  });
+  if (!res.ok) throw new Error(await res.text());
+  setStatus(`Deleted tree ${rootId} with ${ids.length} account${ids.length === 1 ? '' : 's'}.`);
+  await loadHiveAccounts();
 }
 
 function getHiveActionLabel(eventType) {
@@ -318,7 +516,7 @@ function getHiveDetails(event) {
   if (event.event_type === 'hive_load') return `${meta.status || 'unknown'} · ${meta.source || 'lookup'}${meta.account_count ? ' · ' + meta.account_count + ' accounts' : ''}`;
   if (event.event_type === 'hive_account_add') return `${meta.account_type || 'account'} under ${meta.parent_invite_id || 'unknown'}${meta.auto_subaccounts_created ? ' · +' + meta.auto_subaccounts_created + ' placeholders' : ''}`;
   if (event.event_type === 'hive_account_delete') return `${meta.account_type || 'account'} · ${meta.removed_count || 1} removed · ${meta.source || 'delete'}`;
-  if (event.event_type === 'hive_open') return `Root: ${meta.loaded_root_invite_id || 'local'}${meta.remembered_invite_id ? ' · remembered ' + meta.remembered_invite_id : ''}`;
+  if (event.event_type === 'hive_open') return `Tree loaded/opened: ${event.hive_referral_id || meta.loaded_root_invite_id || 'local'}${meta.remembered_invite_id ? ' · remembered ' + meta.remembered_invite_id : ''}`;
   return JSON.stringify(meta || {});
 }
 
@@ -363,8 +561,12 @@ async function loadUsage() {
   }
 }
 
+async function loadAll() {
+  await Promise.all([loadUsage(), loadHiveAccounts()]);
+}
+
 function exportCsv() {
-  const headers = ['created_at','visitor_id','session_id','event_type','country','country_code','device_type','os','browser','path','app_version','locale','timezone','screen_width','screen_height'];
+  const headers = ['created_at','visitor_id','session_id','event_type','hive_referral_id','hive_search_term','hive_result_count','country','country_code','device_type','os','browser','path','app_version','locale','timezone','screen_width','screen_height'];
   const rows = [headers.join(',')].concat(latestEvents.map((event) => headers.map((key) => `"${String(event[key] ?? '').replace(/"/g, '""')}"`).join(',')));
   const blob = new Blob([rows.join('\n')], { type:'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);
@@ -375,12 +577,32 @@ function exportCsv() {
   URL.revokeObjectURL(url);
 }
 
-$('refreshBtn').addEventListener('click', () => loadUsage().catch((error) => setStatus(`Could not load usage data: ${error.message || error}`, 'error')));
-$('rangeSelect').addEventListener('change', () => loadUsage().catch((error) => setStatus(`Could not load usage data: ${error.message || error}`, 'error')));
+$('refreshBtn').addEventListener('click', () => loadAll().catch((error) => setStatus(`Could not load monitor data: ${error.message || error}`, 'error')));
+$('rangeSelect').addEventListener('change', () => loadAll().catch((error) => setStatus(`Could not load monitor data: ${error.message || error}`, 'error')));
 $('exportBtn').addEventListener('click', exportCsv);
-loadUsage().catch((error) => setStatus(`Could not load usage data: ${error.message || error}`, 'error'));
+$('themeBtn').addEventListener('click', () => {
+  const nextDark = !document.body.classList.contains('dark-mode');
+  document.body.classList.toggle('dark-mode', nextDark);
+  localStorage.setItem('aurum_monitor_dark_mode', String(nextDark));
+  $('themeBtn').innerHTML = nextDark
+    ? '<span class="material-symbols-rounded">light_mode</span>Light'
+    : '<span class="material-symbols-rounded">dark_mode</span>Dark';
+});
+$('treeGrid').addEventListener('click', (event) => {
+  const button = event.target.closest('[data-delete-tree]');
+  if (!button) return;
+  deleteHiveTree(button.dataset.deleteTree).catch((error) => setStatus(`Could not delete tree: ${error.message || error}`, 'error'));
+});
+try {
+  const useDark = localStorage.getItem('aurum_monitor_dark_mode') === 'true';
+  document.body.classList.toggle('dark-mode', useDark);
+  $('themeBtn').innerHTML = useDark
+    ? '<span class="material-symbols-rounded">light_mode</span>Light'
+    : '<span class="material-symbols-rounded">dark_mode</span>Dark';
+} catch (error) {}
+loadAll().catch((error) => setStatus(`Could not load monitor data: ${error.message || error}`, 'error'));
 setInterval(() => {
-  loadUsage().catch((error) => setStatus(`Could not load usage data: ${error.message || error}`, 'error'));
+  loadAll().catch((error) => setStatus(`Could not load monitor data: ${error.message || error}`, 'error'));
 }, 10000);
 </script>
 </body>
