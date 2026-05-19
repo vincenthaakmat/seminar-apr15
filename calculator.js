@@ -71,6 +71,8 @@ const PKGS = [
   { key:'luxury',   label:'Luxury',   min:25000, max:49999.99, daily:0.00525,           monthly:0.1575 },
   { key:'ultimate', label:'Ultimate', min:50000, max:99999,    daily:0.00554,           monthly:0.1662 }
 ];
+const DEFAULT_DAILY_VARIANCE = 3;
+const DAILY_VARIANCE_SETTING_KEY = 'aurum_daily_variance';
 
 function getPkg(balance) {
   for (let i = PKGS.length - 1; i >= 0; i--) {
@@ -284,6 +286,34 @@ function updateVarianceRangeLabel() {
   const lowRate = baseRate * (1 - (variance / 100));
   label.textContent = `${formatPercentLabel(lowRate)} - ${formatPercentLabel(baseRate)}`;
   label.title = `Offset range for ${pkg.label}: ${formatPercentLabel(lowRate)} to ${formatPercentLabel(baseRate)} monthly`;
+}
+
+function normalizeDailyVariance(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return DEFAULT_DAILY_VARIANCE;
+  return Math.min(60, Math.max(0, numeric));
+}
+
+function formatSettingNumber(value) {
+  const normalized = normalizeDailyVariance(value);
+  return Number.isInteger(normalized) ? String(normalized) : String(+normalized.toFixed(2));
+}
+
+function getSavedDailyVariance() {
+  try {
+    const saved = localStorage.getItem(DAILY_VARIANCE_SETTING_KEY);
+    if (saved === null) return DEFAULT_DAILY_VARIANCE;
+    return normalizeDailyVariance(saved);
+  } catch(e) {
+    return DEFAULT_DAILY_VARIANCE;
+  }
+}
+
+function setDailyVarianceInput(value) {
+  const input = document.getElementById('variance');
+  if (!input) return;
+  input.value = formatSettingNumber(value);
+  updateVarianceRangeLabel();
 }
 
 function onAmountInput() {
@@ -703,7 +733,7 @@ function resetCalculator() {
   document.getElementById('amount').value = 7700;
   document.getElementById('startDate').value = getTodayLocalISO();
   document.getElementById('years').value = 1;
-  document.getElementById('variance').value = 30;
+  setDailyVarianceInput(getSavedDailyVariance());
   document.getElementById('compoundToggle').checked = true;
   switches = [];
   deposits = [];
@@ -1327,6 +1357,7 @@ const PKG_DEFAULTS = PKGS.map(p => ({ ...p }));
 })();
 
 document.getElementById('startDate').value = getTodayLocalISO();
+setDailyVarianceInput(getSavedDailyVariance());
 onAmountInput();
 onCompoundToggle();
 renderSwitchList();
@@ -1347,6 +1378,24 @@ function closeSettings() {
 function buildSettingsRows() {
   const body = document.getElementById('spBody');
   body.innerHTML = '';
+  const varianceValue = normalizeDailyVariance(document.getElementById('variance')?.value || getSavedDailyVariance());
+
+  const varianceRow = document.createElement('div');
+  varianceRow.className = 'sp-global-row';
+  varianceRow.innerHTML = `
+    <div>
+      <p class="sp-pkg-name">Daily variance / offset</p>
+      <p class="sp-global-note">Default downward-only offset used by projections. Set to 0 for a flat package rate.</p>
+    </div>
+    <div class="sp-field">
+      <label>Variance %</label>
+      <div class="sp-input-wrap">
+        <input type="number" id="sp-daily-variance" value="${formatSettingNumber(varianceValue)}" min="0" max="60" step="1">
+        <span class="sp-unit">%</span>
+      </div>
+    </div>
+  `;
+  body.appendChild(varianceRow);
 
   PKGS.forEach((pkg, i) => {
     const def       = PKG_DEFAULTS[i];
@@ -1406,11 +1455,15 @@ function saveSettings() {
     if (!isNaN(d) && d >= 0) pkg.daily   = d / 100;
     if (!isNaN(m) && m >= 0) pkg.monthly = m / 100;
   });
+  const varianceField = document.getElementById('sp-daily-variance');
+  const variance = normalizeDailyVariance(varianceField?.value);
+  setDailyVarianceInput(variance);
   // Persist to localStorage so rates survive page reloads
   try {
     localStorage.setItem('aurum_pkg_rates', JSON.stringify(
       PKGS.map(p => ({ key: p.key, daily: p.daily, monthly: p.monthly }))
     ));
+    localStorage.setItem(DAILY_VARIANCE_SETTING_KEY, formatSettingNumber(variance));
   } catch(e) {}
   closeSettings();
   onAmountInput();
@@ -1422,8 +1475,12 @@ function resetDefaults() {
     PKGS[i].daily   = def.daily;
     PKGS[i].monthly = def.monthly;
   });
+  setDailyVarianceInput(DEFAULT_DAILY_VARIANCE);
   // Clear persisted overrides
-  try { localStorage.removeItem('aurum_pkg_rates'); } catch(e) {}
+  try {
+    localStorage.removeItem('aurum_pkg_rates');
+    localStorage.removeItem(DAILY_VARIANCE_SETTING_KEY);
+  } catch(e) {}
   buildSettingsRows();
   onAmountInput();
   updateVarianceRangeLabel();
@@ -1936,7 +1993,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 /* ── Planning tools: scenarios, comparisons, reverse calculator, price alerts ── */
-const AURUM_APP_VERSION = '2026.05.18.08';
+const AURUM_APP_VERSION = '2026.05.18.10';
 const AURUM_VERSION_URL = 'app-version.json';
 const AURUM_VERSION_CHECK_MS = 60000;
 const AURUM_UPDATE_REQUESTED_KEY = 'aurum_update_requested_version';
@@ -2433,7 +2490,9 @@ function renderStrategyCompareChart(scenarios) {
 function openReverseCalculator() {
   const cfg = getCurrentScenarioConfig();
   const yearsEl = document.getElementById('reverseYears');
+  const varianceEl = document.getElementById('reverseVariance');
   if (yearsEl) yearsEl.value = cfg.years || 1;
+  if (varianceEl) varianceEl.value = formatSettingNumber(cfg.variance);
   document.getElementById('reverseModal')?.classList.add('open');
 }
 
@@ -2446,11 +2505,12 @@ function deterministicOffsets(numDays, variance) {
 function runReverseCalculator() {
   const target = Number(document.getElementById('reverseTarget')?.value || 0);
   const years = Number(document.getElementById('reverseYears')?.value || 1);
+  const variance = normalizeDailyVariance(document.getElementById('reverseVariance')?.value);
   const result = document.getElementById('reverseResultValue');
   const note = document.getElementById('reverseResultNote');
   if (!target || target < 100) { if (result) result.textContent = '—'; if (note) note.textContent = 'Enter a valid target of at least $100.'; return; }
   const base = getCurrentScenarioConfig();
-  const cfg = { ...base, years };
+  const cfg = { ...base, years, variance };
   const numDays = Math.round(Math.min(10, Math.max(0.0833, years)) * 365);
   const offsets = deterministicOffsets(numDays, cfg.variance);
   let lo = 100, hi = Math.max(target, 1000);

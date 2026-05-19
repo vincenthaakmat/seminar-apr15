@@ -1,8 +1,11 @@
 {
-  "version": "2026.05.18.04",
+  "version": "2026.05.18.10",
   "name": "Aurum app",
   "message": "Aurum has a fresh update ready. Refresh to load the newest calculator and Hive improvements.",
   "updates": [
+    "[NEW] Daily variance / offset now defaults to 3% instead of 30%.",
+    "[NEW] Package settings now include a configurable Daily variance / offset option that saves locally and updates the main calculator.",
+    "[NEW] Reverse calculator now shows its own configurable Daily variance / offset option and uses it in the required starting amount estimate.",
     "Using a My income result in the main calculator now sets the projection period to end on the same target date.",
     "The Daily variance / offset label now shows the effective package rate range for the selected offset.",
     "Collapsed Hive minimap and legend overlays now expand again when tapped or clicked.",

@@ -102,7 +102,7 @@ const HIVE_SYNC_LOG_LIMIT = 40;
 const HIVE_AUTO_REFRESH_MS = 180000;
 const HIVE_MIN_ZOOM = 0.1;
 const HIVE_MAX_ZOOM = 1.2;
-const HIVE_APP_VERSION = '2026.05.18.08';
+const HIVE_APP_VERSION = '2026.05.18.09';
 const HIVE_MOBILE_PANEL_MAX_WIDTH = 1180;
 const HIVE_VERSION_URL = 'hive-version.json';
 const HIVE_CLOUD_TABLE = 'aurum_hive_accounts';
@@ -255,8 +255,12 @@ function ensureHiveUi() {
     .hive-lookup-row { display:grid; grid-template-columns:1fr auto; gap:8px; }
     .hive-lookup input { width:100%; border:1px solid var(--border); border-radius:10px; padding:10px 11px; color:var(--text); background:#fff; font-family:'Inter',sans-serif; font-size:13px; outline:none; }
     .hive-lookup input:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(37,82,231,.12); }
-    .hive-lookup-loading { display:inline-flex; align-items:center; justify-content:center; gap:5px; }
-    .hive-lookup-loading .material-symbols-rounded { font-size:16px; line-height:1; }
+    .hive-lookup-loading { display:inline-flex; align-items:center; justify-content:center; gap:5px; min-width:76px; }
+    .hive-lookup-loading .material-symbols-rounded { font-size:16px; line-height:1; animation:hiveLookupHourglass 1s ease-in-out infinite; }
+    .hive-lookup-loading-text { display:inline-flex; align-items:baseline; gap:1px; }
+    .hive-lookup-loading-dot { width:3px; overflow:hidden; animation:hiveLookupDot 1.2s ease-in-out infinite; }
+    .hive-lookup-loading-dot:nth-child(2) { animation-delay:.16s; }
+    .hive-lookup-loading-dot:nth-child(3) { animation-delay:.32s; }
     .hive-search-row { display:grid; grid-template-columns:1fr auto; gap:8px; }
     .hive-search-results { display:none; border:1px solid rgba(37,82,231,.18); border-radius:12px; background:#f8fbff; overflow:hidden; }
     .hive-search-results.visible { display:grid; }
@@ -374,6 +378,15 @@ function ensureHiveUi() {
     .hive-dot-main.selected, .hive-dot-sub.selected { outline:4px solid rgba(250,204,21,.95); outline-offset:4px; }
     .hive-dot-main.in-selected-branch, .hive-dot-sub.in-selected-branch { box-shadow:0 14px 28px rgba(0,0,0,.24), 0 0 0 7px rgba(239,68,68,.20), 0 0 22px rgba(239,68,68,.70); }
     .hive-dot-main.search-hit, .hive-dot-sub.search-hit { z-index:6; animation:hiveSearchPulse .88s ease-in-out infinite; }
+    @keyframes hiveLookupHourglass {
+      0%, 100% { transform:rotate(0deg); opacity:.78; }
+      50% { transform:rotate(180deg); opacity:1; }
+    }
+    @keyframes hiveLookupDot {
+      0%, 20% { opacity:.2; transform:translateY(0); }
+      45% { opacity:1; transform:translateY(-2px); }
+      70%, 100% { opacity:.2; transform:translateY(0); }
+    }
     @keyframes hiveSearchPulse {
       0%, 100% { transform:scale(1.16); box-shadow:0 18px 34px rgba(0,0,0,.30), 0 0 0 7px rgba(250,204,21,.65), 0 0 28px rgba(250,204,21,.92); }
       50% { transform:scale(1.34); box-shadow:0 22px 42px rgba(0,0,0,.34), 0 0 0 22px rgba(250,204,21,.18), 0 0 48px rgba(250,204,21,1); }
@@ -1477,7 +1490,7 @@ function setHiveLookupLoading(isLoading) {
   button.disabled = Boolean(isLoading);
   if (input) input.disabled = Boolean(isLoading);
   button.innerHTML = isLoading
-    ? '<span class="hive-lookup-loading"><span class="material-symbols-rounded">hourglass_top</span>Loading</span>'
+    ? '<span class="hive-lookup-loading" aria-live="polite"><span class="material-symbols-rounded" aria-hidden="true">hourglass_top</span><span class="hive-lookup-loading-text">Loading<span class="hive-lookup-loading-dot">.</span><span class="hive-lookup-loading-dot">.</span><span class="hive-lookup-loading-dot">.</span></span></span>'
     : 'Load';
 }
 

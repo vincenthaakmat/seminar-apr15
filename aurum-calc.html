@@ -1087,6 +1087,22 @@ tr.subtotal-row-compound td:first-child { color: #15803D; text-align: left; }
 }
 .sp-pkg-row:last-child { border-bottom: none; }
 
+.sp-global-row {
+  display: grid;
+  grid-template-columns: 1fr 160px;
+  gap: 12px;
+  align-items: end;
+  padding: 1rem 0 1.15rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.sp-global-note {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.45;
+  margin-top: 3px;
+}
+
 .sp-pkg-name {
   font-size: 13px;
   font-weight: 600;
@@ -2517,6 +2533,7 @@ body.dark-mode .app-toast { box-shadow:0 18px 42px rgba(0,0,0,.42); }
         <div class="tool-grid">
           <div class="tool-field"><label for="reverseTarget">Target final value</label><input type="number" id="reverseTarget" value="50000" min="100" step="100"></div>
           <div class="tool-field"><label for="reverseYears">Period in years</label><input type="number" id="reverseYears" value="1" min="0.0833" max="10" step="0.25"></div>
+          <div class="tool-field"><label for="reverseVariance">Daily variance / offset (%)</label><input type="number" id="reverseVariance" value="3" min="0" max="60" step="1"></div>
         </div>
         <button class="crypto-action-btn" type="button" onclick="runReverseCalculator()">Calculate required starting amount</button>
         <div class="tool-result">
@@ -2677,7 +2694,7 @@ body.dark-mode .app-toast { box-shadow:0 18px 42px rgba(0,0,0,.42); }
 
         <div class="field">
           <label for="variance" class="helper-inline">Daily variance / offset (%) <span id="varianceRangeLabel" class="variance-range-pill">--</span> <span class="helper-tip" title="Downward-only variance lowers the base daily rate by a random amount up to the selected percentage. It never increases above the package rate.">?</span></label>
-          <input type="number" id="variance" value="30" min="0" max="60" step="1" oninput="updateVarianceRangeLabel()">
+          <input type="number" id="variance" value="3" min="0" max="60" step="1" oninput="updateVarianceRangeLabel()">
           <p class="hint">Applies a downward-only random offset to the daily rate. Set to 0 for a flat projection.</p>
         </div>
       </div>
@@ -2929,8 +2946,8 @@ body.dark-mode .app-toast { box-shadow:0 18px 42px rgba(0,0,0,.42); }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
-<script src="calculator.js?v=2026.05.18.08"></script>
-<script type="module" src="AurumHiveModule.js?v=2026.05.18.08"></script>
+<script src="calculator.js?v=2026.05.18.10"></script>
+<script type="module" src="AurumHiveModule.js?v=2026.05.18.09"></script>
 
 
   <!-- ── Footer copyright ── -->
