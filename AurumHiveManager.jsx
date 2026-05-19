@@ -97,6 +97,7 @@ export default function AurumHiveManager() {
   const [nodes, setNodes] = useState(sampleNodes);
   const [form, setForm] = useState(emptyForm);
   const [selectedId, setSelectedId] = useState("AUR-ROOT");
+  const [formMessage, setFormMessage] = useState("");
 
   const nodeMap = useMemo(() => {
     const map = new Map();
@@ -157,23 +158,26 @@ export default function AurumHiveManager() {
 
     const error = validateNewNode(next);
     if (error) {
-      alert(error);
+      setFormMessage(error);
       return;
     }
 
     setNodes((prev) => [...prev, next]);
     setSelectedId(next.inviteId);
     setForm(emptyForm);
+    setFormMessage("Account added to the Hive.");
   }
 
   function clearSample() {
     setNodes([]);
     setSelectedId("");
+    setFormMessage("");
   }
 
   function loadSample() {
     setNodes(sampleNodes);
     setSelectedId("AUR-ROOT");
+    setFormMessage("Sample Hive loaded.");
   }
 
   return (
@@ -217,6 +221,11 @@ export default function AurumHiveManager() {
               <button onClick={addNode} className="w-full rounded-2xl bg-blue-700 p-3 font-extrabold text-white shadow-lg transition hover:bg-blue-800">
                 Add to Hive
               </button>
+              {formMessage && (
+                <div className={`rounded-2xl border p-3 text-sm font-bold ${formMessage.includes("added") || formMessage.includes("loaded") ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-red-200 bg-red-50 text-red-700"}`}>
+                  {formMessage}
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-2">
                 <button onClick={loadSample} className="rounded-2xl border border-slate-200 p-3 text-sm font-bold text-slate-700 hover:bg-slate-50">Load sample</button>

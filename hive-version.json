@@ -1,7 +1,13 @@
 {
-  "version": "2026.05.18.02",
+  "version": "2026.05.19.02",
   "name": "Aurum Hive",
   "updates": [
+    "Hive update banners now keep showing if a reload did not actually pick up the newest Hive script, preventing stale sessions from missing available updates.",
+    "[NEW] When a searched Referral ID is not found, Hive now asks whether the user is creating a new main account and pre-fills that Referral ID in the account form.",
+    "[NEW] Hive now restores the last local session automatically and starts first-time users from a blank main account instead of sample data.",
+    "PIN-protected cached sessions now stay hidden until the correct PIN is entered, with four attempts before a blank starter Hive is loaded.",
+    "Native browser confirmation and prompt popups in Hive have been replaced with polished in-app dialogs.",
+    "Hive update detection has been bumped with a fresh version so active users see the latest workflow improvements.",
     "Collapsed Hive minimap and legend overlays now expand again when tapped or clicked.",
     "[NEW] Editing a main account with no linked subaccounts can now auto-create the three placeholder subaccounts underneath it.",
     "Hive update detection has been bumped with a fresh version so active users see the latest update banner.",

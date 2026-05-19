@@ -1993,7 +1993,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 /* ── Planning tools: scenarios, comparisons, reverse calculator, price alerts ── */
-const AURUM_APP_VERSION = '2026.05.18.10';
+const AURUM_APP_VERSION = '2026.05.19.02';
 const AURUM_VERSION_URL = 'app-version.json';
 const AURUM_VERSION_CHECK_MS = 60000;
 const AURUM_UPDATE_REQUESTED_KEY = 'aurum_update_requested_version';
@@ -2324,8 +2324,15 @@ async function checkAppVersion() {
     if (!response.ok) return;
     const info = await response.json();
     const latestVersion = String(info?.version || '').trim();
-    if (latestVersion && sessionStorage.getItem(AURUM_UPDATE_REQUESTED_KEY) === latestVersion) return;
-    if (latestVersion && compareAppVersions(AURUM_APP_VERSION, latestVersion) > 0) {
+    if (!latestVersion) return;
+    const versionComparison = compareAppVersions(AURUM_APP_VERSION, latestVersion);
+    if (versionComparison <= 0) {
+      if (sessionStorage.getItem(AURUM_UPDATE_REQUESTED_KEY) === latestVersion) {
+        sessionStorage.removeItem(AURUM_UPDATE_REQUESTED_KEY);
+      }
+      return;
+    }
+    if (versionComparison > 0) {
       showAppUpdatePrompt(info);
     }
   } catch (error) {
@@ -2382,6 +2389,79 @@ function writeSavedScenarios(items) {
   try { localStorage.setItem(AURUM_SCENARIO_KEY, JSON.stringify(items)); } catch(e) {}
   renderScenarioSelect();
 }
+function ensureAppDialogUi() {
+  if (document.getElementById('aurumAppDialogOverlay')) return;
+  const style = document.createElement('style');
+  style.textContent = `
+    .aurum-app-dialog-overlay { position:fixed; inset:0; z-index:10080; display:none; align-items:center; justify-content:center; padding:20px; background:rgba(15,23,42,.46); backdrop-filter:blur(10px); }
+    .aurum-app-dialog-overlay.visible { display:flex; }
+    .aurum-app-dialog-card { width:min(420px, calc(100vw - 34px)); border:1px solid rgba(255,255,255,.64); border-radius:16px; background:#fff; box-shadow:0 26px 70px rgba(15,23,42,.30); padding:18px; color:var(--text); }
+    .aurum-app-dialog-title { margin:0 0 5px; font:900 18px/1.2 Inter,sans-serif; color:var(--text); }
+    .aurum-app-dialog-message { margin:0 0 12px; color:var(--text-muted); font:700 12px/1.45 Inter,sans-serif; white-space:pre-line; }
+    .aurum-app-dialog-input { width:100%; border:1px solid var(--border); border-radius:10px; padding:11px 12px; color:var(--text); background:#fff; font:800 13px Inter,sans-serif; outline:none; }
+    .aurum-app-dialog-input:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(37,82,231,.12); }
+    .aurum-app-dialog-actions { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px; }
+    .aurum-app-dialog-actions button { min-height:42px; border-radius:10px; font:900 12px Inter,sans-serif; cursor:pointer; }
+    .aurum-app-dialog-cancel { border:1px solid var(--border); background:#fff; color:var(--text-mid); }
+    .aurum-app-dialog-confirm { border:1px solid var(--blue-mid); background:var(--blue-mid); color:#fff; }
+  `;
+  document.head.appendChild(style);
+  const overlay = document.createElement('div');
+  overlay.className = 'aurum-app-dialog-overlay';
+  overlay.id = 'aurumAppDialogOverlay';
+  overlay.innerHTML = `
+    <div class="aurum-app-dialog-card" role="dialog" aria-modal="true" aria-labelledby="aurumAppDialogTitle">
+      <h3 class="aurum-app-dialog-title" id="aurumAppDialogTitle"></h3>
+      <p class="aurum-app-dialog-message" id="aurumAppDialogMessage"></p>
+      <input class="aurum-app-dialog-input" id="aurumAppDialogInput" autocomplete="off">
+      <div class="aurum-app-dialog-actions">
+        <button class="aurum-app-dialog-cancel" type="button" id="aurumAppDialogCancel">Cancel</button>
+        <button class="aurum-app-dialog-confirm" type="button" id="aurumAppDialogConfirm">Save</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+function appPrompt(message, defaultValue = '', options = {}) {
+  ensureAppDialogUi();
+  return new Promise((resolve) => {
+    const overlay = document.getElementById('aurumAppDialogOverlay');
+    const title = document.getElementById('aurumAppDialogTitle');
+    const text = document.getElementById('aurumAppDialogMessage');
+    const input = document.getElementById('aurumAppDialogInput');
+    const cancelBtn = document.getElementById('aurumAppDialogCancel');
+    const confirmBtn = document.getElementById('aurumAppDialogConfirm');
+    let settled = false;
+    title.textContent = options.title || 'Enter value';
+    text.textContent = message || '';
+    input.value = defaultValue || '';
+    input.placeholder = options.placeholder || '';
+    confirmBtn.textContent = options.confirmLabel || 'Save';
+    function cleanup(value) {
+      if (settled) return;
+      settled = true;
+      overlay.classList.remove('visible');
+      cancelBtn.removeEventListener('click', onCancel);
+      confirmBtn.removeEventListener('click', onConfirm);
+      overlay.removeEventListener('click', onOverlayClick);
+      document.removeEventListener('keydown', onKeydown);
+      resolve(value);
+    }
+    function onCancel() { cleanup(null); }
+    function onConfirm() { cleanup(input.value); }
+    function onOverlayClick(event) { if (event.target === overlay) onCancel(); }
+    function onKeydown(event) {
+      if (event.key === 'Escape') { event.preventDefault(); onCancel(); }
+      if (event.key === 'Enter' && document.activeElement === input) { event.preventDefault(); onConfirm(); }
+    }
+    cancelBtn.addEventListener('click', onCancel);
+    confirmBtn.addEventListener('click', onConfirm);
+    overlay.addEventListener('click', onOverlayClick);
+    document.addEventListener('keydown', onKeydown);
+    overlay.classList.add('visible');
+    requestAnimationFrame(() => input.focus());
+  });
+}
 function renderScenarioSelect() {
   const sel = document.getElementById('scenarioSelect');
   if (!sel) return;
@@ -2395,11 +2475,14 @@ function renderScenarioSelect() {
     sel.appendChild(opt);
   });
 }
-function saveCurrentScenarioFromUI() {
+async function saveCurrentScenarioFromUI() {
   const input = document.getElementById('scenarioName');
   const typed = input?.value?.trim();
   const fallback = `Scenario ${new Date().toLocaleString()}`;
-  const name = typed || prompt('Scenario name:', fallback) || '';
+  const name = typed || await appPrompt('Name this scenario.', fallback, {
+    title: 'Save Scenario',
+    confirmLabel: 'Save scenario'
+  }) || '';
   if (!name.trim()) return;
   const items = readSavedScenarios();
   items.unshift({ id: String(Date.now()), name: name.trim(), createdAt: new Date().toISOString(), config: getCurrentScenarioConfig() });

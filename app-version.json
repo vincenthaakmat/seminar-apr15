@@ -1,8 +1,14 @@
 {
-  "version": "2026.05.18.10",
+  "version": "2026.05.19.02",
   "name": "Aurum app",
   "message": "Aurum has a fresh update ready. Refresh to load the newest calculator and Hive improvements.",
   "updates": [
+    "Update notices now keep showing if a browser reload did not actually pick up the newest app scripts, preventing stale sessions from silently missing an available update.",
+    "[NEW] Hive now offers to create a new main account when a searched Referral ID cannot be found, copying the searched ID into the new account form automatically.",
+    "[NEW] Hive now restores the last local session automatically, while first-time sessions start from a blank main account instead of sample data.",
+    "PIN-protected cached Hive sessions now require the correct PIN before the saved tree is shown, with four attempts before loading a blank starter Hive.",
+    "Browser alert, confirm, and prompt popups have been replaced with polished in-app dialogs and inline messages across the Hive, scenario saving, and monitor deletion flows.",
+    "App, Hive, script, and offline cache versions have been bumped so users receive this latest workflow update.",
     "[NEW] Daily variance / offset now defaults to 3% instead of 30%.",
     "[NEW] Package settings now include a configurable Daily variance / offset option that saves locally and updates the main calculator.",
     "[NEW] Reverse calculator now shows its own configurable Daily variance / offset option and uses it in the required starting amount estimate.",

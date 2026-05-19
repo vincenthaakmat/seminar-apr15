@@ -88,6 +88,8 @@ let hivePanelCollapsed = false;
 let hivePanX = 0;
 let hivePanY = 0;
 let lastHiveLayout = null;
+let hiveBlankStarterSession = false;
+let hivePinAttemptsExhausted = false;
 const collapsedInviteIds = new Set();
 const HIVE_LOCAL_KEY = 'aurum_hive_database_v1';
 const HIVE_LAST_INVITE_KEY = 'aurum_hive_last_invite_id_v1';
@@ -102,7 +104,7 @@ const HIVE_SYNC_LOG_LIMIT = 40;
 const HIVE_AUTO_REFRESH_MS = 180000;
 const HIVE_MIN_ZOOM = 0.1;
 const HIVE_MAX_ZOOM = 1.2;
-const HIVE_APP_VERSION = '2026.05.18.09';
+const HIVE_APP_VERSION = '2026.05.19.02';
 const HIVE_MOBILE_PANEL_MAX_WIDTH = 1180;
 const HIVE_VERSION_URL = 'hive-version.json';
 const HIVE_CLOUD_TABLE = 'aurum_hive_accounts';
@@ -112,6 +114,7 @@ const AURUM_USAGE_SESSION_KEY = 'aurum_usage_session_id';
 const AURUM_USAGE_SESSION_STARTED_KEY = 'aurum_usage_session_started_at';
 const HIVE_SUPPORTED_SUB_LIMIT = 3;
 const HIVE_PIN_PATTERN = /^\d{4}$/;
+const HIVE_MAX_PIN_ATTEMPTS = 4;
 const AURUM_REFERRAL_BASE_URL = 'https://backoffice.aurum.foundation/u/';
 const HIVE_RANKS = ['NOVA', 'VOYAGER', 'VANGUARD', 'VANGUARD PRO', 'NEXUS', 'ORACLE', 'PRIME', 'ELITE', 'MAGNAT', 'MYTHOS', 'LEGEND'];
 const DEFAULT_HIVE_RANK = 'NOVA';
@@ -168,6 +171,21 @@ function ensureHiveUi() {
     .hive-sync-toast .material-symbols-rounded { display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:999px; background:#16a34a; color:#fff; font-size:18px; flex:0 0 auto; }
     .hive-sync-toast.error { border-color:rgba(220,38,38,.26); background:#fef2f2; color:#7f1d1d; }
     .hive-sync-toast.error .material-symbols-rounded { background:#dc2626; }
+    .hive-dialog-overlay { position:fixed; inset:0; z-index:10070; display:none; align-items:center; justify-content:center; padding:20px; background:rgba(15,23,42,.46); backdrop-filter:blur(10px); }
+    .hive-dialog-overlay.visible { display:flex; }
+    .hive-dialog-card { width:min(420px, calc(100vw - 34px)); border:1px solid rgba(255,255,255,.64); border-radius:16px; background:#fff; box-shadow:0 26px 70px rgba(15,23,42,.30); padding:18px; color:var(--text); }
+    .hive-dialog-head { display:flex; align-items:flex-start; gap:12px; margin-bottom:12px; }
+    .hive-dialog-icon { display:inline-flex; align-items:center; justify-content:center; width:42px; height:42px; border-radius:12px; background:#eff6ff; color:#173fcf; flex:0 0 auto; }
+    .hive-dialog-icon.danger { background:#fef2f2; color:#b91c1c; }
+    .hive-dialog-title { margin:0; font:900 18px/1.2 'Inter',sans-serif; color:var(--text); }
+    .hive-dialog-message { margin:4px 0 0; color:var(--text-muted); font:700 12px/1.45 'Inter',sans-serif; white-space:pre-line; overflow-wrap:anywhere; }
+    .hive-dialog-input { width:100%; margin:6px 0 14px; border:1px solid var(--border); border-radius:10px; padding:11px 12px; color:var(--text); background:#fff; font:800 13px 'Inter',sans-serif; outline:none; }
+    .hive-dialog-input:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(37,82,231,.12); }
+    .hive-dialog-actions { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px; }
+    .hive-dialog-actions button { min-height:42px; border-radius:10px; font:900 12px 'Inter',sans-serif; cursor:pointer; }
+    .hive-dialog-cancel { border:1px solid var(--border); background:#fff; color:var(--text-mid); }
+    .hive-dialog-confirm { border:1px solid #173fcf; background:#173fcf; color:#fff; box-shadow:0 10px 24px rgba(37,82,231,.22); }
+    .hive-dialog-confirm.danger { border-color:#b91c1c; background:#dc2626; box-shadow:0 10px 24px rgba(220,38,38,.18); }
     .hive-pin-overlay { position:fixed; inset:0; z-index:10060; display:none; align-items:center; justify-content:center; padding:20px; background:rgba(15,23,42,.46); backdrop-filter:blur(10px); }
     .hive-pin-overlay.visible { display:flex; }
     .hive-pin-card { width:min(360px, calc(100vw - 34px)); border:1px solid rgba(255,255,255,.64); border-radius:18px; background:linear-gradient(180deg,#ffffff 0%,#eef4ff 100%); box-shadow:0 26px 70px rgba(15,23,42,.30); padding:18px; color:var(--text); }
@@ -470,6 +488,22 @@ function ensureHiveUi() {
           <span class="material-symbols-rounded">check</span>
           <span id="hiveSyncToastText">Hive action completed.</span>
         </div>
+        <div class="hive-dialog-overlay" id="hiveDialogOverlay" role="dialog" aria-modal="true" aria-labelledby="hiveDialogTitle">
+          <div class="hive-dialog-card">
+            <div class="hive-dialog-head">
+              <span class="hive-dialog-icon" id="hiveDialogIcon"><span class="material-symbols-rounded">help</span></span>
+              <div>
+                <h3 class="hive-dialog-title" id="hiveDialogTitle">Confirm action</h3>
+                <p class="hive-dialog-message" id="hiveDialogMessage"></p>
+              </div>
+            </div>
+            <input class="hive-dialog-input" id="hiveDialogInput" autocomplete="off">
+            <div class="hive-dialog-actions">
+              <button class="hive-dialog-cancel" type="button" id="hiveDialogCancelBtn">Cancel</button>
+              <button class="hive-dialog-confirm" type="button" id="hiveDialogConfirmBtn">Continue</button>
+            </div>
+          </div>
+        </div>
         <div class="hive-pin-overlay" id="hivePinOverlay" role="dialog" aria-modal="true" aria-labelledby="hivePinTitle">
           <div class="hive-pin-card">
             <div class="hive-pin-head">
@@ -768,8 +802,14 @@ function ensureHiveUi() {
     persistHive();
     renderHive();
   });
-  document.getElementById('hiveClearSampleBtn').addEventListener('click', clearSampleHive);
-  document.getElementById('hiveDeleteUnfundedSubsBtn').addEventListener('click', deleteUnfundedSubAccounts);
+  document.getElementById('hiveClearSampleBtn').addEventListener('click', () => clearSampleHive().catch((error) => {
+    console.warn('Hive clear failed.', error);
+    setMessage('Could not clear the Hive.', 'error');
+  }));
+  document.getElementById('hiveDeleteUnfundedSubsBtn').addEventListener('click', () => deleteUnfundedSubAccounts().catch((error) => {
+    console.warn('Hive unfunded sub delete failed.', error);
+    setMessage('Could not delete the selected unfunded sub account.', 'error');
+  }));
   document.getElementById('hiveClearSyncLogBtn').addEventListener('click', clearHiveSyncLog);
   document.getElementById('hiveMobileBackBtn').addEventListener('click', closeMobileHivePanel);
   renderHiveSyncLog();
@@ -1040,6 +1080,25 @@ function loadLocalHive() {
   return false;
 }
 
+function loadHiveStartupSession() {
+  if (loadLocalHive()) {
+    hiveBlankStarterSession = false;
+    return 'local';
+  }
+
+  const [blankRoot] = createBlankHive();
+  hiveData.splice(0, hiveData.length, blankRoot);
+  selectedInviteId = blankRoot.inviteId;
+  isolatedRootInviteId = '';
+  highlightedInviteId = '';
+  hiveFocusMode = false;
+  hiveMode = 'edit';
+  hiveEditLocked = false;
+  hiveBlankStarterSession = true;
+  collapsedInviteIds.clear();
+  return 'blank';
+}
+
 function saveLocalHive() {
   try {
     localStorage.setItem(HIVE_LOCAL_KEY, JSON.stringify(hiveData));
@@ -1058,6 +1117,7 @@ function readLastInviteId() {
 
 function rememberInviteId(inviteId) {
   activeLookupInviteId = String(inviteId || '').trim();
+  if (activeLookupInviteId) hiveBlankStarterSession = false;
   try {
     if (activeLookupInviteId) localStorage.setItem(HIVE_LAST_INVITE_KEY, activeLookupInviteId);
   } catch (error) {
@@ -1108,6 +1168,7 @@ function rememberPanelCollapsed() {
 }
 
 function persistHive() {
+  hiveBlankStarterSession = false;
   saveLocalHive();
   hivePendingCloudSync = true;
   updateSyncStatus('Local changes saved. Cloud sync pending...', 'local');
@@ -1152,8 +1213,15 @@ async function checkHiveAppVersion() {
     if (!response.ok) return;
     const data = await response.json();
     const latestVersion = String(data?.version || '').trim();
-    if (latestVersion && sessionStorage.getItem(HIVE_UPDATE_REQUESTED_KEY) === latestVersion) return;
-    if (latestVersion && compareVersionParts(HIVE_APP_VERSION, latestVersion) > 0) {
+    if (!latestVersion) return;
+    const versionComparison = compareVersionParts(HIVE_APP_VERSION, latestVersion);
+    if (versionComparison <= 0) {
+      if (sessionStorage.getItem(HIVE_UPDATE_REQUESTED_KEY) === latestVersion) {
+        sessionStorage.removeItem(HIVE_UPDATE_REQUESTED_KEY);
+      }
+      return;
+    }
+    if (versionComparison > 0) {
       showHiveUpdateBanner(latestVersion);
     }
   } catch (error) {
@@ -1447,6 +1515,7 @@ async function loadHiveFromLookup() {
     if (localNode) {
       const localAccessPin = await requestLocalHiveAccessPinIfNeeded(localNode);
       if (localAccessPin === null) {
+        if (hivePinAttemptsExhausted) return;
         forgetInviteId();
         setMessage('PIN required to load this local Referral ID.', 'error');
         return;
@@ -1471,16 +1540,70 @@ async function loadHiveFromLookup() {
       return;
     }
 
-    setMessage('Referral ID was not found locally or in the configured cloud database.', 'error');
-    showHiveStatusToast('Referral ID was not found.', 'error');
     sendHiveUsageEvent('hive_load', {
       invite_id: inviteId,
       source: 'lookup',
       status: 'not_found'
     });
+    if (await hiveConfirm(`Referral ID ${inviteId} was not found.\n\nAre you creating a new main account with this Referral ID?`, {
+      title: 'Create New Account?',
+      confirmLabel: 'Create account',
+      icon: 'person_add'
+    })) {
+      startNewMainAccountDraft(inviteId);
+      return;
+    }
+    setMessage('Referral ID was not found locally or in the configured cloud database.', 'error');
+    showHiveStatusToast('Referral ID was not found.', 'error');
   } finally {
     setHiveLookupLoading(false);
   }
+}
+
+function startNewMainAccountDraft(inviteId) {
+  const referralId = String(inviteId || '').trim();
+  if (!referralId) return;
+
+  const [draftRoot] = createBlankHive();
+  Object.assign(draftRoot, {
+    inviteId: referralId,
+    name: '',
+    amount: 0,
+    totalTurnover: 0,
+    rank: DEFAULT_HIVE_RANK,
+    type: 'main',
+    parentInviteId: null,
+    children: []
+  });
+
+  hiveData.splice(0, hiveData.length, draftRoot);
+  selectedInviteId = referralId;
+  isolatedRootInviteId = '';
+  highlightedInviteId = '';
+  hiveFocusMode = false;
+  hiveMode = 'edit';
+  hiveEditLocked = true;
+  collapsedInviteIds.clear();
+  forgetInviteId();
+  renderHive();
+
+  const lookupInput = document.getElementById('hiveLookupInviteId');
+  const inviteInput = document.getElementById('hiveInviteId');
+  const nameInput = document.getElementById('hiveName');
+  const accountCard = document.getElementById('hiveAccountCardRollup');
+  if (lookupInput) lookupInput.value = referralId;
+  if (inviteInput) inviteInput.value = referralId;
+  if (accountCard) accountCard.open = true;
+  requestAnimationFrame(() => nameInput?.focus());
+
+  setMessage('New main account draft ready. Complete the account details, then save it.', 'ok');
+  showHiveStatusToast('New main account draft ready.', 'ok');
+  updateSyncStatus('New main account draft is open. Save it to sync with the cloud database.', 'local');
+  sendHiveUsageEvent('hive_account_draft_start', {
+    invite_id: referralId,
+    account_type: 'main',
+    source: 'lookup_not_found'
+  });
 }
 
 function setHiveLookupLoading(isLoading) {
@@ -1513,6 +1636,84 @@ function rememberHiveAccessPin(inviteId, pin) {
   else hiveAccessPins.delete(key);
 }
 
+function showHiveDialog(options = {}) {
+  return new Promise((resolve) => {
+    const overlay = document.getElementById('hiveDialogOverlay');
+    const iconWrap = document.getElementById('hiveDialogIcon');
+    const icon = iconWrap?.querySelector('.material-symbols-rounded');
+    const title = document.getElementById('hiveDialogTitle');
+    const message = document.getElementById('hiveDialogMessage');
+    const input = document.getElementById('hiveDialogInput');
+    const cancelBtn = document.getElementById('hiveDialogCancelBtn');
+    const confirmBtn = document.getElementById('hiveDialogConfirmBtn');
+    if (!overlay || !input || !cancelBtn || !confirmBtn) {
+      resolve(options.type === 'prompt' ? null : false);
+      return;
+    }
+
+    const isPrompt = options.type === 'prompt';
+    let settled = false;
+    if (title) title.textContent = options.title || (isPrompt ? 'Enter value' : 'Confirm action');
+    if (message) message.textContent = options.message || '';
+    if (icon) icon.textContent = options.icon || (options.variant === 'danger' ? 'warning' : (isPrompt ? 'edit' : 'help'));
+    iconWrap?.classList.toggle('danger', options.variant === 'danger');
+    confirmBtn.classList.toggle('danger', options.variant === 'danger');
+    confirmBtn.textContent = options.confirmLabel || (isPrompt ? 'Save' : 'Continue');
+    cancelBtn.textContent = options.cancelLabel || 'Cancel';
+    input.style.display = isPrompt ? '' : 'none';
+    input.value = options.defaultValue || '';
+    input.placeholder = options.placeholder || '';
+
+    function cleanup(value) {
+      if (settled) return;
+      settled = true;
+      overlay.classList.remove('visible');
+      cancelBtn.removeEventListener('click', onCancel);
+      confirmBtn.removeEventListener('click', onConfirm);
+      overlay.removeEventListener('click', onOverlayClick);
+      document.removeEventListener('keydown', onKeydown);
+      resolve(value);
+    }
+
+    function onCancel() {
+      cleanup(isPrompt ? null : false);
+    }
+
+    function onConfirm() {
+      cleanup(isPrompt ? input.value : true);
+    }
+
+    function onOverlayClick(event) {
+      if (event.target === overlay) onCancel();
+    }
+
+    function onKeydown(event) {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onCancel();
+      } else if (event.key === 'Enter' && (!isPrompt || document.activeElement === input)) {
+        event.preventDefault();
+        onConfirm();
+      }
+    }
+
+    overlay.classList.add('visible');
+    cancelBtn.addEventListener('click', onCancel);
+    confirmBtn.addEventListener('click', onConfirm);
+    overlay.addEventListener('click', onOverlayClick);
+    document.addEventListener('keydown', onKeydown);
+    requestAnimationFrame(() => (isPrompt ? input : confirmBtn).focus());
+  });
+}
+
+function hiveConfirm(message, options = {}) {
+  return showHiveDialog({ ...options, type: 'confirm', message });
+}
+
+function hivePrompt(message, defaultValue = '', options = {}) {
+  return showHiveDialog({ ...options, type: 'prompt', message, defaultValue });
+}
+
 function promptForHiveAccessPin(inviteId, options = {}) {
   return new Promise((resolve) => {
     const overlay = document.getElementById('hivePinOverlay');
@@ -1525,8 +1726,7 @@ function promptForHiveAccessPin(inviteId, options = {}) {
     const unlockBtn = document.getElementById('hivePinUnlockBtn');
     const error = document.getElementById('hivePinError');
     if (!overlay || !keypad || !cancelBtn || !unlockBtn || !slots.length) {
-      const fallback = window.prompt(`Enter the 4-digit PIN for Referral ID ${inviteId}.`);
-      resolve(fallback === null ? null : String(fallback || '').trim());
+      resolve(null);
       return;
     }
 
@@ -1647,22 +1847,75 @@ async function requestHiveAccessPinIfNeeded(inviteId) {
 async function requestLocalHiveAccessPinIfNeeded(node) {
   const storedPin = normalizeHiveAccessPin(node?.accessPin);
   if (!storedPin) return '';
+  hivePinAttemptsExhausted = false;
 
   const inviteId = String(node?.inviteId || '').trim();
   const rememberedPin = getRememberedHiveAccessPin(inviteId);
   if (rememberedPin === storedPin) return rememberedPin;
 
-  const enteredPin = await promptForHiveAccessPin(inviteId);
-  if (enteredPin === storedPin) {
-    rememberHiveAccessPin(inviteId, enteredPin);
-    return enteredPin;
+  for (let attempt = 1; attempt <= HIVE_MAX_PIN_ATTEMPTS; attempt += 1) {
+    const attemptsLeft = HIVE_MAX_PIN_ATTEMPTS - attempt;
+    const enteredPin = await promptForHiveAccessPin(inviteId, {
+      subtitle: `Referral ID ${inviteId} is protected.`,
+      warning: attempt > 1
+        ? `${attemptsLeft + 1} attempt${attemptsLeft + 1 === 1 ? '' : 's'} remaining before a blank Hive is loaded.`
+        : ''
+    });
+    if (enteredPin === null) return null;
+    if (enteredPin === storedPin) {
+      rememberHiveAccessPin(inviteId, enteredPin);
+      return enteredPin;
+    }
+
+    setMessage('Incorrect PIN for this local Referral ID.', 'error');
+    if (attemptsLeft > 0) {
+      showHiveStatusToast(`Incorrect PIN. ${attemptsLeft} attempt${attemptsLeft === 1 ? '' : 's'} left.`, 'error');
+    }
   }
 
-  if (enteredPin !== null) {
-    setMessage('Incorrect PIN for this local Referral ID.', 'error');
-    showHiveStatusToast('Incorrect PIN for this local Referral ID.', 'error');
-  }
+  loadBlankHiveAfterPinFailures(inviteId);
+  hivePinAttemptsExhausted = true;
   return null;
+}
+
+function loadBlankHiveAfterPinFailures(inviteId) {
+  const [blankRoot] = createBlankHive();
+  hiveData.splice(0, hiveData.length, blankRoot);
+  selectedInviteId = blankRoot.inviteId;
+  isolatedRootInviteId = '';
+  highlightedInviteId = '';
+  hiveFocusMode = false;
+  hiveMode = 'edit';
+  hiveEditLocked = false;
+  hiveBlankStarterSession = true;
+  collapsedInviteIds.clear();
+  forgetInviteId();
+  saveLocalHive();
+  renderHive();
+
+  const lookupInput = document.getElementById('hiveLookupInviteId');
+  if (lookupInput) lookupInput.value = '';
+
+  setMessage(`PIN failed 4 times for ${inviteId}. A new empty Hive has been loaded.`, 'error');
+  showHiveStatusToast('PIN failed 4 times. Empty Hive loaded.', 'error');
+  updateSyncStatus('Blank starter Hive ready. Save your first account to create a local session.', 'local');
+}
+
+async function renderCachedHiveAfterRootUnlock() {
+  const root = hiveData[0];
+  const rootPin = normalizeHiveAccessPin(root?.accessPin);
+  if (rootPin) {
+    const accessPin = await requestLocalHiveAccessPinIfNeeded(root);
+    if (accessPin === null) {
+      if (!hivePinAttemptsExhausted) {
+        loadBlankHiveAfterPinFailures(root?.inviteId || 'the cached account');
+      }
+      return;
+    }
+  }
+
+  renderHive();
+  if (isMobileHive()) openMobileHivePanel(getSelectedHiveNode());
 }
 
 async function changeSelectedHivePin() {
@@ -1715,7 +1968,12 @@ async function removeSelectedHivePin() {
     return;
   }
   if (!await unlockHiveAccountForChange(selected, 'remove the PIN for')) return;
-  if (!window.confirm(`Remove the PIN from ${selected.inviteId}?`)) return;
+  if (!await hiveConfirm(`Remove the PIN from ${selected.inviteId}?`, {
+    title: 'Remove PIN?',
+    confirmLabel: 'Remove PIN',
+    variant: 'danger',
+    icon: 'lock_open'
+  })) return;
 
   selected.accessPin = '';
   rememberHiveAccessPin(selected.inviteId, '');
@@ -2081,6 +2339,7 @@ async function reloadActiveHiveFromCloud(statusMessage) {
 }
 
 function getHiveRefreshInviteId() {
+  if (hiveBlankStarterSession && !activeLookupInviteId) return '';
   return activeLookupInviteId || hiveData[0]?.inviteId || selectedInviteId || '';
 }
 
@@ -3114,7 +3373,7 @@ export function removeHiveItem(inviteId) {
   return removed;
 }
 
-function deleteUnfundedSubAccounts() {
+async function deleteUnfundedSubAccounts() {
   if (isHiveEditorLocked()) {
     setMessage('Save or cancel the current account changes before deleting an unfunded sub account.', 'error');
     return;
@@ -3131,7 +3390,12 @@ function deleteUnfundedSubAccounts() {
   }
 
   const accountName = selected.name || 'Unnamed';
-  if (!window.confirm(`Delete this unfunded sub account?\n\nReferral ID: ${selected.inviteId}\nName: ${accountName}`)) return;
+  if (!await hiveConfirm(`Referral ID: ${selected.inviteId}\nName: ${accountName}`, {
+    title: 'Delete Unfunded Sub Account?',
+    confirmLabel: 'Delete account',
+    variant: 'danger',
+    icon: 'delete'
+  })) return;
 
   const beforeHive = cloneNode(hiveData);
   const targetIds = new Set([selected.inviteId]);
@@ -3223,6 +3487,7 @@ async function unlockHiveAccountForChange(node, actionLabel) {
   if (node === hiveData[0]) return true;
   const accessPin = await requestLocalHiveAccessPinIfNeeded(node);
   if (accessPin === null) {
+    if (hivePinAttemptsExhausted) return false;
     setMessage(`PIN required to ${actionLabel} this account.`, 'error');
     return false;
   }
@@ -3456,8 +3721,13 @@ function updateHiveBranchHighlightButton() {
   btn.setAttribute('aria-label', btn.title);
 }
 
-function clearSampleHive() {
-  if (!window.confirm('Clear the sample Hive and start with one blank main account? This only changes your local Hive until you save new accounts.')) return;
+async function clearSampleHive() {
+  if (!await hiveConfirm('Clear the sample Hive and start with one blank main account?\n\nThis only changes your local Hive until you save new accounts.', {
+    title: 'Clear Hive?',
+    confirmLabel: 'Clear Hive',
+    variant: 'danger',
+    icon: 'mop'
+  })) return;
   const blankHive = createBlankHive();
   hiveData.splice(0, hiveData.length, blankHive[0]);
   selectedInviteId = blankHive[0].inviteId;
@@ -3485,9 +3755,17 @@ async function runHiveStarterSetup() {
     setMessage('Save or cancel the current account changes before starter setup.', 'error');
     return;
   }
-  if ((root.children || []).length && !window.confirm('Starter setup can replace the current root child accounts with three placeholders. Continue?')) return;
+  if ((root.children || []).length && !await hiveConfirm('Starter setup can replace the current root child accounts with three placeholders.', {
+    title: 'Replace Child Accounts?',
+    confirmLabel: 'Continue',
+    variant: 'danger',
+    icon: 'account_tree'
+  })) return;
 
-  const nextInviteId = String(window.prompt('Enter the root Referral ID for this Hive.', root.inviteId || '') || '').trim();
+  const nextInviteId = String(await hivePrompt('Enter the root Referral ID for this Hive.', root.inviteId || '', {
+    title: 'Root Referral ID',
+    confirmLabel: 'Continue'
+  }) || '').trim();
   if (!nextInviteId) {
     setMessage('Starter setup cancelled. Root Referral ID is required.', 'error');
     return;
@@ -3498,14 +3776,21 @@ async function runHiveStarterSetup() {
     return;
   }
 
-  const nextName = String(window.prompt('Enter the root account name.', root.name || '') || '').trim();
+  const nextName = String(await hivePrompt('Enter the root account name.', root.name || '', {
+    title: 'Root Account Name',
+    confirmLabel: 'Continue'
+  }) || '').trim();
   if (!nextName) {
     setMessage('Starter setup cancelled. Account name is required.', 'error');
     return;
   }
 
   let nextPin = '';
-  if (window.confirm('Add a 4-digit PIN to protect this root account?')) {
+  if (await hiveConfirm('Add a 4-digit PIN to protect this root account?', {
+    title: 'Protect Root Account?',
+    confirmLabel: 'Add PIN',
+    icon: 'lock'
+  })) {
     nextPin = await promptForHiveAccessPin(nextInviteId, {
       title: 'Set Root PIN',
       subtitle: `Enter a 4-digit PIN for ${nextInviteId}.`,
@@ -3912,7 +4197,7 @@ function safeFilePart(value) {
 }
 
 export function openHiveManager() {
-  loadLocalHive();
+  const startupSession = loadHiveStartupSession();
   hiveZoom = readSavedZoom();
   hivePanelCollapsed = readPanelCollapsed();
   hiveFullscreen = true;
@@ -3928,12 +4213,15 @@ export function openHiveManager() {
   setHiveFullscreen(true);
   setHivePanelCollapsed(hivePanelCollapsed);
   setDefaultMobileAccountCardState();
-  updateSyncStatus(isCloudConfigured() ? 'Cloud sync configured. Local cache active.' : 'Local database active. Cloud sync not configured.', isCloudConfigured() ? 'cloud' : 'local');
+  updateSyncStatus(
+    startupSession === 'blank'
+      ? 'Blank starter Hive ready. Save your first account to create a local session.'
+      : (isCloudConfigured() ? 'Cloud sync configured. Last local session loaded.' : 'Last local session loaded. Cloud sync not configured.'),
+    startupSession === 'blank' ? 'local' : (isCloudConfigured() ? 'cloud' : 'local')
+  );
   const lookupInput = document.getElementById('hiveLookupInviteId');
   if (lookupInput && rememberedInviteId) lookupInput.value = rememberedInviteId;
   renderHiveSyncLog();
-  renderHive();
-  if (isMobileHive()) openMobileHivePanel(getSelectedHiveNode());
   setHiveZoom(hiveZoom);
   checkHiveAppVersion();
   subscribeToHiveRealtime().catch((error) => {
@@ -3945,6 +4233,16 @@ export function openHiveManager() {
     loadHiveFromLookup().catch((error) => {
       console.warn('Remembered Referral ID could not be loaded.', error);
       setMessage('Saved Referral ID could not be loaded. You can enter it again.', 'error');
+    }).finally(() => {
+      if (isMobileHive() && document.getElementById('hiveContainer')?.children.length) {
+        openMobileHivePanel(getSelectedHiveNode());
+      }
+      setHiveZoom(hiveZoom);
+    });
+  } else {
+    renderCachedHiveAfterRootUnlock().catch((error) => {
+      console.warn('Cached Hive PIN check failed.', error);
+      loadBlankHiveAfterPinFailures(hiveData[0]?.inviteId || 'the cached account');
     });
   }
 }

@@ -84,6 +84,16 @@
   }
   .dot { width:8px; height:8px; border-radius:50%; background:var(--green); box-shadow:0 0 0 4px rgba(22,163,74,.12); }
   .dot.error { background:var(--red); box-shadow:0 0 0 4px rgba(220,38,38,.12); }
+  .app-dialog-overlay { position:fixed; inset:0; z-index:10080; display:none; align-items:center; justify-content:center; padding:20px; background:rgba(15,23,42,.46); backdrop-filter:blur(10px); }
+  .app-dialog-overlay.visible { display:flex; }
+  .app-dialog-card { width:min(440px, calc(100vw - 34px)); border:1px solid rgba(255,255,255,.38); border-radius:16px; background:var(--surface); box-shadow:0 26px 70px rgba(15,23,42,.30); padding:18px; color:var(--text); }
+  .app-dialog-title { margin:0 0 5px; font:900 18px/1.2 Inter,sans-serif; color:var(--text); }
+  .app-dialog-message { margin:0 0 12px; color:var(--muted); font:700 12px/1.45 Inter,sans-serif; white-space:pre-line; }
+  .app-dialog-input { width:100%; border:1px solid var(--border); border-radius:10px; padding:11px 12px; color:var(--text); background:var(--surface-soft); font:800 13px Inter,sans-serif; outline:none; }
+  .app-dialog-input:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(37,82,231,.12); }
+  .app-dialog-actions { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px; }
+  .app-dialog-actions button { min-height:42px; justify-content:center; }
+  .app-dialog-confirm.danger { background:var(--red); border-color:var(--red); color:#fff; }
   .grid { display:grid; gap:14px; }
   .metrics { grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); margin-bottom:14px; }
   .cards { grid-template-columns:1.15fr .85fr; }
@@ -263,6 +273,17 @@
 
     <div class="notice">This panel uses the public Supabase key from the app. Keep this file in a private/admin-only location if usage data should not be public.</div>
   </main>
+  <div class="app-dialog-overlay" id="appDialogOverlay">
+    <div class="app-dialog-card" role="dialog" aria-modal="true" aria-labelledby="appDialogTitle">
+      <h3 class="app-dialog-title" id="appDialogTitle">Confirm action</h3>
+      <p class="app-dialog-message" id="appDialogMessage"></p>
+      <input class="app-dialog-input" id="appDialogInput" autocomplete="off">
+      <div class="app-dialog-actions">
+        <button type="button" id="appDialogCancel">Cancel</button>
+        <button class="app-dialog-confirm danger" type="button" id="appDialogConfirm">Delete</button>
+      </div>
+    </div>
+  </div>
 
 <script>
 const SUPABASE_URL = 'https://mwjavyzunvqylmuvsnmy.supabase.co';
@@ -273,6 +294,47 @@ let latestEvents = [];
 let latestHiveAccounts = [];
 let loadingUsage = false;
 let loadingHive = false;
+
+function appPrompt(message, defaultValue = '', options = {}) {
+  return new Promise((resolve) => {
+    const overlay = document.getElementById('appDialogOverlay');
+    const title = document.getElementById('appDialogTitle');
+    const text = document.getElementById('appDialogMessage');
+    const input = document.getElementById('appDialogInput');
+    const cancelBtn = document.getElementById('appDialogCancel');
+    const confirmBtn = document.getElementById('appDialogConfirm');
+    let settled = false;
+    title.textContent = options.title || 'Confirm action';
+    text.textContent = message || '';
+    input.value = defaultValue || '';
+    input.placeholder = options.placeholder || '';
+    confirmBtn.textContent = options.confirmLabel || 'Continue';
+    confirmBtn.classList.toggle('danger', options.variant === 'danger');
+    function cleanup(value) {
+      if (settled) return;
+      settled = true;
+      overlay.classList.remove('visible');
+      cancelBtn.removeEventListener('click', onCancel);
+      confirmBtn.removeEventListener('click', onConfirm);
+      overlay.removeEventListener('click', onOverlayClick);
+      document.removeEventListener('keydown', onKeydown);
+      resolve(value);
+    }
+    function onCancel() { cleanup(null); }
+    function onConfirm() { cleanup(input.value); }
+    function onOverlayClick(event) { if (event.target === overlay) onCancel(); }
+    function onKeydown(event) {
+      if (event.key === 'Escape') { event.preventDefault(); onCancel(); }
+      if (event.key === 'Enter' && document.activeElement === input) { event.preventDefault(); onConfirm(); }
+    }
+    cancelBtn.addEventListener('click', onCancel);
+    confirmBtn.addEventListener('click', onConfirm);
+    overlay.addEventListener('click', onOverlayClick);
+    document.addEventListener('keydown', onKeydown);
+    overlay.classList.add('visible');
+    requestAnimationFrame(() => input.focus());
+  });
+}
 
 const $ = (id) => document.getElementById(id);
 
@@ -476,7 +538,12 @@ async function deleteHiveTree(rootId) {
     setStatus(`Could not find tree ${rootId}. Refresh and try again.`, 'error');
     return;
   }
-  const typed = window.prompt(`Delete the whole Hive tree rooted at ${rootId}?\n\nThis removes ${ids.length} account${ids.length === 1 ? '' : 's'} from the cloud database.\n\nType the root Referral ID to confirm.`);
+  const typed = await appPrompt(`Delete the whole Hive tree rooted at ${rootId}?\n\nThis removes ${ids.length} account${ids.length === 1 ? '' : 's'} from the cloud database.\n\nType the root Referral ID to confirm.`, '', {
+    title: 'Delete Hive Tree?',
+    confirmLabel: 'Delete tree',
+    variant: 'danger',
+    placeholder: rootId
+  });
   if (typed !== rootId) {
     setStatus('Tree delete cancelled. Confirmation did not match.', 'error');
     return;
